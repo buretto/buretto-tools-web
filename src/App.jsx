@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import Navigation from './components/Navigation'
-import SeriesCalculator from './components/SeriesCalculator'
+import SeriesCalculator from './components/SeriesCalculator.jsx'
 import Home from './components/Home'
 
 function App() {
