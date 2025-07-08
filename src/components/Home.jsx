@@ -130,7 +130,7 @@ function Home({ onNavigate }) {
             All tools include optional code viewing so you can see how calculations work.
           </p>
           <a 
-            href="https://github.com/buretto/buretto-tools" 
+            href="https://github.com/buretto/buretto-tools-web" 
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex items-center text-buretto-secondary hover:text-yellow-600 font-medium"
