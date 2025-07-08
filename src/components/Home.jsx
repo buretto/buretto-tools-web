@@ -26,14 +26,6 @@ function Home({ onNavigate }) {
       action: null,
       status: 'coming-soon',
       features: ['Uncertainty modeling', 'Range outputs', 'Confidence intervals']
-    },
-    {
-      name: 'Reverse Series Probability Range Calculator',
-      description: 'Find game win probability ranges needed to achieve a target series win probability range.',
-      icon: Calculator,
-      action: null,
-      status: 'coming-soon',
-      features: ['Range inputs and outputs', 'Backwards range calculation', 'Uncertainty analysis']
     }
   ]
 
