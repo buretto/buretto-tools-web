@@ -1,6 +1,8 @@
 import React, { useState } from 'react'
 import Navigation from './components/Navigation'
 import SeriesCalculator from './components/SeriesCalculator.jsx'
+import ReverseSeriesCalculator from './components/ReverseSeriesCalculator.jsx'
+import RangeSeriesCalculator from './components/RangeSeriesCalculator.jsx'
 import Home from './components/Home'
 
 function App() {
@@ -10,6 +12,10 @@ function App() {
     switch(currentPage) {
       case 'series-calculator':
         return <SeriesCalculator />
+      case 'reverse-series-calculator':
+        return <ReverseSeriesCalculator />
+      case 'range-series-calculator':
+        return <RangeSeriesCalculator />
       default:
         return <Home onNavigate={setCurrentPage} />
     }

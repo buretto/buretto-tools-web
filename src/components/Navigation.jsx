@@ -47,6 +47,18 @@ function Navigation({ currentPage, onNavigate }) {
             >
               Series Calculator
             </button>
+            <button 
+              onClick={() => onNavigate('reverse-series-calculator')}
+              className={`${currentPage === 'reverse-series-calculator' ? 'text-buretto-primary font-medium' : 'text-gray-600 hover:text-gray-900'}`}
+            >
+              Reverse Calculator
+            </button>
+            <button 
+              onClick={() => onNavigate('range-series-calculator')}
+              className={`${currentPage === 'range-series-calculator' ? 'text-buretto-primary font-medium' : 'text-gray-600 hover:text-gray-900'}`}
+            >
+              Range Calculator
+            </button>
             <a 
               href="https://www.buretto.com" 
               className="text-buretto-secondary font-medium hover:text-yellow-600"

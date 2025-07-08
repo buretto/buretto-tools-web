@@ -14,18 +14,18 @@ function Home({ onNavigate }) {
     {
       name: 'Reverse Series Probability Calculator',
       description: 'Given a target series win probability and current scores, find the implied game win probability.',
-      icon: TrendingUp,
-      action: null,
-      status: 'coming-soon',
-      features: ['Works from any series state', 'Backwards calculation', 'Quick estimation']
+      icon: Calculator,
+      action: () => onNavigate('reverse-series-calculator'),
+      status: 'available',
+      features: ['Works from any series state', 'Binary search algorithm', 'Verification included', 'Handles edge cases']
     },
     {
       name: 'Series Probability Range Calculator',
       description: 'Calculate series win probability ranges using upper and lower bounds for game win rates.',
-      icon: BarChart3,
-      action: null,
-      status: 'coming-soon',
-      features: ['Uncertainty modeling', 'Range outputs', 'Confidence intervals']
+      icon: Calculator,
+      action: () => onNavigate('range-series-calculator'),
+      status: 'available',
+      features: ['Uncertainty modeling', 'Two probability models', 'Monte Carlo simulation', 'Confidence intervals']
     }
   ]
 
@@ -61,7 +61,7 @@ function Home({ onNavigate }) {
         </div>
       </div>
 
-      <div className="grid md:grid-cols-2 lg:grid-cols-2 gap-8">
+      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
         {tools.map((tool) => (
           <div 
             key={tool.name}
@@ -76,9 +76,9 @@ function Home({ onNavigate }) {
                   <h3 className="text-lg font-semibold text-buretto-primary">
                     {tool.name}
                   </h3>
-                  {tool.status === 'coming-soon' && (
-                    <span className="text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full">
-                      Coming Soon
+                  {tool.status === 'available' && (
+                    <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full">
+                      Available
                     </span>
                   )}
                 </div>
@@ -100,21 +100,12 @@ function Home({ onNavigate }) {
                 </ul>
               </div>
               
-              {tool.status === 'available' ? (
-                <button 
-                  onClick={tool.action}
-                  className="w-full bg-buretto-primary text-white px-4 py-2 rounded-lg hover:bg-gray-800 transition-colors font-medium"
-                >
-                  Launch Tool
-                </button>
-              ) : (
-                <button 
-                  disabled
-                  className="w-full bg-gray-200 text-gray-500 px-4 py-2 rounded-lg cursor-not-allowed font-medium"
-                >
-                  Coming Soon
-                </button>
-              )}
+              <button 
+                onClick={tool.action}
+                className="w-full bg-buretto-primary text-white px-4 py-2 rounded-lg hover:bg-gray-800 transition-colors font-medium"
+              >
+                Launch Tool
+              </button>
             </div>
           </div>
         ))}
