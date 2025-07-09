@@ -108,7 +108,7 @@ function RolldownTool() {
             <div className="shop-container-wrapper">
               {/* Player buttons - 25% of shop area width */}
               <div className="player-buttons-section unified-slot">
-                <div className="button-section flex flex-col" style={{ height: 'calc(var(--base-unit) * 1.85 - var(--base-unit) * 0.12)', gap: 'calc(var(--base-unit) * 0.06)' }}>
+                <div className="button-section flex flex-col" style={{ height: 'calc(var(--base-unit) * 1.85 - var(--base-unit) * 0.12)', gap: 'calc(var(--base-unit) * 0.06)', position: 'relative', zIndex: 1 }}>
                   <button className="w-full px-2 py-1 bg-blue-600 hover:bg-blue-700 rounded transition-colors text-xs flex-1">
                     Buy XP (4g)
                   </button>
