@@ -85,7 +85,7 @@ function RolldownTool() {
           <div className="shop-area-content" style={{ marginLeft: '-2%', width: '60%' }}>
             {/* Level/XP section floating above */}
             <div className="level-floating-section">
-              <div className="level-section bg-gray-900 p-2 rounded-lg mb-1" style={{ width: 'calc(25% - 0.5rem)', minWidth: '140px' }}>
+              <div className="level-section bg-gray-900 p-2 rounded-lg mb-1" style={{ width: 'calc(var(--base-unit) * 2.62)', minWidth: 'calc(var(--base-unit) * 2.62)' }}>
                 <div className="flex items-center justify-between mb-1">
                   <div className="flex items-center gap-1">
                     <Star className="w-3 h-3 text-blue-400" />
@@ -107,8 +107,8 @@ function RolldownTool() {
             {/* Main wrapper with aligned elements */}
             <div className="shop-container-wrapper">
               {/* Player buttons - 25% of shop area width */}
-              <div className="player-buttons-section">
-                <div className="button-section flex flex-col gap-1" style={{ height: 'calc(var(--base-unit, 8.5rem) * 1.35)' }}>
+              <div className="player-buttons-section unified-slot">
+                <div className="button-section flex flex-col" style={{ height: 'calc(var(--base-unit) * 1.85 - var(--base-unit) * 0.12)', gap: 'calc(var(--base-unit) * 0.06)' }}>
                   <button className="w-full px-2 py-1 bg-blue-600 hover:bg-blue-700 rounded transition-colors text-xs flex-1">
                     Buy XP (4g)
                   </button>

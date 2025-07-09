@@ -34,19 +34,19 @@ function GameBoard({ units, onUnitMove }) {
   const HEX_HEIGHT = hexSize * Math.sqrt(3)
   
   // Calculate board dimensions with proper padding for current spacing (0.88/0.44)
-  const BOARD_WIDTH = HEX_WIDTH * BOARD_COLS * 0.88 + hexSize * 2  // Extra padding for cutoff fix
-  const BOARD_HEIGHT = HEX_HEIGHT * BOARD_ROWS * 0.88 + HEX_HEIGHT * 1  // Extra padding for cutoff fix
-  const TOTAL_HEIGHT = BOARD_HEIGHT * 2 + hexSize
+  const BOARD_WIDTH = HEX_WIDTH * BOARD_COLS * 0.88 + hexSize * 1.5  // Reduced padding for better fit
+  const BOARD_HEIGHT = HEX_HEIGHT * BOARD_ROWS * 0.88 + HEX_HEIGHT * 0.5  // Reduced padding for better fit
+  const TOTAL_HEIGHT = BOARD_HEIGHT * 2 + hexSize * 0.5  // Reduced gap between boards
   
   const renderHexGrid = (isOpponent = false) => {
     const tiles = []
-    const yOffset = isOpponent ? 0 : BOARD_HEIGHT
+    const yOffset = isOpponent ? 0 : BOARD_HEIGHT + hexSize * 0.25  // Account for reduced gap
     
     for (let row = 0; row < BOARD_ROWS; row++) {
       for (let col = 0; col < BOARD_COLS; col++) {
         // Calculate hex position with proper tessellation and spacing
-        const x = col * HEX_WIDTH * 0.88 + hexSize  // Increase spacing to prevent overlap
-        const y = row * HEX_HEIGHT * 0.88 + hexSize + yOffset  // Increase spacing to prevent overlap
+        const x = col * HEX_WIDTH * 0.88 + hexSize * 0.75  // Optimized spacing for better fit
+        const y = row * HEX_HEIGHT * 0.88 + hexSize * 0.25 + yOffset  // Optimized spacing for better fit
         
         // Offset every other row for hexagonal tessellation
         const offsetX = (row % 2 === 0) ? 0 : HEX_WIDTH * 0.44
@@ -75,7 +75,7 @@ function GameBoard({ units, onUnitMove }) {
       <svg 
         viewBox={`0 0 ${BOARD_WIDTH} ${TOTAL_HEIGHT}`}
         className="hex-game-board"
-        preserveAspectRatio="xMidYMid slice"
+        preserveAspectRatio="xMidYMid meet"
         style={{ maxWidth: '100%', maxHeight: '100%', width: '100%', height: '100%' }}
       >
         {/* Opponent Board */}
