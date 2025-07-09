@@ -1,0 +1,145 @@
+import React, { useState, useEffect } from 'react'
+import { Star } from 'lucide-react'
+import GameBoard from './components/GameBoard'
+import Shop from './components/Shop'
+import Bench from './components/Bench'
+import PlayerInfo from './components/PlayerInfo'
+import Timer from './components/Timer'
+import Analytics from './components/Analytics'
+import TraitsColumn from './components/TraitsColumn'
+import { initializeViewportScaling } from './utils/viewportScaling'
+import './styles/rolldown.css'
+
+const getLevelUpCost = (level) => {
+  const costs = [0, 2, 2, 6, 10, 20, 36, 56, 80]
+  return costs[level] || 0
+}
+
+const INITIAL_GAME_STATE = {
+  phase: 'scouting',
+  timer: 60,
+  player: {
+    gold: 150,
+    level: 8,
+    exp: 0,
+    board: [],
+    bench: [],
+    shop: []
+  },
+  unitPool: new Map(),
+  analytics: {
+    rollsPerMinute: 0,
+    goldSpent: 0,
+    startTime: Date.now(),
+    actions: []
+  }
+}
+
+function RolldownTool() {
+  const [gameState, setGameState] = useState(INITIAL_GAME_STATE)
+  
+  // Initialize viewport scaling on mount
+  useEffect(() => {
+    initializeViewportScaling()
+  }, [])
+  
+  return (
+    <div className="game-root">
+      <div className="game-content">
+        {/* Header Area - 15% of content height */}
+        <div className="game-header">
+          <div className="flex justify-between items-center p-4 bg-gray-800 border-b border-gray-700 w-full h-full">
+            <Timer 
+              phase={gameState.phase} 
+              timer={gameState.timer}
+              onPhaseChange={(newPhase) => setGameState(prev => ({ ...prev, phase: newPhase }))}
+            />
+            <Analytics analytics={gameState.analytics} />
+          </div>
+        </div>
+        
+        {/* Game Board Area - 60% of content height */}
+        <div className="game-board-area">
+          <GameBoard 
+            units={gameState.player.board}
+            onUnitMove={(fromPos, toPos) => {
+              // TODO: Implement unit movement
+              console.log('Move unit from', fromPos, 'to', toPos)
+            }}
+          />
+        </div>
+        
+        {/* Bench Area - 12% of content height */}
+        <div className="bench-area">
+          <Bench 
+            units={gameState.player.bench}
+            onUnitMove={(fromPos, toPos) => {
+              // TODO: Implement bench movement
+              console.log('Move bench unit from', fromPos, 'to', toPos)
+            }}
+          />
+        </div>
+        
+        {/* Shop Area - 13% of content height */}
+        <div className="shop-area">
+          <div className="shop-area-content" style={{ marginLeft: '-2%', width: '60%' }}>
+            {/* Level/XP section floating above */}
+            <div className="level-floating-section">
+              <div className="level-section bg-gray-900 p-2 rounded-lg mb-1" style={{ width: 'calc(25% - 0.5rem)', minWidth: '140px' }}>
+                <div className="flex items-center justify-between mb-1">
+                  <div className="flex items-center gap-1">
+                    <Star className="w-3 h-3 text-blue-400" />
+                    <span className="font-semibold text-sm">Lv {gameState.player.level}</span>
+                  </div>
+                  <div className="text-xs text-gray-400">
+                    {gameState.player.exp}/{getLevelUpCost(gameState.player.level)}
+                  </div>
+                </div>
+                <div className="bg-gray-700 rounded-full h-2">
+                  <div 
+                    className="bg-blue-400 h-2 rounded-full transition-all duration-300"
+                    style={{ width: `${(gameState.player.exp / getLevelUpCost(gameState.player.level)) * 100}%` }}
+                  />
+                </div>
+              </div>
+            </div>
+            
+            {/* Main wrapper with aligned elements */}
+            <div className="shop-container-wrapper">
+              {/* Player buttons - 25% of shop area width */}
+              <div className="player-buttons-section">
+                <div className="button-section flex flex-col gap-1" style={{ height: 'calc(var(--base-unit, 8.5rem) * 1.35)' }}>
+                  <button className="w-full px-2 py-1 bg-blue-600 hover:bg-blue-700 rounded transition-colors text-xs flex-1">
+                    Buy XP (4g)
+                  </button>
+                  <button className="w-full px-2 py-1 bg-blue-600 hover:bg-blue-700 rounded transition-colors text-xs flex-1">
+                    Refresh ($2)
+                  </button>
+                </div>
+              </div>
+              
+              {/* Shop - 75% of shop area width */}
+              <div className="shop-wrapper">
+                <Shop 
+                  units={gameState.player.shop}
+                  playerGold={gameState.player.gold}
+                  onPurchase={(unit) => {
+                    // TODO: Implement unit purchase
+                    console.log('Purchase unit', unit)
+                  }}
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        {/* Traits Column - Positioned absolutely */}
+        <div className="traits-column">
+          <TraitsColumn boardUnits={gameState.player.board} />
+        </div>
+      </div>
+    </div>
+  )
+}
+
+export default RolldownTool

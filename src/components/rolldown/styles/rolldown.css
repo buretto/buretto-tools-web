@@ -1,0 +1,463 @@
+/* TFT Rolldown Tool Styles */
+
+/* Viewport Scaling System */
+.game-root {
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  background: #1a1a1a;
+}
+
+.game-content {
+  width: 1280px;   /* Base container width (2/3 of 1920) */
+  height: 950px;   /* Further reduced height to prevent scrollbar */
+  transform: scale(var(--game-scale, 1));
+  transform-origin: center center;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  background: rgb(17 24 39); /* bg-gray-900 */
+  color: white;
+  
+  /* Base unit for proportional sizing: 1280px / 12 = ~107px */
+  --base-unit: 6.67rem; /* 107px converted to rem */
+}
+
+/* Proportional Layout Areas */
+.game-header {
+  height: 8%;
+  margin-bottom: 5%;
+  display: flex;
+  align-items: stretch;
+  width: 100%;
+}
+
+.game-board-area {
+  height: 60%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  overflow: hidden;
+}
+
+.game-board-area .game-board {
+  width: 55%;
+  max-width: 55%;
+}
+
+.bench-area {
+  height: 12%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 1rem;
+}
+
+.shop-area {
+  height: 13%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 1rem;
+}
+
+.shop-area-content {
+  display: flex;
+  flex-direction: column;
+}
+
+.level-floating-section {
+  margin-bottom: 0.25rem;
+}
+
+.shop-container-wrapper {
+  display: flex;
+  gap: 1rem;
+  background: rgb(31 41 55); /* bg-gray-800 */
+  border: 2px solid rgb(55 65 81); /* border-gray-700 */
+  border-radius: 8px;
+  padding: calc(var(--base-unit, 8.5rem) * 1.35 * 0.02); /* 2% of shop slot height */
+  align-items: center; /* Perfect alignment between buttons and shop slots */
+}
+
+.player-buttons-section {
+  width: calc(25% - 0.5rem);
+  min-width: 140px;
+}
+
+.shop-wrapper {
+  width: calc(75% - 0.5rem);
+}
+
+.traits-column {
+  position: absolute;
+  left: 1rem;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 10;
+}
+
+/* SVG Hexagonal Game Board */
+.hex-game-board {
+  display: block;
+  margin: 0 auto;
+  width: 100%;
+  height: 100%;
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: fill;
+}
+
+.hex-tile {
+  transition: all 0.2s ease;
+}
+
+.hex-tile.player:hover {
+  stroke: #60A5FA;
+  stroke-width: 3;
+}
+
+.hex-tile.opponent {
+  pointer-events: none;
+}
+
+/* Unit Cost Colors */
+.cost-1 {
+  border-color: #9CA3AF !important;
+}
+
+.cost-2 {
+  border-color: #22C55E !important;
+}
+
+.cost-3 {
+  border-color: #3B82F6 !important;
+}
+
+.cost-4 {
+  border-color: #A855F7 !important;
+}
+
+.cost-5 {
+  border-color: #EAB308 !important;
+}
+
+/* Unit Card Styles */
+.unit-card {
+  position: relative;
+  transition: transform 0.2s ease;
+}
+
+.unit-card:hover {
+  transform: scale(1.02);
+}
+
+.unit-image {
+  background-size: cover;
+  background-position: center;
+  border-radius: 6px;
+  position: relative;
+  overflow: hidden;
+}
+
+.unit-cost {
+  position: absolute;
+  bottom: 2px;
+  right: 2px;
+  background: rgba(0, 0, 0, 0.8);
+  padding: 2px 4px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: bold;
+}
+
+/* Shop Styles */
+.shop-container {
+  width: 100%;
+  height: 100%;
+  background: rgb(17 24 39); /* bg-gray-900 */
+  border-radius: 8px;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+}
+
+.shop-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.75rem;
+}
+
+.shop-title {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: rgb(156 163 175); /* text-gray-400 */
+}
+
+.refresh-btn {
+  padding: 0.25rem 0.75rem;
+  border-radius: 4px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  border: none;
+  cursor: pointer;
+}
+
+.refresh-btn.enabled {
+  background: rgb(37 99 235); /* bg-blue-600 */
+  color: white;
+}
+
+.refresh-btn.enabled:hover {
+  background: rgb(29 78 216); /* bg-blue-700 */
+}
+
+.refresh-btn.disabled {
+  background: rgb(75 85 99); /* bg-gray-600 */
+  color: rgb(156 163 175); /* text-gray-400 */
+  cursor: not-allowed;
+}
+
+.shop-slots {
+  display: flex;
+  gap: 0.75rem;
+  height: 100%;
+  width: 100%;
+  max-width: 100%;
+  justify-content: center;
+  flex-wrap: nowrap;
+}
+
+.shop-slot {
+  /* Base unit = 1280px / 12 = ~107px, shop slots = 150% of bench size */
+  /* Aspect ratio 1.35:1 (width:height) */
+  height: calc(var(--base-unit, 8.5rem) * 1.35); /* 150% of bench height */
+  width: calc(var(--base-unit, 8.5rem) * 1.35 * 1.35); /* height * 1.35 for correct aspect ratio */
+  min-width: 0; /* Allow shrinking */
+  max-width: calc((100% - 3rem) / 5); /* Fit 5 slots with gaps */
+  background: rgb(31 41 55); /* bg-gray-800 */
+  border: 2px solid rgb(55 65 81); /* border-gray-700 */
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+  flex-shrink: 1;
+}
+
+.shop-slot:hover {
+  border-color: rgb(75 85 99); /* border-gray-600 */
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+}
+
+.shop-slot .unit-display {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+}
+
+.shop-slot .unit-avatar {
+  width: 65%;
+  height: 65%;
+  border-radius: 6px;
+  border: 2px solid;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  font-size: 1.125rem;
+  background: rgba(0, 0, 0, 0.3);
+  color: white;
+}
+
+.shop-slot .unit-cost {
+  font-size: 0.75rem;
+  color: rgb(250 204 21); /* text-yellow-400 */
+  font-weight: 600;
+}
+
+.shop-slot .empty-slot {
+  color: rgb(107 114 128); /* text-gray-500 */
+  font-size: 0.875rem;
+}
+
+/* Bench Styles */
+.bench-container {
+  width: 100%;
+  max-width: 55%; /* 2/3 of available width */
+  height: 100%;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.bench-slots {
+  display: flex;
+  gap: 0.5rem;
+  height: 80%;
+  width: 100%;
+  max-width: 100%;
+  justify-content: center;
+  flex-wrap: nowrap;
+}
+
+.bench-slot {
+  /* Base unit = 1280px / 12 = ~107px, bench tiles = 90% of hex size */
+  /* Aspect ratio 1.35:1 (width:height) */
+  height: calc(var(--base-unit, 8.5rem) * 0.9);
+  width: calc(var(--base-unit, 8.5rem) * 0.9 * 1.35); /* height * 1.35 for correct aspect ratio */
+  min-width: 0; /* Allow shrinking */
+  max-width: calc((100% - 4rem) / 9); /* Fit 9 slots with gaps */
+  background: rgb(55 65 81); /* bg-gray-700 */
+  border: 2px solid rgb(75 85 99); /* border-gray-600 */
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+  flex-shrink: 1;
+}
+
+.bench-slot:hover {
+  border-color: rgb(107 114 128); /* border-gray-500 */
+  transform: translateY(-2px);
+}
+
+.bench-slot .unit-display {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.bench-slot .unit-avatar {
+  width: 60%;
+  height: 60%;
+  border-radius: 4px;
+  border: 2px solid;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  font-size: 1rem;
+  background: rgba(0, 0, 0, 0.3);
+  color: white;
+}
+
+/* Drag and Drop States */
+.dragging {
+  opacity: 0.5;
+  transform: scale(0.95);
+}
+
+.drop-target {
+  background: rgba(59, 130, 246, 0.2) !important;
+  border-color: #3B82F6 !important;
+}
+
+.drop-invalid {
+  background: rgba(239, 68, 68, 0.2) !important;
+  border-color: #EF4444 !important;
+}
+
+/* Animation Classes */
+.fade-in {
+  animation: fadeIn 0.3s ease;
+}
+
+.slide-up {
+  animation: slideUp 0.3s ease;
+}
+
+.pulse {
+  animation: pulse 2s infinite;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes pulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+}
+
+/* Responsive Design */
+/* Responsive Design - Use container queries when available, fallback to media queries */
+@media (max-width: 1024px) {
+  .shop-slot,
+  .bench-slot {
+    aspect-ratio: 1;
+    min-width: 60px;
+  }
+  
+  .bench-slot {
+    max-width: calc((100% - 3rem) / 9); /* Tighter spacing on smaller screens */
+  }
+  
+  .shop-slot {
+    max-width: calc((100% - 2.5rem) / 5); /* Tighter spacing on smaller screens */
+  }
+}
+
+@media (max-width: 768px) {
+  .shop-slot,
+  .bench-slot {
+    aspect-ratio: 1;
+    min-width: 50px;
+  }
+  
+  .bench-slots {
+    gap: 0.25rem;
+  }
+  
+  .shop-slots {
+    gap: 0.5rem;
+  }
+  
+  .bench-slot {
+    max-width: calc((100% - 2rem) / 9);
+  }
+  
+  .shop-slot {
+    max-width: calc((100% - 2rem) / 5);
+  }
+}

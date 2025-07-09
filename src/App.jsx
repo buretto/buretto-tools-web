@@ -3,6 +3,7 @@ import Navigation from './components/Navigation'
 import SeriesCalculator from './components/SeriesCalculator.jsx'
 import ReverseSeriesCalculator from './components/ReverseSeriesCalculator.jsx'
 import RangeSeriesCalculator from './components/RangeSeriesCalculator.jsx'
+import RolldownTool from './components/rolldown/RolldownTool.jsx'
 import Home from './components/Home'
 
 function App() {
@@ -16,6 +17,8 @@ function App() {
         return <ReverseSeriesCalculator />
       case 'range-series-calculator':
         return <RangeSeriesCalculator />
+      case 'rolldown-tool':
+        return <RolldownTool />
       default:
         return <Home onNavigate={setCurrentPage} />
     }

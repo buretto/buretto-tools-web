@@ -59,6 +59,12 @@ function Navigation({ currentPage, onNavigate }) {
             >
               Range Calculator
             </button>
+            <button 
+              onClick={() => onNavigate('rolldown-tool')}
+              className={`${currentPage === 'rolldown-tool' ? 'text-buretto-primary font-medium' : 'text-gray-600 hover:text-gray-900'}`}
+            >
+              TFT Rolldown
+            </button>
             <a 
               href="https://www.buretto.com" 
               className="text-buretto-secondary font-medium hover:text-yellow-600"
