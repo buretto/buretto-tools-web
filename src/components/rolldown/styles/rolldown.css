@@ -33,18 +33,16 @@
 /* Proportional Layout Areas */
 .game-header {
   height: 8%;
-  margin-bottom: 5%;
   display: flex;
   align-items: stretch;
   width: 100%;
 }
 
 .game-board-area {
-  height: 60%;
+  height: 63%;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 1rem;
   overflow: hidden;
 }
 
@@ -54,7 +52,7 @@
 }
 
 .bench-area {
-  height: 12%;
+  height: 13%;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -62,7 +60,7 @@
 }
 
 .shop-area {
-  height: 13%;
+  height: 14%;
   display: flex;
   align-items: center;
   justify-content: center;

@@ -45,8 +45,8 @@ function GameBoard({ units, onUnitMove }) {
     for (let row = 0; row < BOARD_ROWS; row++) {
       for (let col = 0; col < BOARD_COLS; col++) {
         // Calculate hex position with proper tessellation and spacing
-        const x = col * HEX_WIDTH * 0.88 + hexSize * 0.75  // Optimized spacing for better fit
-        const y = row * HEX_HEIGHT * 0.88 + hexSize * 0.25 + yOffset  // Optimized spacing for better fit
+        const x = col * HEX_WIDTH * 0.88 + hexSize * 1.25  // Optimized spacing for better fit
+        const y = row * HEX_HEIGHT * 0.88 + hexSize * 1.25 + yOffset  // Increased Y offset to center tiles properly
         
         // Offset every other row for hexagonal tessellation
         const offsetX = (row % 2 === 0) ? 0 : HEX_WIDTH * 0.44
