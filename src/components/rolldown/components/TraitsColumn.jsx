@@ -16,17 +16,28 @@ function TraitsColumn({ boardUnits }) {
   }
   
   return (
-    <div className="traits-column fixed left-4 top-20 w-16 space-y-2">
+    <div className="traits-column">
       {traits.map((trait, index) => {
         const IconComponent = trait.icon
         return (
           <div
             key={index}
-            className={`trait-item p-2 rounded-lg border-2 transition-all ${getTraitStyle(trait.count, trait.threshold)}`}
+            className={`trait-item rounded-lg border-2 transition-all ${getTraitStyle(trait.count, trait.threshold)}`}
+            style={{ 
+              width: 'clamp(1.8rem, 4.8vw, 2.4rem)',
+              marginBottom: 'clamp(0.18rem, 0.48vw, 0.3rem)',
+              padding: 'clamp(0.18rem, 0.48vw, 0.3rem)' /* 20% bigger overall */
+            }}
           >
             <div className="flex flex-col items-center">
-              <IconComponent className="w-6 h-6 mb-1" />
-              <div className="text-xs font-bold">
+              <IconComponent 
+                style={{ 
+                  width: 'clamp(10.8px, 2.4vw, 14.4px)', 
+                  height: 'clamp(10.8px, 2.4vw, 14.4px)',
+                  marginBottom: 'clamp(0.12rem, 0.3vw, 0.15rem)'
+                }} 
+              />
+              <div className="responsive-header-text-xs font-bold">
                 {trait.count}/{trait.threshold}
               </div>
             </div>

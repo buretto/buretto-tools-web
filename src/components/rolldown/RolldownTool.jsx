@@ -7,7 +7,6 @@ import PlayerInfo from './components/PlayerInfo'
 import Timer from './components/Timer'
 import Analytics from './components/Analytics'
 import TraitsColumn from './components/TraitsColumn'
-import { initializeViewportScaling } from './utils/viewportScaling'
 import './styles/rolldown.css'
 
 const getLevelUpCost = (level) => {
@@ -38,10 +37,6 @@ const INITIAL_GAME_STATE = {
 function RolldownTool() {
   const [gameState, setGameState] = useState(INITIAL_GAME_STATE)
   
-  // Initialize viewport scaling on mount
-  useEffect(() => {
-    initializeViewportScaling()
-  }, [])
   
   return (
     <div className="game-root">
@@ -82,10 +77,10 @@ function RolldownTool() {
         
         {/* Shop Area - 13% of content height */}
         <div className="shop-area">
-          <div className="shop-area-content" style={{ marginLeft: '-2%', width: '60%' }}>
+          <div className="shop-area-content">
             {/* Level/XP section floating above */}
             <div className="level-floating-section">
-              <div className="level-section bg-gray-900 p-2 rounded-lg mb-1" style={{ width: 'calc(var(--base-unit) * 2.62)', minWidth: 'calc(var(--base-unit) * 2.62)' }}>
+              <div className="level-section bg-gray-900 p-2 rounded-lg mb-1" style={{ flex: 1 }}>
                 <div className="flex items-center justify-between mb-1">
                   <div className="flex items-center gap-1">
                     <Star className="w-3 h-3 text-blue-400" />
@@ -108,11 +103,11 @@ function RolldownTool() {
             <div className="shop-container-wrapper">
               {/* Player buttons - 25% of shop area width */}
               <div className="player-buttons-section unified-slot">
-                <div className="button-section flex flex-col" style={{ height: 'calc(var(--base-unit) * 1.85 - var(--base-unit) * 0.12)', gap: 'calc(var(--base-unit) * 0.06)', position: 'relative', zIndex: 1 }}>
-                  <button className="w-full px-2 py-1 bg-blue-600 hover:bg-blue-700 rounded transition-colors text-xs flex-1">
+                <div className="button-section flex flex-col responsive-button-gap" style={{ height: '100%', position: 'relative', zIndex: 1 }}>
+                  <button className="w-full bg-blue-600 hover:bg-blue-700 rounded transition-colors responsive-button-text responsive-button-padding flex-1">
                     Buy XP (4g)
                   </button>
-                  <button className="w-full px-2 py-1 bg-blue-600 hover:bg-blue-700 rounded transition-colors text-xs flex-1">
+                  <button className="w-full bg-blue-600 hover:bg-blue-700 rounded transition-colors responsive-button-text responsive-button-padding flex-1">
                     Refresh ($2)
                   </button>
                 </div>

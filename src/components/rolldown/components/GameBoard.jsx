@@ -1,34 +1,12 @@
-import React, { useEffect, useState } from 'react'
+import React from 'react'
 import HexTile from './HexTile'
 
 const BOARD_ROWS = 4
 const BOARD_COLS = 7
 
 function GameBoard({ units, onUnitMove }) {
-  const [hexSize, setHexSize] = useState(107) // Default fallback
-  
-  // Read hex size from CSS custom property
-  useEffect(() => {
-    const updateHexSize = () => {
-      const baseUnit = parseFloat(
-        getComputedStyle(document.documentElement)
-          .getPropertyValue('--base-unit')
-          .replace('px', '')
-      ) || 107 // Fallback to default
-      
-      setHexSize(baseUnit)
-    }
-    
-    updateHexSize()
-    // Listen for changes to the CSS custom property
-    const observer = new MutationObserver(updateHexSize)
-    observer.observe(document.documentElement, { 
-      attributes: true, 
-      attributeFilter: ['style'] 
-    })
-    
-    return () => observer.disconnect()
-  }, [])
+  // Simple responsive hex size calculation
+  const hexSize = Math.min(window.innerWidth / 18, window.innerHeight / 14)
   
   const HEX_WIDTH = hexSize * 2
   const HEX_HEIGHT = hexSize * Math.sqrt(3)

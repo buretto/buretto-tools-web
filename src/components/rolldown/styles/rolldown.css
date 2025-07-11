@@ -12,22 +12,18 @@
 }
 
 .game-content {
-  width: 1280px;   /* Base container width (2/3 of 1920) */
-  height: 950px;   /* Further reduced height to prevent scrollbar */
-  transform: scale(var(--game-scale, 1));
-  transform-origin: center center;
+  /* Responsive dimensions that maintain aspect ratio (1280:950 ≈ 1.35:1) */
+  width: min(90vw, calc(90vh * 1.35));   /* Scale by viewport, maintain aspect ratio */
+  height: min(90vh, calc(90vw / 1.35));  /* Scale by viewport, maintain aspect ratio */
+  min-width: 400px;   /* Reduced minimum for better viewport fit */
+  min-height: 300px;  /* Reduced minimum for better viewport fit */
+  max-width: 1280px;  /* Original design size as maximum */
+  max-height: 950px;  /* Original design size as maximum */
   position: relative;
   display: flex;
   flex-direction: column;
   background: rgb(17 24 39); /* bg-gray-900 */
   color: white;
-  
-  /* Dynamic base unit for proportional sizing */
-  /* Takes the smaller of width/height scaled appropriately to maintain proportions */
-  --base-unit: min(
-    calc(100vw / 18),  /* Width-based: scale to viewport width */
-    calc(100vh / 14)   /* Height-based: scale to viewport height */
-  );
 }
 
 /* Proportional Layout Areas */
@@ -39,41 +35,43 @@
 }
 
 .game-board-area {
-  height: 63%;
+  height: 72%;
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: center; /* GameBoard stays centered */
   overflow: hidden;
 }
 
 .game-board-area .game-board {
-  width: clamp(50%, 55%, 60%); /* Flexible width with 55% target */
-  max-width: 60%;
+  width: 50%; /* Consistent percentage-based width - narrowest */
+  margin: 0 auto; /* Center the board */
 }
 
 .bench-area {
-  height: 13%;
+  height: 8%;
   display: flex;
   align-items: center;
-  justify-content: center;
-  padding: 0 1rem;
 }
 
 .shop-area {
-  height: 14%;
+  height: 18%;
   display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0 1rem;
+  align-items: stretch; /* Allow content to fill area */
+  overflow: hidden; /* Prevent content from spilling outside container */
 }
 
 .shop-area-content {
   display: flex;
-  flex-direction: column;
+  flex-direction: column; /* Normal order: level first, then shop */
+  height: 100%; /* Take full height of shop-area (12%) */
 }
 
 .level-floating-section {
-  margin-bottom: 0;
+  width: 20%; /* Match shop-container-wrapper width */
+  margin-left: 20%; /* Align with shop-container positioning */
+  height: 40%; /* Fixed portion of shop-area height */
+  display: flex;
+  align-items: center; /* Center content vertically within allocated space */
 }
 
 .shop-container-wrapper {
@@ -82,7 +80,10 @@
   background: transparent; /* Remove wrapper background */
   border-radius: 4px;
   padding: 0; /* Remove wrapper padding */
-  align-items: center;
+  align-items: stretch; /* Allow children to fill height */
+  margin-left: 20%; /* Positions left edge 2.5% left of bench */
+  width: 100%;
+  height: 60%; /* Fixed portion of shop-area height (100% - 40% for level) */
 }
 
 /* Unified slot styling for buttons and shop slots */
@@ -90,36 +91,42 @@
   background: rgb(31 41 55); /* Consistent slot background (frame color) */
   border: 1px solid rgb(55 65 81); /* Subtle border */
   border-radius: 4px;
-  padding: calc(var(--base-unit) * 0.06); /* Increased padding for visibility */
+  padding: 0.5rem; /* Standard padding */
   position: relative;
 }
 
 .unified-slot::before {
   content: '';
   position: absolute;
-  top: calc(var(--base-unit) * 0.04); /* Leave thin frame border */
-  left: calc(var(--base-unit) * 0.04);
-  right: calc(var(--base-unit) * 0.04);
-  bottom: calc(var(--base-unit) * 0.04);
+  top: 0.25rem; /* Leave thin frame border */
+  left: 0.25rem;
+  right: 0.25rem;
+  bottom: 0.25rem;
   background: rgb(17 24 39); /* Darker inner background for shadow effect */
   border-radius: 2px;
   z-index: 0;
 }
 
 .player-buttons-section {
-  width: calc(var(--base-unit) * 2.62); /* Match shop slot total width */
-  min-width: calc(var(--base-unit) * 2.62);
+  flex-shrink: 0; /* Prevent shrinking */
+  width: 20%; /* Match shop slot width (1/5 of container = 20%) */
 }
 
 .shop-wrapper {
   flex: 1; /* Take remaining space after button section */
+  height: 100%; /* Ensure full height */
 }
 
 .traits-column {
   position: absolute;
   left: 1rem;
   top: 50%;
-  transform: translateY(-50%);
+  transform: translateY(-40%);
+  height: 66.67vh; /* 2/3 of viewport height */
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start; /* Items appear from top */
+  align-items: center; /* Center horizontally */
   z-index: 10;
 }
 
@@ -252,20 +259,18 @@
   height: 100%;
   width: 100%;
   max-width: 100%;
-  justify-content: center;
   flex-wrap: nowrap;
 }
 
 .shop-slot {
-  /* Proportional sizing: inner content 2.5 + padding 0.12 */
-  width: calc(var(--base-unit) * 2.62); /* 2.5 + 0.06*2 for padding */
-  height: calc(var(--base-unit) * 1.97); /* 1.85 + 0.06*2 for padding */
+  /* Flexible sizing to fill available width */
+  flex: 1; /* Expand equally to fill container */
+  height: 100%; /* Fill full container height */
   min-width: 0;
-  max-width: 100%; /* Remove outdated gap-based constraint */
   background: rgb(31 41 55); /* Unified slot background (frame color) */
   border: 1px solid rgb(55 65 81); /* Unified slot border */
   border-radius: 4px;
-  padding: calc(var(--base-unit) * 0.06); /* Unified slot padding */
+  padding: 0.5rem; /* Unified slot padding */
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -279,10 +284,10 @@
 .shop-slot::before {
   content: '';
   position: absolute;
-  top: calc(var(--base-unit) * 0.04); /* Leave thin frame border */
-  left: calc(var(--base-unit) * 0.04);
-  right: calc(var(--base-unit) * 0.04);
-  bottom: calc(var(--base-unit) * 0.04);
+  top: 0.25rem; /* Leave thin frame border */
+  left: 0.25rem;
+  right: 0.25rem;
+  bottom: 0.25rem;
   background: rgb(17 24 39); /* Darker inner background for shadow effect */
   border-radius: 2px;
   z-index: 0;
@@ -343,10 +348,9 @@
 
 /* Bench Styles */
 .bench-container {
-  width: 100%;
-  max-width: clamp(50%, 55%, 65%); /* Flexible width with 55% target */
+  width: 47.5%; /* Extends 2.5% left of board, aligns right with board */
   height: 100%;
-  margin: 0 auto;
+  margin-left: 25%; /* Positions left edge 2.5% left of board */
   display: flex;
   align-items: center;
   justify-content: center;
@@ -354,7 +358,7 @@
 
 .bench-slots {
   display: flex;
-  gap: calc(var(--base-unit) * 0.04); /* Proportional gap */
+  gap: 0.25rem; /* Standard gap */
   height: 80%;
   width: 100%;
   max-width: 100%;
@@ -363,15 +367,15 @@
 }
 
 .bench-slot {
-  /* Proportional sizing: inner content 2.0 + padding 0.12 */
-  width: calc(var(--base-unit) * 2.12); /* 2.0 + 0.06*2 for padding */
-  height: calc(var(--base-unit) * 1.60); /* 1.48 + 0.06*2 for padding */
+  /* Flexible sizing with aspect ratio */
+  flex: 1; /* Equal width distribution */
+  aspect-ratio: 1.32; /* Maintain proportional shape (2.12/1.60) */
   min-width: 0;
-  max-width: 100%; /* Remove outdated gap-based constraint */
+  max-width: 100%;
   background: rgb(55 65 81); /* bg-gray-700 */
   border: 1px solid rgb(75 85 99); /* Thinner border */
   border-radius: 4px; /* Smaller radius for consistency */
-  padding: calc(var(--base-unit) * 0.06); /* Unified slot padding */
+  padding: 0.5rem; /* Unified slot padding */
   display: flex;
   align-items: center;
   justify-content: center;
@@ -466,13 +470,71 @@
   }
 }
 
+/* Responsive Button Text */
+.responsive-button-text {
+  font-size: clamp(0.35rem, 0.6vw, 0.5rem); /* Reduced ~30% for better fit in slots */
+  font-weight: 500;
+}
+
+/* Responsive Button Padding */
+.responsive-button-padding {
+  padding: clamp(0.12rem, 0.35vw, 0.25rem) clamp(0.18rem, 0.6vw, 0.5rem); /* Reduced ~40% for better fit */
+}
+
+/* Responsive Button Gap */
+.responsive-button-gap {
+  gap: clamp(0.14rem, 0.35vw, 0.35rem); /* Reduced ~30% to prevent vertical overflow */
+}
+
+/* Responsive Header Elements */
+.responsive-header-text-xs {
+  font-size: clamp(0.5rem, 0.8vw, 0.75rem); /* Scale from 8px to 12px */
+}
+
+.responsive-header-text-sm {
+  font-size: clamp(0.7rem, 1.0vw, 0.875rem); /* Scale from 11px to 14px */
+}
+
+.responsive-header-text-lg {
+  font-size: clamp(0.8rem, 1.2vw, 1.125rem); /* Scale from 13px to 18px */
+}
+
+.responsive-header-text-xl {
+  font-size: clamp(1rem, 1.6vw, 1.5rem); /* Scale from 16px to 24px */
+}
+
+.responsive-header-icon-sm {
+  width: clamp(12px, 2.5vw, 16px);
+  height: clamp(12px, 2.5vw, 16px);
+}
+
+.responsive-header-icon-md {
+  width: clamp(16px, 3vw, 20px);
+  height: clamp(16px, 3vw, 20px);
+}
+
+.responsive-header-gap-sm {
+  gap: clamp(0.3rem, 0.8vw, 0.75rem); /* Small gaps */
+}
+
+.responsive-header-gap-md {
+  gap: clamp(0.5rem, 1.2vw, 1rem); /* Medium gaps */
+}
+
+.responsive-header-gap-lg {
+  gap: clamp(0.8rem, 1.5vw, 1.5rem); /* Large gaps */
+}
+
+.responsive-header-padding {
+  padding: clamp(0.3rem, 0.8vw, 0.5rem) clamp(0.6rem, 1.2vw, 1rem);
+}
+
 /* Responsive Design */
 /* Responsive Design - Use container queries when available, fallback to media queries */
-@media (max-width: 1024px) {
+@media (max-width:1000000px) {
   .shop-slot,
   .bench-slot {
-    aspect-ratio: 1;
-    min-width: 60px;
+    aspect-ratio: 1.32;
   }
   
   .bench-slot {
@@ -484,26 +546,3 @@
   }
 }
 
-@media (max-width: 768px) {
-  .shop-slot,
-  .bench-slot {
-    aspect-ratio: 1;
-    min-width: 50px;
-  }
-  
-  .bench-slots {
-    gap: 0.25rem;
-  }
-  
-  .shop-slots {
-    gap: 0.5rem;
-  }
-  
-  .bench-slot {
-    max-width: 100%; /* Remove outdated constraint */
-  }
-  
-  .shop-slot {
-    max-width: 100%; /* Remove outdated constraint */
-  }
-}

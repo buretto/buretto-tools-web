@@ -33,31 +33,31 @@ function Timer({ phase, timer, onPhaseChange }) {
   }
   
   return (
-    <div className="timer flex items-center gap-4">
-      <div className="flex items-center gap-2">
-        <Clock className="w-5 h-5 text-gray-400" />
-        <div className={`text-2xl font-bold ${getPhaseColor(phase)}`}>
+    <div className="timer flex items-center responsive-header-gap-md">
+      <div className="flex items-center responsive-header-gap-sm">
+        <Clock className="responsive-header-icon-md text-gray-400" />
+        <div className={`responsive-header-text-xl font-bold ${getPhaseColor(phase)}`}>
           {formatTime(timer)}
         </div>
       </div>
       
-      <div className="flex items-center gap-3">
-        <div className={`text-lg font-semibold ${getPhaseColor(phase)}`}>
+      <div className="flex items-center responsive-header-gap-sm">
+        <div className={`responsive-header-text-lg font-semibold ${getPhaseColor(phase)}`}>
           {getPhaseDisplay(phase)}
         </div>
         
         {phase === 'scouting' && (
           <button
             onClick={handleStartShopping}
-            className="px-4 py-2 bg-yellow-600 hover:bg-yellow-700 rounded transition-colors flex items-center gap-2"
+            className="bg-yellow-600 hover:bg-yellow-700 rounded transition-colors flex items-center responsive-header-gap-sm responsive-header-padding"
           >
-            <Play className="w-4 h-4" />
-            Start Shopping
+            <Play className="responsive-header-icon-sm" />
+            <span className="responsive-header-text-sm">Start Shopping</span>
           </button>
         )}
         
         {phase === 'shopping' && (
-          <div className="text-sm text-gray-400">
+          <div className="responsive-header-text-sm text-gray-400">
             Shopping Phase Active
           </div>
         )}

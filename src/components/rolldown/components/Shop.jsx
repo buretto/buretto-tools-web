@@ -27,7 +27,7 @@ function Shop({ units = [], playerGold = 0, onPurchase }) {
               </div>
             </div>
           ) : (
-            <div className="empty-slot">Empty</div>
+            <div className="empty-slot"></div>
           )}
         </div>
       )

@@ -13,48 +13,48 @@ function Analytics({ analytics }) {
   }
   
   return (
-    <div className="analytics flex items-center gap-6">
-      <div className="flex items-center gap-2">
-        <BarChart3 className="w-5 h-5 text-green-400" />
-        <span className="font-semibold">Analytics</span>
+    <div className="analytics flex items-center responsive-header-gap-lg">
+      <div className="flex items-center responsive-header-gap-sm">
+        <BarChart3 className="responsive-header-icon-md text-green-400" />
+        <span className="font-semibold responsive-header-text-lg">Analytics</span>
       </div>
       
-      <div className="flex items-center gap-6">
+      <div className="flex items-center responsive-header-gap-md">
         <div className="stat-item">
-          <div className="flex items-center gap-2">
-            <Clock className="w-4 h-4 text-blue-400" />
-            <span className="text-sm font-medium">Time:</span>
-            <span className="text-lg font-bold text-blue-400">
+          <div className="flex items-center responsive-header-gap-sm">
+            <Clock className="responsive-header-icon-sm text-blue-400" />
+            <span className="responsive-header-text-sm font-medium">Time:</span>
+            <span className="responsive-header-text-lg font-bold text-blue-400">
               {formatElapsedTime(getElapsedTime())}
             </span>
           </div>
         </div>
         
         <div className="stat-item">
-          <div className="flex items-center gap-2">
-            <MousePointer className="w-4 h-4 text-purple-400" />
-            <span className="text-sm font-medium">Rolls/Min:</span>
-            <span className="text-lg font-bold text-purple-400">
+          <div className="flex items-center responsive-header-gap-sm">
+            <MousePointer className="responsive-header-icon-sm text-purple-400" />
+            <span className="responsive-header-text-sm font-medium">Rolls/Min:</span>
+            <span className="responsive-header-text-lg font-bold text-purple-400">
               {analytics.rollsPerMinute.toFixed(1)}
             </span>
           </div>
         </div>
         
         <div className="stat-item">
-          <div className="flex items-center gap-2">
-            <DollarSign className="w-4 h-4 text-yellow-400" />
-            <span className="text-sm font-medium">Gold Spent:</span>
-            <span className="text-lg font-bold text-yellow-400">
+          <div className="flex items-center responsive-header-gap-sm">
+            <DollarSign className="responsive-header-icon-sm text-yellow-400" />
+            <span className="responsive-header-text-sm font-medium">Gold Spent:</span>
+            <span className="responsive-header-text-lg font-bold text-yellow-400">
               {analytics.goldSpent}
             </span>
           </div>
         </div>
         
         <div className="stat-item">
-          <div className="flex items-center gap-2">
-            <BarChart3 className="w-4 h-4 text-green-400" />
-            <span className="text-sm font-medium">Actions:</span>
-            <span className="text-lg font-bold text-green-400">
+          <div className="flex items-center responsive-header-gap-sm">
+            <BarChart3 className="responsive-header-icon-sm text-green-400" />
+            <span className="responsive-header-text-sm font-medium">Actions:</span>
+            <span className="responsive-header-text-lg font-bold text-green-400">
               {analytics.actions.length}
             </span>
           </div>
