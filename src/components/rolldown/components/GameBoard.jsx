@@ -18,7 +18,7 @@ function GameBoard({ units, onUnitMove }) {
   
   const renderHexGrid = (isOpponent = false) => {
     const tiles = []
-    const yOffset = isOpponent ? 0 : BOARD_HEIGHT + hexSize * 0.25  // Account for reduced gap
+    const yOffset = isOpponent ? hexSize * Math.sqrt(3) * 0.3 : BOARD_HEIGHT + hexSize * 0.25  // Move opponent down by 30% hex height
     
     for (let row = 0; row < BOARD_ROWS; row++) {
       for (let col = 0; col < BOARD_COLS; col++) {

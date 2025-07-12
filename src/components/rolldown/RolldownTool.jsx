@@ -3,6 +3,7 @@ import { Star } from 'lucide-react'
 import GameBoard from './components/GameBoard'
 import Shop from './components/Shop'
 import Bench from './components/Bench'
+import OpponentBench from './components/OpponentBench'
 import PlayerInfo from './components/PlayerInfo'
 import Timer from './components/Timer'
 import Analytics from './components/Analytics'
@@ -24,6 +25,9 @@ const INITIAL_GAME_STATE = {
     board: [],
     bench: [],
     shop: []
+  },
+  opponent: {
+    bench: [] // Opponent bench for display purposes
   },
   unitPool: new Map(),
   analytics: {
@@ -53,7 +57,15 @@ function RolldownTool() {
           </div>
         </div>
         
-        {/* Game Board Area - 60% of content height */}
+        {/* Opponent Bench Area - 6.8% of content height */}
+        <div className="opponent-bench-area">
+          <OpponentBench 
+            units={gameState.opponent?.bench || []}
+            label="Opponent Bench"
+          />
+        </div>
+        
+        {/* Game Board Area - 61.2% of content height */}
         <div className="game-board-area">
           <GameBoard 
             units={gameState.player.board}
@@ -64,7 +76,7 @@ function RolldownTool() {
           />
         </div>
         
-        {/* Bench Area - 12% of content height */}
+        {/* Player Bench Area - 6.8% of content height */}
         <div className="bench-area">
           <Bench 
             units={gameState.player.bench}

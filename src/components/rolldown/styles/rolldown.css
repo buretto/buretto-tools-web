@@ -33,8 +33,16 @@
   width: 100%;
 }
 
+.opponent-bench-area {
+  height: 6.8%;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end; /* Align opponent bench to the right */
+  margin-top: 1.5%; /* Move down by same amount as opponent board (30% hex height equivalent) */
+}
+
 .game-board-area {
-  height: 72%;
+  height: 61.2%; /* Reduced by 15% from 72% */
   display: flex;
   align-items: center;
   justify-content: center; /* GameBoard stays centered */
@@ -47,7 +55,7 @@
 }
 
 .bench-area {
-  height: 8%;
+  height: 6.8%; /* Reduced by 15% from 8% */
   display: flex;
   align-items: center;
 }
@@ -68,7 +76,7 @@
 .level-floating-section {
   width: 20%; /* Match shop-container-wrapper width */
   margin-left: 28%; /* Align with shop-container positioning */
-  height: 40%; /* Fixed portion of shop-area height */
+  height: 30%; /* Fixed portion of shop-area height */
   display: flex;
   align-items: flex-end; /* Anchor level section to bottom of allocated space */
 }
@@ -350,6 +358,16 @@
   width: 50%; /* Extends 2.5% left of board, aligns right with board */
   height: 100%;
   margin-left: 23%; /* Positions left edge 2.5% left of board */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Opponent bench styling - positioned on the right */
+.opponent-bench-container {
+  width: 50%; /* Same width as player bench */
+  height: 100%;
+  margin-right: 23%; /* Positions right edge 2.5% right of board */
   display: flex;
   align-items: center;
   justify-content: center;
