@@ -84,9 +84,9 @@ function RolldownTool() {
                 <div className="flex items-center justify-between mb-1">
                   <div className="flex items-center gap-1">
                     <Star className="w-3 h-3 text-blue-400" />
-                    <span className="font-semibold text-sm">Lv {gameState.player.level}</span>
+                    <span className="font-semibold responsive-header-text-sm">Lv {gameState.player.level}</span>
                   </div>
-                  <div className="text-xs text-gray-400">
+                  <div className="responsive-header-text-xs text-gray-400">
                     {gameState.player.exp}/{getLevelUpCost(gameState.player.level)}
                   </div>
                 </div>

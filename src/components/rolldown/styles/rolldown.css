@@ -15,8 +15,8 @@
   /* Responsive dimensions that maintain aspect ratio (1280:950 ≈ 1.35:1) */
   width: min(90vw, calc(90vh * 1.35));   /* Scale by viewport, maintain aspect ratio */
   height: min(90vh, calc(90vw / 1.35));  /* Scale by viewport, maintain aspect ratio */
-  min-width: 400px;   /* Reduced minimum for better viewport fit */
-  min-height: 300px;  /* Reduced minimum for better viewport fit */
+  min-width: 600px;   /* Minimum letterbox width to prevent scaling issues */
+  min-height: 444px;  /* Minimum height to maintain 1.35:1 aspect ratio at 600px width */
   max-width: 1280px;  /* Original design size as maximum */
   max-height: 950px;  /* Original design size as maximum */
   position: relative;
