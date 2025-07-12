@@ -5,26 +5,34 @@ const BOARD_ROWS = 4
 const BOARD_COLS = 7
 
 function GameBoard({ units, onUnitMove }) {
-  // Simple responsive hex size calculation
-  const hexSize = Math.min(window.innerWidth / 18, window.innerHeight / 14)
+  // Base hex size calculation without multiplier for consistent viewBox
+  const availableHeight = window.innerHeight * 0.612 // 61.2% for game-board-area
+  const availableWidth = window.innerWidth * 0.5 // 50% for game-board width
+  const baseHexSize = Math.min(availableWidth / 18, availableHeight / 14)
+  
+  // Adjustable multiplier for actual hex tile size
+  const hexSizeMultiplier = 1.075 // Change this to scale hex tiles
+  const hexSize = baseHexSize * hexSizeMultiplier
   
   const HEX_WIDTH = hexSize * 2
   const HEX_HEIGHT = hexSize * Math.sqrt(3)
   
-  // Calculate board dimensions with proper padding for current spacing (0.88/0.44)
-  const BOARD_WIDTH = HEX_WIDTH * BOARD_COLS * 0.88 + hexSize * 1.5  // Reduced padding for better fit
-  const BOARD_HEIGHT = HEX_HEIGHT * BOARD_ROWS * 0.88 + HEX_HEIGHT * 0.5  // Reduced padding for better fit
-  const TOTAL_HEIGHT = BOARD_HEIGHT * 2 + hexSize * 0.5  // Reduced gap between boards
+  // Use base size for viewBox calculations to keep coordinate system stable
+  const BASE_HEX_WIDTH = baseHexSize * 2
+  const BASE_HEX_HEIGHT = baseHexSize * Math.sqrt(3)
+  const BOARD_WIDTH = BASE_HEX_WIDTH * BOARD_COLS * 0.88 + baseHexSize * 1.5
+  const BOARD_HEIGHT = BASE_HEX_HEIGHT * BOARD_ROWS * 0.88 + BASE_HEX_HEIGHT * 0.5
+  const TOTAL_HEIGHT = BOARD_HEIGHT * 2 + baseHexSize * 0.15
   
   const renderHexGrid = (isOpponent = false) => {
     const tiles = []
-    const yOffset = isOpponent ? hexSize * Math.sqrt(3) * 0.3 : BOARD_HEIGHT + hexSize * 0.25  // Move opponent down by 30% hex height
+    const yOffset = isOpponent ? hexSize * Math.sqrt(3) * 0.3 : BOARD_HEIGHT + hexSize * 0.25  // Scale board gap with tile size
     
     for (let row = 0; row < BOARD_ROWS; row++) {
       for (let col = 0; col < BOARD_COLS; col++) {
-        // Calculate hex position with proper tessellation and spacing
-        const x = col * HEX_WIDTH * 0.88 + hexSize * 1.25  // Optimized spacing for better fit
-        const y = row * HEX_HEIGHT * 0.88 + hexSize * 1.25 + yOffset  // Increased Y offset to center tiles properly
+        // Calculate hex position using scaled size for proportional spacing
+        const x = col * HEX_WIDTH * 0.88 + hexSize * 1.25  // Grid scales with tile size
+        const y = row * HEX_HEIGHT * 0.88 + hexSize * 0.65 + yOffset  // Grid scales with tile size
         
         // Offset every other row for hexagonal tessellation
         const offsetX = (row % 2 === 0) ? 0 : HEX_WIDTH * 0.44

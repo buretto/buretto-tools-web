@@ -27,7 +27,7 @@
 
 /* Proportional Layout Areas */
 .game-header {
-  height: 8%;
+  height: 6.4%; /* Reduced by 20% from 8% to free up space for larger hex tiles */
   display: flex;
   align-items: stretch;
   width: 100%;
@@ -50,7 +50,7 @@
 }
 
 .game-board-area .game-board {
-  width: 50%; /* Consistent percentage-based width - narrowest */
+  width: 75%; /* Increased from 50% to allow larger hex tiles */
   margin: 0 auto; /* Center the board */
 }
 
@@ -357,7 +357,7 @@
 .bench-container {
   width: 50%; /* Extends 2.5% left of board, aligns right with board */
   height: 100%;
-  margin-left: 23%; /* Positions left edge 2.5% left of board */
+  margin-left: 25%; /* Positions left edge 2.5% left of board */
   display: flex;
   align-items: center;
   justify-content: center;
@@ -367,7 +367,7 @@
 .opponent-bench-container {
   width: 50%; /* Same width as player bench */
   height: 100%;
-  margin-right: 23%; /* Positions right edge 2.5% right of board */
+  margin-right: 21%; /* Positions right edge 2.5% right of board */
   display: flex;
   align-items: center;
   justify-content: center;
