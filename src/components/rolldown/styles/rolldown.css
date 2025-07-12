@@ -22,6 +22,7 @@
   flex-direction: column;
   background: rgb(17 24 39); /* bg-gray-900 */
   color: white;
+  container-type: size; /* Enable container queries for child elements */
 }
 
 /* Proportional Layout Areas */
@@ -470,61 +471,61 @@
 
 /* Responsive Button Text */
 .responsive-button-text {
-  font-size: max(0.35rem, 0.9vw); /* Increased scaling for better visibility on large screens */
+  font-size: max(0.35rem, 0.9cqw); /* Container-relative scaling tied to letterbox size */
   font-weight: 500;
 }
 
 /* Responsive Button Padding */
 .responsive-button-padding {
-  padding: max(0.12rem, 0.28vw) max(0.18rem, 0.56vw); /* Unlimited scaling with 40% increased viewport rate */
+  padding: max(0.12rem, 0.28cqw) max(0.18rem, 0.56cqw); /* Container-relative scaling tied to letterbox size */
 }
 
 /* Responsive Button Gap */
 .responsive-button-gap {
-  gap: max(0.14rem, 0.28vw); /* Unlimited scaling with 40% increased viewport rate */
+  gap: max(0.14rem, 0.28cqw); /* Container-relative scaling tied to letterbox size */
 }
 
 /* Responsive Header Elements */
 .responsive-header-text-xs {
-  font-size: max(0.25rem, 0.7vw); /* Unlimited scaling with 40% increased viewport rate */
+  font-size: max(0.25rem, 0.7cqw); /* Container-relative scaling tied to letterbox size */
 }
 
 .responsive-header-text-sm {
-  font-size: max(0.35rem, 0.84vw); /* Unlimited scaling with 40% increased viewport rate */
+  font-size: max(0.35rem, 0.84cqw); /* Container-relative scaling tied to letterbox size */
 }
 
 .responsive-header-text-lg {
-  font-size: max(0.4rem, 0.98vw); /* Unlimited scaling with 40% increased viewport rate */
+  font-size: max(0.4rem, 0.98cqw); /* Container-relative scaling tied to letterbox size */
 }
 
 .responsive-header-text-xl {
-  font-size: max(0.5rem, 1.26vw); /* Unlimited scaling with 40% increased viewport rate */
+  font-size: max(0.5rem, 1.26cqw); /* Container-relative scaling tied to letterbox size */
 }
 
 .responsive-header-icon-sm {
-  width: max(5px, 2.1vw);
-  height: max(5px, 2.1vw);
+  width: max(5px, 2.1cqw);
+  height: max(5px, 2.1cqw);
 }
 
 .responsive-header-icon-md {
-  width: max(7px, 2.52vw);
-  height: max(7px, 2.52vw);
+  width: max(7px, 2.52cqw);
+  height: max(7px, 2.52cqw);
 }
 
 .responsive-header-gap-sm {
-  gap: max(0.15rem, 0.56vw); /* Unlimited scaling with 40% increased viewport rate */
+  gap: max(0.15rem, 0.56cqw); /* Container-relative scaling tied to letterbox size */
 }
 
 .responsive-header-gap-md {
-  gap: max(0.25rem, 0.84vw); /* Unlimited scaling with 40% increased viewport rate */
+  gap: max(0.25rem, 0.84cqw); /* Container-relative scaling tied to letterbox size */
 }
 
 .responsive-header-gap-lg {
-  gap: max(0.4rem, 1.12vw); /* Unlimited scaling with 40% increased viewport rate */
+  gap: max(0.4rem, 1.12cqw); /* Container-relative scaling tied to letterbox size */
 }
 
 .responsive-header-padding {
-  padding: max(0.15rem, 0.56vw) max(0.25rem, 0.84vw);
+  padding: max(0.15rem, 0.56cqw) max(0.25rem, 0.84cqw);
 }
 
 /* Responsive Design */
