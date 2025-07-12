@@ -71,7 +71,7 @@
   margin-left: 22.5%; /* Align with shop-container positioning */
   height: 40%; /* Fixed portion of shop-area height */
   display: flex;
-  align-items: center; /* Center content vertically within allocated space */
+  align-items: flex-end; /* Anchor level section to bottom of allocated space */
 }
 
 .shop-container-wrapper {
@@ -348,9 +348,9 @@
 
 /* Bench Styles */
 .bench-container {
-  width: 47.5%; /* Extends 2.5% left of board, aligns right with board */
+  width: 50%; /* Extends 2.5% left of board, aligns right with board */
   height: 100%;
-  margin-left: 25%; /* Positions left edge 2.5% left of board */
+  margin-left: 23%; /* Positions left edge 2.5% left of board */
   display: flex;
   align-items: center;
   justify-content: center;
@@ -359,7 +359,7 @@
 .bench-slots {
   display: flex;
   gap: 0.25rem; /* Standard gap */
-  height: 80%;
+  height: 100%;
   width: 100%;
   max-width: 100%;
   justify-content: center;

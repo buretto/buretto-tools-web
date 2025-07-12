@@ -10,7 +10,7 @@ function PlayerInfo({ player }) {
   return (
     <div className="player-info-container" style={{ width: 'calc(25% - 0.5rem)', minWidth: '140px' }}>
       {/* Level and XP section with separate background */}
-      <div className="level-section bg-gray-900 p-2 rounded-lg mb-1" style={{flex:1}}>
+      <div className="level-section bg-gray-900 p-2 rounded-lg mb-1">
         <div className="flex items-center justify-between mb-1">
           <div className="flex items-center gap-1">
             <Star className="w-3 h-3 text-blue-400" />

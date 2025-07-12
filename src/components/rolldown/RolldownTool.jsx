@@ -80,19 +80,18 @@ function RolldownTool() {
           <div className="shop-area-content">
             {/* Level/XP section floating above */}
             <div className="level-floating-section">
-              <div className="level-section bg-gray-900 p-2 rounded-lg mb-1" style={{ flex: 1 }}>
-                <div className="flex items-center justify-between mb-1">
+              <div className="level-section bg-gray-900 py-1 px-2 rounded-lg" style={{ flex: 1 }}>
+                <div className="flex items-center justify-between">
                   <div className="flex items-center gap-1">
-                    <Star className="w-3 h-3 text-blue-400" />
                     <span className="font-semibold responsive-header-text-sm">Lv {gameState.player.level}</span>
                   </div>
                   <div className="responsive-header-text-xs text-gray-400">
                     {gameState.player.exp}/{getLevelUpCost(gameState.player.level)}
                   </div>
                 </div>
-                <div className="bg-gray-700 rounded-full h-2">
+                <div className="bg-gray-700 rounded-full h-1">
                   <div 
-                    className="bg-blue-400 h-2 rounded-full transition-all duration-300"
+                    className="bg-blue-400 h-1 rounded-full transition-all duration-300"
                     style={{ width: `${(gameState.player.exp / getLevelUpCost(gameState.player.level)) * 100}%` }}
                   />
                 </div>
