@@ -43,7 +43,7 @@ function RolldownTool() {
   
   
   return (
-    <div className="game-root">
+    <div className="game-root w-full h-full">
       <div className="game-content">
         {/* Header Area - 15% of content height */}
         <div className="game-header">

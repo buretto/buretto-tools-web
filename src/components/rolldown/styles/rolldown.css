@@ -23,6 +23,16 @@
   background: rgb(17 24 39); /* bg-gray-900 */
   color: white;
   container-type: size; /* Enable container queries for child elements */
+  margin: 0 auto; /* Center horizontally */
+}
+
+/* When in fullscreen tool mode, center the letterbox perfectly */
+.tool-fullscreen .game-root {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100vw;
+  height: 100vh;
 }
 
 /* Proportional Layout Areas */
