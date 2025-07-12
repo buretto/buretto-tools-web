@@ -24,17 +24,17 @@ function TraitsColumn({ boardUnits }) {
             key={index}
             className={`trait-item rounded-lg border-2 transition-all ${getTraitStyle(trait.count, trait.threshold)}`}
             style={{ 
-              width: 'clamp(1.8rem, 4.8vw, 2.4rem)',
-              marginBottom: 'clamp(0.18rem, 0.48vw, 0.3rem)',
-              padding: 'clamp(0.18rem, 0.48vw, 0.3rem)' /* 20% bigger overall */
+              width: 'max(1.8rem, 3.36vw)',
+              marginBottom: 'max(0.18rem, 0.336vw)',
+              padding: 'max(0.18rem, 0.336vw)' /* 20% bigger overall */
             }}
           >
             <div className="flex flex-col items-center">
               <IconComponent 
                 style={{ 
-                  width: 'clamp(10.8px, 2.4vw, 14.4px)', 
-                  height: 'clamp(10.8px, 2.4vw, 14.4px)',
-                  marginBottom: 'clamp(0.12rem, 0.3vw, 0.15rem)'
+                  width: 'max(10.8px, 1.68vw)', 
+                  height: 'max(10.8px, 1.68vw)',
+                  marginBottom: 'max(0.12rem, 0.21vw)'
                 }} 
               />
               <div className="responsive-header-text-xs font-bold">
