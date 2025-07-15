@@ -192,6 +192,27 @@
   border-color: #EAB308 !important;
 }
 
+/* Unit Bottom Header Background Colors */
+.shop-slot .unit-bottom-header.cost-1 {
+  background-color: #6B7280; /* gray-500 for 1-cost */
+}
+
+.shop-slot .unit-bottom-header.cost-2 {
+  background-color: #16A34A; /* green-600 for 2-cost */
+}
+
+.shop-slot .unit-bottom-header.cost-3 {
+  background-color: #2563EB; /* blue-600 for 3-cost */
+}
+
+.shop-slot .unit-bottom-header.cost-4 {
+  background-color: #9333EA; /* purple-600 for 4-cost */
+}
+
+.shop-slot .unit-bottom-header.cost-5 {
+  background-color: #CA8A04; /* yellow-600 for 5-cost */
+}
+
 /* Unit Card Styles */
 .unit-card {
   position: relative;
@@ -210,16 +231,7 @@
   overflow: hidden;
 }
 
-.unit-cost {
-  position: absolute;
-  bottom: 2px;
-  right: 2px;
-  background: rgba(0, 0, 0, 0.8);
-  padding: 2px 4px;
-  border-radius: 4px;
-  font-size: 10px;
-  font-weight: bold;
-}
+/* Removed old unit-cost positioning rule - now handled by shop-slot specific styles */
 
 /* Shop Styles */
 .shop-container {
@@ -321,18 +333,18 @@
   height: 100%;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 0.25rem;
+  align-items: stretch;
+  justify-content: flex-start;
+  gap: 0;
   position: relative;
   z-index: 1; /* Ensure content appears above dark background */
 }
 
 .shop-slot .unit-avatar {
-  width: 65%;
-  height: 65%;
-  border-radius: 6px;
-  border: 2px solid;
+  width: 100%;
+  flex: 1;
+  border-radius: 3px 3px 0 0;
+  border: none;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -340,12 +352,58 @@
   font-size: 1.125rem;
   background: rgba(0, 0, 0, 0.3);
   color: white;
+  overflow: hidden;
+}
+
+.shop-slot .unit-bottom-header {
+  width: 100%;
+  height: 25%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0;
+  border-radius: 0 0 3px 3px;
+  color: rgb(243 244 246); /* text-gray-100 */
+  font-weight: 500;
+}
+
+.shop-slot .unit-name {
+  flex: 1;
+  font-size: max(0.25rem, 0.7cqw); /* Container-relative scaling like buttons */
+  font-weight: 500;
+  color: rgb(243 244 246); /* text-gray-100 */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding-left: 0.125rem;
+}
+
+.shop-slot .unit-cost-container {
+  display: flex;
+  align-items: center;
+  gap: 0.125rem;
+  padding-right: 0.125rem; /* minimal right padding */
+  padding-left: 0;
+}
+
+.shop-slot .unit-cost-icon {
+  width: max(0.5rem, 0.6cqw); /* Scale with container like text */
+  height: max(0.5rem, 0.6cqw);
+  color: #EAB308; /* Gold color (yellow-500) */
+  flex-shrink: 0;
+  transform: scaleX(-1); /* Horizontal flip */
+  stroke-width: 2.5; /* Increase boldness to reduce aliasing */
+  filter: drop-shadow(0 0 1px rgba(0,0,0,0.6)); /* Add subtle dark outline */
 }
 
 .shop-slot .unit-cost {
-  font-size: 0.75rem;
-  color: rgb(250 204 21); /* text-yellow-400 */
+  font-size: max(0.25rem, 0.7cqw); /* Container-relative scaling like buttons */
+  color: rgb(243 244 246); /* text-gray-100 */
   font-weight: 600;
+  line-height: 1.2; /* Better vertical centering */
+  background: none; /* Explicitly remove any background */
+  padding: 0; /* Remove any padding */
+  border: none; /* Remove any border */
 }
 
 .shop-slot .empty-slot {

@@ -1,6 +1,24 @@
 import React, { useState, useRef, useEffect } from 'react'
 import { ChevronDown, Plus, Loader2, AlertCircle, Settings } from 'lucide-react'
 
+// Mapping of League versions to TFT versions for display
+const getVersionDisplayInfo = (version) => {
+  const versionMappings = {
+    '15.13.1': '14.7',
+    '15.1.1': '14.1',
+    '14.24.1': '13.24',
+    // Add more mappings as needed
+  }
+  
+  const tftVersion = versionMappings[version] || version
+  return {
+    leagueVersion: version,
+    tftVersion: tftVersion,
+    displayText: tftVersion,
+    dropdownText: `${tftVersion} (${version})`
+  }
+}
+
 const TFTVersionSelector = ({ 
   currentVersion, 
   cachedVersions, 
@@ -68,7 +86,7 @@ const TFTVersionSelector = ({
       >
         <div className="version-selector-content">
           <span className="version-label">TFT Set:</span>
-          <span className="version-current">{currentVersion}</span>
+          <span className="version-current">{getVersionDisplayInfo(currentVersion).displayText}</span>
           {loading ? (
             <Loader2 className="version-icon loading" />
           ) : (
@@ -98,7 +116,7 @@ const TFTVersionSelector = ({
                     className={`version-option ${version === currentVersion ? 'active' : ''}`}
                     onClick={() => handleVersionSelect(version)}
                   >
-                    {version}
+                    {getVersionDisplayInfo(version).dropdownText}
                     {version === currentVersion && <span className="current-indicator">●</span>}
                   </button>
                   <button

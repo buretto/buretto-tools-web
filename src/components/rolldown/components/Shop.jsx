@@ -1,4 +1,5 @@
 import React, { useEffect, useRef } from 'react'
+import { Coins } from 'lucide-react'
 
 const SHOP_SLOTS = 5
 
@@ -85,7 +86,7 @@ function ShopUnitDisplay({ unit, tftData, tftImages }) {
   
   return (
     <div className="unit-display">
-      <div className={`unit-avatar cost-${unit.cost}`} ref={imageRef}>
+      <div className={`unit-avatar`} ref={imageRef}>
         {/* Show fallback if no image URL available */}
         {!championData?.imageUrl && (
           <div className="text-placeholder">
@@ -93,8 +94,16 @@ function ShopUnitDisplay({ unit, tftData, tftImages }) {
           </div>
         )}
       </div>
-      <div className="unit-cost">
-        {unit.cost}g
+      <div className={`unit-bottom-header cost-${unit.cost}`}>
+        <span className="unit-name">
+          {championData?.name || unit.name || 'Unknown'}
+        </span>
+        <div className="unit-cost-container">
+          <Coins className="unit-cost-icon" />
+          <span className="unit-cost">
+            {unit.cost}
+          </span>
+        </div>
       </div>
     </div>
   )
