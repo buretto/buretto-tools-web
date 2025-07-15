@@ -71,6 +71,32 @@ function RolldownTool() {
   
   const tftImages = useTFTImages(tftData)
   
+  // Add a comprehensive drag end handler to ensure the drag state always resets
+  useEffect(() => {
+    const handleWindowDragEnd = (e) => {
+      // Force drag end after any drag operation ends - small delay only as fallback
+      setTimeout(() => {
+        // Dispatch custom event to force drag context reset
+        const event = new CustomEvent('forceDragEnd')
+        document.dispatchEvent(event)
+      }, 50)
+    }
+    
+    const handleWindowDrop = (e) => {
+      // Force drag end immediately after any drop operation
+      const event = new CustomEvent('forceDragEnd')
+      document.dispatchEvent(event)
+    }
+    
+    window.addEventListener('dragend', handleWindowDragEnd, true)
+    window.addEventListener('drop', handleWindowDrop, true)
+    
+    return () => {
+      window.removeEventListener('dragend', handleWindowDragEnd, true)
+      window.removeEventListener('drop', handleWindowDrop, true)
+    }
+  }, [])
+  
   // Initialize pool and shop management
   const unitPoolHook = useUnitPool(tftData, currentVersion)
   const shopHook = useShop(tftData, currentVersion, unitPoolHook)
@@ -252,6 +278,14 @@ function RolldownTool() {
 
   // Handle unit move from bench to board or board to bench
   const handleUnitMove = (unit, fromLocation, fromIndex, toLocation, toIndex, toRow, toCol) => {
+    console.log('🚀 MOVE HANDLER CALLED:', { 
+      unit: unit?.name, 
+      fromLocation, 
+      toLocation, 
+      toRow, 
+      toCol 
+    })
+    
     setGameState(prev => {
       const newState = { ...prev }
       
@@ -298,6 +332,13 @@ function RolldownTool() {
 
   // Handle unit swap between positions
   const handleUnitSwap = (unit1, location1, index1, row1, col1, unit2, location2, index2, row2, col2) => {
+    console.log('🔄 SWAP HANDLER CALLED:', { 
+      unit1: unit1?.name, 
+      location1, 
+      unit2: unit2?.name, 
+      location2 
+    })
+    
     setGameState(prev => {
       const newState = { ...prev }
       const newBench = [...newState.player.bench]

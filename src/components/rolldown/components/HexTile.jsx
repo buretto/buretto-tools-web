@@ -57,23 +57,49 @@ const HexTile = ({
   }, [unit, tftImages, size])
 
   const handleDrop = (e) => {
-    e.preventDefault()
+    console.log('🎯 HexTile DROP EVENT:', { 
+      row, col, 
+      hasUnit: !!unit, 
+      unitName: unit?.name,
+      draggedUnit: draggedUnit?.name, 
+      dragSource,
+      isOpponent
+    })
     
-    if (!draggedUnit || !dragSource || isOpponent) return
+    e.preventDefault()
+    e.stopPropagation() // Stop event from bubbling up
+    
+    if (!draggedUnit || !dragSource || isOpponent) {
+      console.log('❌ Drop rejected:', { draggedUnit: !!draggedUnit, dragSource, isOpponent })
+      return
+    }
+    
+    // Store drag data locally before clearing it
+    const currentDraggedUnit = draggedUnit
+    const currentDragSource = dragSource
+    
+    // Reset drag state immediately to make overlay disappear
+    endDrag()
     
     if (unit) {
       // Swap units
-      if (dragSource === 'bench') {
-        onUnitSwap?.(draggedUnit, 'bench', draggedUnit.benchIndex, null, null, unit, 'board', null, row, col)
-      } else if (dragSource === 'board') {
-        onUnitSwap?.(draggedUnit, 'board', null, draggedUnit.row, draggedUnit.col, unit, 'board', null, row, col)
+      console.log('🔄 Attempting SWAP')
+      if (currentDragSource === 'bench') {
+        console.log('🔄 Bench->Board swap')
+        onUnitSwap?.(currentDraggedUnit, 'bench', currentDraggedUnit.benchIndex, null, null, unit, 'board', null, row, col)
+      } else if (currentDragSource === 'board') {
+        console.log('🔄 Board->Board swap')
+        onUnitSwap?.(currentDraggedUnit, 'board', null, currentDraggedUnit.row, currentDraggedUnit.col, unit, 'board', null, row, col)
       }
     } else {
       // Move to empty space
-      if (dragSource === 'bench') {
-        onUnitMove?.(draggedUnit, 'bench', draggedUnit.benchIndex, 'board', null, row, col)
-      } else if (dragSource === 'board') {
-        onUnitMove?.(draggedUnit, 'board', null, 'board', null, row, col)
+      console.log('🚀 Attempting MOVE')
+      if (currentDragSource === 'bench') {
+        console.log('🚀 Bench->Board move')
+        onUnitMove?.(currentDraggedUnit, 'bench', currentDraggedUnit.benchIndex, 'board', null, row, col)
+      } else if (currentDragSource === 'board') {
+        console.log('🚀 Board->Board move')
+        onUnitMove?.(currentDraggedUnit, 'board', null, 'board', null, row, col)
       }
     }
   }
@@ -94,10 +120,9 @@ const HexTile = ({
   }
 
   const handleUnitDragEnd = (e) => {
-    // Force end drag after a small delay to ensure all operations complete
-    setTimeout(() => {
-      endDrag()
-    }, 100)
+    console.log('⚡ HexTile unit drag end (immediate)')
+    // End drag immediately for instant response
+    endDrag()
   }
   
   return (
@@ -115,11 +140,16 @@ const HexTile = ({
         onClick={onClick}
         onDragOver={(e) => {
           if (!isOpponent && isDragging && dragSource !== 'shop') {
+            console.log('🎯 HexTile DRAGOVER:', { row, col, hasUnit: !!unit, dragSource })
             e.preventDefault()
+            e.stopPropagation()
             e.dataTransfer.dropEffect = 'move'
           }
         }}
-        onDrop={handleDrop}
+        onDrop={(e) => {
+          e.stopPropagation()
+          handleDrop(e)
+        }}
       />
       {unit && (
         <g>
@@ -135,6 +165,15 @@ const HexTile = ({
               draggable={!isOpponent}
               onDragStart={handleUnitDragStart}
               onDragEnd={handleUnitDragEnd}
+              onDragOver={(e) => {
+                // Let drag over events pass through to the polygon
+                e.stopPropagation()
+              }}
+              onDrop={(e) => {
+                // Let drop events pass through to the polygon
+                e.stopPropagation()
+                handleDrop(e)
+              }}
               style={{
                 width: '100%',
                 height: '100%',
@@ -144,7 +183,8 @@ const HexTile = ({
                 backgroundColor: 'rgba(0,0,0,0.7)',
                 borderRadius: '50%',
                 border: '2px solid #fff',
-                cursor: !isOpponent ? 'grab' : 'default'
+                cursor: !isOpponent ? 'grab' : 'default',
+                pointerEvents: isOpponent ? 'none' : 'auto'
               }}
             >
               {/* Fallback text */}

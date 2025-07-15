@@ -7,7 +7,7 @@ const SHOP_SLOTS = 5
 function Shop({ units = [], playerGold = 0, tftData, tftImages, onPurchase, onSell }) {
   const [draggedUnit, setDraggedUnit] = useState(null)
   const [isDraggedOutside, setIsDraggedOutside] = useState(false)
-  const { isDragging, draggedUnit: globalDraggedUnit, dragSource } = useDrag()
+  const { isDragging, draggedUnit: globalDraggedUnit, dragSource, endDrag } = useDrag()
   
   // Add global drag handlers to ensure proper drag state management
   useEffect(() => {
@@ -49,14 +49,29 @@ function Shop({ units = [], playerGold = 0, tftData, tftImages, onPurchase, onSe
   }, [units, tftImages])
 
   const handleSellDrop = (e) => {
+    console.log('🛒 Shop sell drop')
     e.preventDefault()
     e.stopPropagation()
     
-    if (globalDraggedUnit && (dragSource === 'bench' || dragSource === 'board') && onSell) {
-      const location = dragSource
-      const index = dragSource === 'bench' ? globalDraggedUnit.benchIndex : null
-      onSell(globalDraggedUnit, location, index)
+    // Store drag data locally before clearing it
+    const currentDraggedUnit = globalDraggedUnit
+    const currentDragSource = dragSource
+    
+    // Reset drag state immediately
+    endDrag()
+    
+    if (currentDraggedUnit && (currentDragSource === 'bench' || currentDragSource === 'board') && onSell) {
+      const location = currentDragSource
+      const index = currentDragSource === 'bench' ? currentDraggedUnit.benchIndex : null
+      onSell(currentDraggedUnit, location, index)
     }
+  }
+
+  const handleSellDragOver = (e) => {
+    console.log('🛒 Shop sell dragover')
+    e.preventDefault()
+    e.stopPropagation()
+    e.dataTransfer.dropEffect = 'move'
   }
   
   const renderShopSlots = () => {
@@ -106,10 +121,7 @@ function Shop({ units = [], playerGold = 0, tftData, tftImages, onPurchase, onSe
     return (
       <div
         className="shop-slots-sell-overlay"
-        onDragOver={(e) => {
-          e.preventDefault()
-          e.dataTransfer.dropEffect = 'move'
-        }}
+        onDragOver={handleSellDragOver}
         onDrop={handleSellDrop}
       >
         <div className="sell-text">

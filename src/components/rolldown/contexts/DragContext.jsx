@@ -24,6 +24,7 @@ export const DragProvider = ({ children }) => {
   }
 
   const endDrag = useCallback(() => {
+    console.log('🛑 DRAG STATE RESET')
     setDraggedUnit(null)
     setDragSource(null)
     setDragSourceIndex(null)
@@ -33,10 +34,20 @@ export const DragProvider = ({ children }) => {
   // Add global drag end handler to ensure drag state is always reset
   React.useEffect(() => {
     const handleGlobalDragEnd = (e) => {
+      console.log('⏰ Global drag end (50ms delay)')
       // Use a small delay to ensure all drop operations complete first
       setTimeout(() => {
         endDrag()
       }, 50)
+    }
+    
+    const handleGlobalDrop = (e) => {
+      console.log('⚡ Global drop (immediate)', e.target)
+      // Only reset if the drop wasn't handled by a valid drop zone
+      setTimeout(() => {
+        console.log('⚡ Global drop reset after timeout')
+        endDrag()
+      }, 10)
     }
     
     const handleGlobalDragLeave = (e) => {
@@ -44,18 +55,38 @@ export const DragProvider = ({ children }) => {
       if (e.target === document.documentElement) {
         setTimeout(() => {
           endDrag()
-        }, 50)
+        }, 100)
       }
     }
     
+    // Add mouse up handler as fallback
+    const handleMouseUp = (e) => {
+      if (isDragging) {
+        setTimeout(() => {
+          endDrag()
+        }, 100)
+      }
+    }
+    
+    // Listen for force drag end events
+    const handleForceDragEnd = (e) => {
+      endDrag()
+    }
+    
     document.addEventListener('dragend', handleGlobalDragEnd)
+    document.addEventListener('drop', handleGlobalDrop)
     document.addEventListener('dragleave', handleGlobalDragLeave)
+    document.addEventListener('mouseup', handleMouseUp)
+    document.addEventListener('forceDragEnd', handleForceDragEnd)
     
     return () => {
       document.removeEventListener('dragend', handleGlobalDragEnd)
+      document.removeEventListener('drop', handleGlobalDrop)
       document.removeEventListener('dragleave', handleGlobalDragLeave)
+      document.removeEventListener('mouseup', handleMouseUp)
+      document.removeEventListener('forceDragEnd', handleForceDragEnd)
     }
-  }, [endDrag])
+  }, [endDrag, isDragging])
 
   const value = {
     draggedUnit,

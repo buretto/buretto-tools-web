@@ -4,7 +4,7 @@ import { useDrag } from '../contexts/DragContext'
 const BENCH_SLOTS = 9
 
 function Bench({ units = [], onUnitMove, onUnitSwap, onSell, tftData, tftImages }) {
-  const { isDragging, draggedUnit, dragSource } = useDrag()
+  const { isDragging, draggedUnit, dragSource, endDrag } = useDrag()
   
   // Load images for visible units
   useEffect(() => {
@@ -17,25 +17,39 @@ function Bench({ units = [], onUnitMove, onUnitSwap, onSell, tftData, tftImages 
     }
   }, [units, tftImages])
   const handleDrop = (e, benchIndex) => {
+    console.log('🎯 Bench DROP EVENT:', { benchIndex, draggedUnit: draggedUnit?.name, dragSource })
+    
     e.preventDefault()
+    e.stopPropagation()
     
     if (!draggedUnit || !dragSource) return
     
+    // Store drag data locally before clearing it
+    const currentDraggedUnit = draggedUnit
+    const currentDragSource = dragSource
+    
+    // Reset drag state immediately to make overlay disappear
+    endDrag()
+    
     const existingUnit = units[benchIndex]
     
-    if (dragSource === 'bench') {
+    if (currentDragSource === 'bench') {
       // Moving within bench or swapping
       if (existingUnit) {
-        onUnitSwap?.(draggedUnit, 'bench', draggedUnit.benchIndex, null, null, existingUnit, 'bench', benchIndex, null, null)
+        console.log('🔄 Bench->Bench swap')
+        onUnitSwap?.(currentDraggedUnit, 'bench', currentDraggedUnit.benchIndex, null, null, existingUnit, 'bench', benchIndex, null, null)
       } else {
-        onUnitMove?.(draggedUnit, 'bench', draggedUnit.benchIndex, 'bench', benchIndex, null, null)
+        console.log('🚀 Bench->Bench move')
+        onUnitMove?.(currentDraggedUnit, 'bench', currentDraggedUnit.benchIndex, 'bench', benchIndex, null, null)
       }
-    } else if (dragSource === 'board') {
+    } else if (currentDragSource === 'board') {
       // Moving from board to bench
       if (existingUnit) {
-        onUnitSwap?.(draggedUnit, 'board', null, draggedUnit.row, draggedUnit.col, existingUnit, 'bench', benchIndex, null, null)
+        console.log('🔄 Board->Bench swap')
+        onUnitSwap?.(currentDraggedUnit, 'board', null, currentDraggedUnit.row, currentDraggedUnit.col, existingUnit, 'bench', benchIndex, null, null)
       } else {
-        onUnitMove?.(draggedUnit, 'board', null, 'bench', benchIndex, null, null)
+        console.log('🚀 Board->Bench move')
+        onUnitMove?.(currentDraggedUnit, 'board', null, 'bench', benchIndex, null, null)
       }
     }
   }
@@ -53,11 +67,15 @@ function Bench({ units = [], onUnitMove, onUnitSwap, onSell, tftData, tftImages 
           data-slot={i}
           onDragOver={(e) => {
             e.preventDefault()
+            e.stopPropagation()
             if (isDragging && dragSource !== 'shop') {
               e.dataTransfer.dropEffect = 'move'
             }
           }}
-          onDrop={(e) => handleDrop(e, i)}
+          onDrop={(e) => {
+            e.stopPropagation()
+            handleDrop(e, i)
+          }}
         >
           {unit && (
             <BenchUnitDisplay 
@@ -139,10 +157,8 @@ function BenchUnitDisplay({ unit, unitIndex, tftData, tftImages, onSell }) {
   }
 
   const handleDragEnd = (e) => {
-    // Force end drag after a small delay to ensure all operations complete
-    setTimeout(() => {
-      endDrag()
-    }, 100)
+    // End drag immediately for instant response
+    endDrag()
   }
   
   return (
