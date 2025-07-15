@@ -9,10 +9,13 @@ import Timer from './components/Timer'
 import Analytics from './components/Analytics'
 import TraitsColumn from './components/TraitsColumn'
 import TFTVersionSelector from './components/TFTVersionSelector'
+import ImageMappingModal from './components/ImageMappingModal'
+import ImageLoadWarning from './components/ImageLoadWarning'
 import { useTFTData } from './hooks/useTFTData'
 import { useTFTImages } from './hooks/useTFTImages'
 import { useUnitPool } from './hooks/useUnitPool'
 import { useShop } from './hooks/useShop'
+import { startImagePreloading, setPreloadCallbacks, getPreloadProgress, PRELOAD_PHASES } from './utils/imagePreloader'
 import './styles/rolldown.css'
 
 const getLevelUpCost = (level) => {
@@ -44,6 +47,15 @@ const INITIAL_GAME_STATE = {
 
 function RolldownTool() {
   const [gameState, setGameState] = useState(INITIAL_GAME_STATE)
+  const [preloadProgress, setPreloadProgress] = useState({
+    critical: { loaded: 0, total: 0, complete: false },
+    background: { loaded: 0, total: 0, complete: false },
+    overall: { loaded: 0, total: 0, percentage: 0 }
+  })
+  const [preloadPhase, setPreloadPhase] = useState(null)
+  const [mappingModalOpen, setMappingModalOpen] = useState(false)
+  const [mappingModalVersion, setMappingModalVersion] = useState(null)
+  
   const { 
     data: tftData, 
     loading: tftLoading, 
@@ -59,12 +71,29 @@ function RolldownTool() {
   const unitPoolHook = useUnitPool(tftData, currentVersion)
   const shopHook = useShop(tftData, currentVersion, unitPoolHook)
   
+  // Set up preloading callbacks
+  useEffect(() => {
+    setPreloadCallbacks({
+      onProgress: (progress) => {
+        setPreloadProgress(progress)
+      },
+      onPhaseComplete: (phase, progress) => {
+        console.log(`Preload phase '${phase}' complete`)
+        setPreloadPhase(phase)
+      },
+      onComplete: (progress) => {
+        console.log('All image preloading complete!')
+        setPreloadPhase(PRELOAD_PHASES.COMPLETE)
+      }
+    })
+  }, [])
+
   // Initialize pool when tftData is loaded
   useEffect(() => {
     if (tftData && tftData.champions && Object.keys(tftData.champions).length > 0 && !tftLoading) {
       console.log('Initializing pool with tftData:', Object.keys(tftData.champions).length, 'champions')
       
-      // Just initialize pool - shop generation will happen when pool is ready
+      // Initialize pool - preloading will happen after shop is generated
       unitPoolHook.initializePool()
     }
   }, [tftData, tftLoading])
@@ -82,8 +111,27 @@ function RolldownTool() {
           shop: initialShop
         }
       }))
+      
+      // Start preloading with critical shop images
+      if (tftData && initialShop.length > 0) {
+        const startPreloading = async () => {
+          try {
+            const criticalChampionIds = initialShop
+              .filter(unit => unit && unit.id)
+              .map(unit => unit.id)
+            
+            console.log(`Starting preload with ${criticalChampionIds.length} critical images`)
+            
+            await startImagePreloading(tftData, criticalChampionIds, currentVersion)
+          } catch (error) {
+            console.error('Image preloading failed:', error)
+          }
+        }
+        
+        startPreloading()
+      }
     }
-  }, [unitPoolHook.unitPool.size, gameState.player.shop.length])
+  }, [unitPoolHook.unitPool.size, gameState.player.shop.length, tftData, currentVersion])
   
   // Handle shop reroll
   const handleReroll = () => {
@@ -119,25 +167,31 @@ function RolldownTool() {
       const purchasedUnit = shopHook.purchaseUnit(shopSlotIndex, 'bench')
       
       if (purchasedUnit) {
-        setGameState(prev => ({
-          ...prev,
-          player: {
-            ...prev.player,
-            gold: prev.player.gold - unit.cost,
-            bench: [...prev.player.bench, purchasedUnit],
-            shop: shopHook.currentShop // Update shop state
-          },
-          analytics: {
-            ...prev.analytics,
-            goldSpent: prev.analytics.goldSpent + unit.cost,
-            actions: [...prev.analytics.actions, {
-              type: 'purchase',
-              timestamp: Date.now(),
-              unit: unit.id,
-              cost: unit.cost
-            }]
+        setGameState(prev => {
+          // Create updated shop with purchased slot cleared
+          const updatedShop = [...prev.player.shop]
+          updatedShop[shopSlotIndex] = null
+          
+          return {
+            ...prev,
+            player: {
+              ...prev.player,
+              gold: prev.player.gold - unit.cost,
+              bench: [...prev.player.bench, purchasedUnit],
+              shop: updatedShop // Use explicitly updated shop
+            },
+            analytics: {
+              ...prev.analytics,
+              goldSpent: prev.analytics.goldSpent + unit.cost,
+              actions: [...prev.analytics.actions, {
+                type: 'purchase',
+                timestamp: Date.now(),
+                unit: unit.id,
+                cost: unit.cost
+              }]
+            }
           }
-        }))
+        })
       }
     }
   }
@@ -172,6 +226,18 @@ function RolldownTool() {
       return newState
     })
   }
+
+  // Handle opening mapping modal
+  const handleOpenMappings = (version = currentVersion) => {
+    setMappingModalVersion(version)
+    setMappingModalOpen(true)
+  }
+
+  // Handle closing mapping modal
+  const handleCloseMappings = () => {
+    setMappingModalOpen(false)
+    setMappingModalVersion(null)
+  }
   
   return (
     <div className="game-root w-full h-full">
@@ -184,6 +250,39 @@ function RolldownTool() {
               timer={gameState.timer}
               onPhaseChange={(newPhase) => setGameState(prev => ({ ...prev, phase: newPhase }))}
             />
+            
+            {/* Image Preloading Progress */}
+            {preloadPhase !== PRELOAD_PHASES.COMPLETE && preloadProgress.overall.total > 0 && (
+              <div className="flex items-center gap-2 px-3 py-1 bg-gray-700 rounded-lg">
+                <div className="flex flex-col items-end">
+                  <span className="text-xs text-gray-300">
+                    {preloadPhase === PRELOAD_PHASES.CRITICAL ? 'Loading shop...' : 
+                     preloadPhase === PRELOAD_PHASES.BACKGROUND ? 'Loading images...' : 'Preparing...'}
+                  </span>
+                  <div className="flex items-center gap-1">
+                    <div className="w-16 h-1 bg-gray-600 rounded-full overflow-hidden">
+                      <div 
+                        className={`h-full transition-all duration-300 ${
+                          preloadPhase === PRELOAD_PHASES.CRITICAL ? 'bg-yellow-500' : 'bg-blue-500'
+                        }`}
+                        style={{ width: `${preloadProgress.overall.percentage}%` }}
+                      />
+                    </div>
+                    <span className="text-xs text-gray-400 min-w-[2rem]">
+                      {preloadProgress.overall.percentage}%
+                    </span>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Image Load Warning */}
+            <ImageLoadWarning 
+              onOpenMappings={handleOpenMappings}
+              version={currentVersion}
+              totalImages={preloadProgress.overall.total}
+            />
+            
             <Analytics analytics={gameState.analytics} />
           </div>
         </div>
@@ -211,6 +310,8 @@ function RolldownTool() {
         <div className="bench-area">
           <Bench 
             units={gameState.player.bench}
+            tftData={tftData}
+            tftImages={tftImages}
             onUnitMove={(fromPos, toPos) => {
               // TODO: Implement bench movement
               console.log('Move bench unit from', fromPos, 'to', toPos)
@@ -291,6 +392,14 @@ function RolldownTool() {
           loading={tftLoading}
           error={tftError}
           onVersionSelect={loadVersion}
+          onOpenMappings={handleOpenMappings}
+        />
+
+        {/* Image Mapping Modal */}
+        <ImageMappingModal
+          isOpen={mappingModalOpen}
+          onClose={handleCloseMappings}
+          version={mappingModalVersion}
         />
       </div>
     </div>

@@ -785,6 +785,35 @@
   cursor: not-allowed;
 }
 
+/* Version Selector with Mapping Buttons */
+.version-option-container {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.version-option {
+  flex: 1;
+}
+
+.mapping-button {
+  background: transparent;
+  border: none;
+  color: rgb(107 114 128); /* text-gray-500 */
+  cursor: pointer;
+  padding: 0.25rem;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.mapping-button:hover {
+  background: rgb(243 244 246); /* bg-gray-100 */
+  color: rgb(75 85 99); /* text-gray-600 */
+}
+
 /* Responsive Design */
 /* Responsive Design - Use container queries when available, fallback to media queries */
 @media (max-width:1000000px) {

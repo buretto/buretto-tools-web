@@ -1,12 +1,13 @@
 import React, { useState, useRef, useEffect } from 'react'
-import { ChevronDown, Plus, Loader2, AlertCircle } from 'lucide-react'
+import { ChevronDown, Plus, Loader2, AlertCircle, Settings } from 'lucide-react'
 
 const TFTVersionSelector = ({ 
   currentVersion, 
   cachedVersions, 
   loading, 
   error, 
-  onVersionSelect 
+  onVersionSelect,
+  onOpenMappings
 }) => {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false)
   const [customVersion, setCustomVersion] = useState('')
@@ -92,14 +93,26 @@ const TFTVersionSelector = ({
             <div className="version-section">
               <div className="version-section-header">Cached Versions</div>
               {cachedVersions.map((version) => (
-                <button
-                  key={version}
-                  className={`version-option ${version === currentVersion ? 'active' : ''}`}
-                  onClick={() => handleVersionSelect(version)}
-                >
-                  {version}
-                  {version === currentVersion && <span className="current-indicator">●</span>}
-                </button>
+                <div key={version} className="version-option-container">
+                  <button
+                    className={`version-option ${version === currentVersion ? 'active' : ''}`}
+                    onClick={() => handleVersionSelect(version)}
+                  >
+                    {version}
+                    {version === currentVersion && <span className="current-indicator">●</span>}
+                  </button>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      onOpenMappings?.(version)
+                      setIsDropdownOpen(false)
+                    }}
+                    className="mapping-button"
+                    title={`Manage image mappings for ${version}`}
+                  >
+                    <Settings className="w-3 h-3" />
+                  </button>
+                </div>
               ))}
             </div>
           )}

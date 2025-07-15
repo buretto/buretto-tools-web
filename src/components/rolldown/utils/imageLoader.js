@@ -1,8 +1,16 @@
 // TFT Image Loading Utility with Sprite Sheet Support
 
+import { getMappingInfo } from './imageMappings.js'
+
 const IMAGE_CACHE = new Map()
 const SPRITE_CACHE = new Map()
 const LOADING_PROMISES = new Map()
+const CACHE_METADATA = new Map() // Track cache timestamp and hit count
+const FAILED_IMAGES = new Map() // Track failed image loads
+
+// Cache management constants
+const MAX_CACHE_SIZE = 200 // Maximum number of cached images
+const CACHE_EXPIRY_TIME = Infinity // Cache indefinitely for patch-specific images
 
 /**
  * Generates image URLs for TFT Data Dragon assets
@@ -28,15 +36,35 @@ export const generateImageUrls = (version, championId, type = 'champion') => {
 }
 
 /**
- * Generates image URL for a specific champion/trait
+ * Generates image URL for a specific champion/trait with mapping support
  */
 export const generateDirectImageUrl = (version, entityId, type = 'champion') => {
   const baseUrl = `https://ddragon.leagueoflegends.com/cdn/${version}/img/tft-${type}`
   
+  // Apply name mapping if available
+  const mappingInfo = getMappingInfo(version, entityId, type)
+  const mappedId = mappingInfo.name
+  
   if (type === 'champion') {
-    return `${baseUrl}/${entityId}.TFT_Set14.png`
+    return `${baseUrl}/${mappedId}.TFT_Set14.png`
   } else if (type === 'trait') {
-    const traitName = entityId.replace('TFT14_', '').replace('TFT_', '')
+    // Extract set number and trait name from mapped ID
+    if (mappedId.startsWith('TFT')) {
+      const match = mappedId.match(/^TFT(\d+)_(.+)$/)
+      if (match) {
+        const [, setNumber, traitName] = match
+        
+        // Use suffix info from mapping
+        if (mappingInfo.hasSetSuffix) {
+          return `${baseUrl}/Trait_Icon_${setNumber}_${traitName}.TFT_Set${setNumber}.png`
+        } else {
+          return `${baseUrl}/Trait_Icon_${setNumber}_${traitName}.png`
+        }
+      }
+    }
+    
+    // Fallback to original logic for non-standard names
+    const traitName = mappedId.replace('TFT14_', '').replace('TFT_', '')
     return `${baseUrl}/Trait_Icon_14_${traitName}.TFT_Set14.png`
   }
   
@@ -44,10 +72,15 @@ export const generateDirectImageUrl = (version, entityId, type = 'champion') => 
 }
 
 /**
- * Loads and caches an image
+ * Loads and caches an image with retry logic
  */
-const loadImage = (url) => {
+const loadImage = (url, maxRetries = 3, retryDelay = 1000) => {
   if (IMAGE_CACHE.has(url)) {
+    // Track cache hit
+    const metadata = CACHE_METADATA.get(url)
+    if (metadata) {
+      metadata.hitCount++
+    }
     return Promise.resolve(IMAGE_CACHE.get(url))
   }
   
@@ -56,21 +89,52 @@ const loadImage = (url) => {
   }
   
   const promise = new Promise((resolve, reject) => {
-    const img = new Image()
-    img.crossOrigin = 'anonymous'
+    let attempts = 0
     
-    img.onload = () => {
-      IMAGE_CACHE.set(url, img)
-      LOADING_PROMISES.delete(url)
-      resolve(img)
+    const attemptLoad = () => {
+      attempts++
+      const img = new Image()
+      img.crossOrigin = 'anonymous'
+      
+      img.onload = () => {
+        // Add to cache with metadata
+        IMAGE_CACHE.set(url, img)
+        CACHE_METADATA.set(url, {
+          timestamp: Date.now(),
+          hitCount: 0,
+          size: img.width * img.height // Rough size estimation
+        })
+        
+        // Clean cache if needed
+        cleanupCache()
+        
+        LOADING_PROMISES.delete(url)
+        resolve(img)
+      }
+      
+      img.onerror = () => {
+        if (attempts < maxRetries) {
+          console.log(`Image load failed (attempt ${attempts}/${maxRetries}), retrying in ${retryDelay * attempts}ms: ${url}`)
+          setTimeout(attemptLoad, retryDelay * attempts) // Exponential backoff
+        } else {
+          LOADING_PROMISES.delete(url)
+          
+          // Track failed image
+          FAILED_IMAGES.set(url, {
+            timestamp: Date.now(),
+            attempts: maxRetries,
+            error: 'Failed to load'
+          })
+          
+          console.error(`Failed to load image after ${maxRetries} attempts: ${url}`)
+          reject(new Error(`Failed to load image after ${maxRetries} attempts: ${url}`))
+        }
+      }
+      
+      img.src = url
     }
     
-    img.onerror = () => {
-      LOADING_PROMISES.delete(url)
-      reject(new Error(`Failed to load image: ${url}`))
-    }
-    
-    img.src = url
+    attemptLoad()
   })
   
   LOADING_PROMISES.set(url, promise)
@@ -210,12 +274,57 @@ export const loadTFTImages = async (version, entityIds, type = 'champion') => {
 }
 
 /**
+ * Cleans up cache by removing old or least-used items
+ */
+const cleanupCache = () => {
+  if (IMAGE_CACHE.size <= MAX_CACHE_SIZE) return
+  
+  const now = Date.now()
+  const entriesToRemove = []
+  
+  // First, remove expired entries
+  for (const [url, metadata] of CACHE_METADATA.entries()) {
+    if (now - metadata.timestamp > CACHE_EXPIRY_TIME) {
+      entriesToRemove.push(url)
+    }
+  }
+  
+  // If still over limit, remove least recently used
+  if (IMAGE_CACHE.size - entriesToRemove.length > MAX_CACHE_SIZE) {
+    const sortedEntries = Array.from(CACHE_METADATA.entries())
+      .filter(([url]) => !entriesToRemove.includes(url))
+      .sort((a, b) => {
+        // Sort by hit count (ascending) then by timestamp (ascending)
+        if (a[1].hitCount !== b[1].hitCount) {
+          return a[1].hitCount - b[1].hitCount
+        }
+        return a[1].timestamp - b[1].timestamp
+      })
+    
+    const excess = IMAGE_CACHE.size - entriesToRemove.length - MAX_CACHE_SIZE
+    entriesToRemove.push(...sortedEntries.slice(0, excess).map(([url]) => url))
+  }
+  
+  // Remove selected entries
+  entriesToRemove.forEach(url => {
+    IMAGE_CACHE.delete(url)
+    CACHE_METADATA.delete(url)
+  })
+  
+  if (entriesToRemove.length > 0) {
+    console.log(`Cleaned up ${entriesToRemove.length} cached images`)
+  }
+}
+
+/**
  * Clears image cache (useful for memory management)
  */
 export const clearImageCache = () => {
   IMAGE_CACHE.clear()
   SPRITE_CACHE.clear()
   LOADING_PROMISES.clear()
+  CACHE_METADATA.clear()
+  FAILED_IMAGES.clear()
 }
 
 /**
@@ -223,11 +332,37 @@ export const clearImageCache = () => {
  */
 export const getCacheStats = () => {
   return {
-    imagesLoaded: IMAGE_CACHE.size,
-    spritesLoaded: SPRITE_CACHE.size,
-    loadingInProgress: LOADING_PROMISES.size
+    imageCount: IMAGE_CACHE.size,
+    spriteCount: SPRITE_CACHE.size,
+    loadingCount: LOADING_PROMISES.size,
+    failedCount: FAILED_IMAGES.size,
+    totalSize: Array.from(CACHE_METADATA.values()).reduce((sum, meta) => sum + meta.size, 0),
+    hitCounts: Array.from(CACHE_METADATA.values()).map(meta => meta.hitCount)
   }
 }
+
+/**
+ * Gets failed image statistics
+ */
+export const getFailedImageStats = () => {
+  const failed = Array.from(FAILED_IMAGES.entries()).map(([url, data]) => ({
+    url,
+    ...data
+  }))
+  
+  return {
+    count: FAILED_IMAGES.size,
+    failed: failed
+  }
+}
+
+/**
+ * Clear failed images tracking
+ */
+export const clearFailedImages = () => {
+  FAILED_IMAGES.clear()
+}
+
 
 /**
  * Extracts all unique sprite names from champion/trait data
