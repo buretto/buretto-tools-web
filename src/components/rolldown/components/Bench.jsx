@@ -56,43 +56,48 @@ function Bench({ units = [], onUnitMove, tftData, tftImages }) {
 function BenchUnitDisplay({ unit, tftData, tftImages }) {
   const imageRef = useRef(null)
   
+  const championData = tftData?.champions?.[unit.id]
+  
   useEffect(() => {
-    if (tftData?.champions?.[unit.id]?.imageUrl && imageRef.current) {
+    if (tftImages && unit.id && imageRef.current) {
       // Clear previous content
       imageRef.current.innerHTML = ''
       
-      // Create image element with direct URL
-      const imgElement = document.createElement('img')
-      imgElement.src = tftData.champions[unit.id].imageUrl
-      imgElement.alt = tftData.champions[unit.id].name || unit.name || 'Champion'
-      imgElement.style.width = '100%'
-      imgElement.style.height = '100%'
-      imgElement.style.objectFit = 'cover'
+      // Get the loaded image from tftImages (which applies mappings)
+      const loadedImage = tftImages.getImage(unit.id, 'champion')
       
-      // Handle image load errors
-      imgElement.onerror = () => {
+      if (loadedImage) {
+        // Use the properly loaded and mapped image
+        const imgElement = document.createElement('img')
+        imgElement.src = loadedImage.src
+        imgElement.alt = championData?.name || unit.name || 'Champion'
+        imgElement.style.width = '100%'
+        imgElement.style.height = '100%'
+        imgElement.style.objectFit = 'cover'
+        imgElement.style.borderRadius = '8px'
+        
+        imageRef.current.appendChild(imgElement)
+      } else if (tftImages.isImageLoading(unit.id, 'champion')) {
+        // Show loading indicator
+        imageRef.current.innerHTML = `<div class="loading-placeholder">...</div>`
+      } else if (tftImages.hasImageError(unit.id, 'champion')) {
+        // Show error indicator
         imageRef.current.innerHTML = `<div class="error-placeholder">!</div>`
+      } else {
+        // Fallback to text placeholder
+        imageRef.current.innerHTML = `<div class="text-placeholder">${championData?.name?.charAt(0) || unit.name?.charAt(0) || 'U'}</div>`
       }
-      
-      imageRef.current.appendChild(imgElement)
     }
-  }, [unit.id, tftData])
-  
-  const championData = tftData?.champions?.[unit.id]
+  }, [unit.id, tftImages, championData])
   
   return (
-    <div className="unit-display">
-      <div className={`unit-avatar cost-${unit.cost}`} ref={imageRef}>
-        {/* Show fallback if no image URL available */}
-        {!championData?.imageUrl && (
-          <div className="text-placeholder">
-            {championData?.name?.charAt(0) || unit.name?.charAt(0) || 'U'}
-          </div>
-        )}
-      </div>
-      <div className="unit-cost">
-        {unit.cost}g
-      </div>
+    <div className="bench-unit-image" ref={imageRef}>
+      {/* Show fallback if no image available */}
+      {!championData && (
+        <div className="text-placeholder">
+          {unit.name?.charAt(0) || 'U'}
+        </div>
+      )}
     </div>
   )
 }

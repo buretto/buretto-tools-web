@@ -47,6 +47,7 @@ const INITIAL_GAME_STATE = {
 
 function RolldownTool() {
   const [gameState, setGameState] = useState(INITIAL_GAME_STATE)
+  const [benchFullWarning, setBenchFullWarning] = useState(false)
   const [preloadProgress, setPreloadProgress] = useState({
     critical: { loaded: 0, total: 0, complete: false },
     background: { loaded: 0, total: 0, complete: false },
@@ -163,6 +164,16 @@ function RolldownTool() {
   // Handle unit purchase
   const handlePurchase = (unit, shopSlotIndex) => {
     console.log('Purchasing unit:', unit, 'at slot:', shopSlotIndex)
+    
+    // Check if bench is full (9 slots)
+    const benchUnits = gameState.player.bench.filter(unit => unit !== null)
+    if (benchUnits.length >= 9) {
+      // Show warning and return early
+      setBenchFullWarning(true)
+      setTimeout(() => setBenchFullWarning(false), 1000)
+      return
+    }
+    
     if (gameState.player.gold >= unit.cost) {
       const purchasedUnit = shopHook.purchaseUnit(shopSlotIndex, 'bench')
       
@@ -242,6 +253,15 @@ function RolldownTool() {
   return (
     <div className="game-root w-full h-full">
       <div className="game-content">
+        {/* Bench Full Warning */}
+        {benchFullWarning && (
+          <div className="bench-full-warning">
+            <div className="bench-full-warning-text">
+              Your bench is full, you must free up space on your bench to purchase a unit!
+            </div>
+          </div>
+        )}
+        
         {/* Header Area - 15% of content height */}
         <div className="game-header">
           <div className="flex justify-between items-center p-4 bg-gray-800 border-b border-gray-700 w-full h-full">

@@ -412,8 +412,8 @@
   border-radius: 3px;
   color: rgb(107 114 128); /* text-gray-500 */
   font-size: 0.875rem;
-  width: 80%; /* 10% margin on each side */
-  height: 80%; /* 10% margin on top/bottom */
+  width: 104%; /* Increased from 80% by 30% (80 * 1.3 = 104) */ /* 10% margin on each side */
+  height: 104%; /* Increased from 80% by 30% (80 * 1.3 = 104) */ /* 10% margin on top/bottom */
   display: flex;
   align-items: center;
   justify-content: center;
@@ -499,8 +499,28 @@
 
 /* Drag and Drop States */
 .dragging {
-  opacity: 0.5;
-  transform: scale(0.95);
+  opacity: 0.7;
+  transform: scale(1.05);
+  z-index: 1000;
+  cursor: grabbing;
+}
+
+.unit-display[draggable="true"] {
+  cursor: grab;
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+}
+
+.unit-display[draggable="true"]:active {
+  cursor: grabbing;
+}
+
+/* Prevent child elements from interfering with drag */
+.unit-display[draggable="true"] * {
+  pointer-events: none;
+  user-select: none;
 }
 
 .drop-target {
@@ -889,3 +909,77 @@
   }
 }
 
+
+
+/* Additional drag behavior fixes */
+.unit-display[draggable="true"] * {
+  -webkit-user-drag: none !important;
+  -khtml-user-drag: none !important;
+  -moz-user-drag: none !important;
+  -o-user-drag: none !important;
+}
+
+.unit-display[draggable="true"] {
+  -webkit-user-drag: element !important;
+  -khtml-user-drag: element !important;
+  -moz-user-drag: element !important;
+  -o-user-drag: element !important;
+}
+
+/* Bench unit image styling */
+.bench-unit-image {
+  width: 100%;
+  height: 100%;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  font-size: 1rem;
+  background: rgba(0, 0, 0, 0.3);
+  color: white;
+  overflow: hidden;
+}
+
+/* Bench Full Warning */
+.bench-full-warning {
+  position: absolute;
+  top: 40%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 9999;
+  pointer-events: none;
+  animation: benchWarningFade 1s ease-in-out;
+}
+
+.bench-full-warning-text {
+  background: rgba(0, 0, 0, 0.8);
+  color: rgb(229, 231, 235); /* Greyish white */
+  padding: 1rem 2rem;
+  border-radius: 8px;
+  font-size: 1.2rem;
+  font-weight: 600;
+  text-align: center;
+  max-width: 400px;
+  line-height: 1.4;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+}
+
+@keyframes benchWarningFade {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -60%);
+  }
+  20% {
+    opacity: 1;
+    transform: translate(-50%, -50%);
+  }
+  80% {
+    opacity: 1;
+    transform: translate(-50%, -50%);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -40%);
+  }
+}

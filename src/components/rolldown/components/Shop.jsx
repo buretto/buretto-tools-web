@@ -1,9 +1,31 @@
-import React, { useEffect, useRef } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { Coins } from 'lucide-react'
 
 const SHOP_SLOTS = 5
 
 function Shop({ units = [], playerGold = 0, tftData, tftImages, onPurchase }) {
+  const [draggedUnit, setDraggedUnit] = useState(null)
+  const [isDraggedOutside, setIsDraggedOutside] = useState(false)
+  
+  // Add global drag over handler to prevent default and allow dropping
+  useEffect(() => {
+    const handleDragOver = (e) => {
+      e.preventDefault()
+      e.dataTransfer.dropEffect = 'move'
+    }
+    
+    const handleDrop = (e) => {
+      e.preventDefault()
+    }
+    
+    document.addEventListener('dragover', handleDragOver)
+    document.addEventListener('drop', handleDrop)
+    
+    return () => {
+      document.removeEventListener('dragover', handleDragOver)
+      document.removeEventListener('drop', handleDrop)
+    }
+  }, [])
   
   // Load images for visible units
   useEffect(() => {
@@ -25,7 +47,7 @@ function Shop({ units = [], playerGold = 0, tftData, tftImages, onPurchase }) {
       slots.push(
         <div
           key={`shop-${i}`}
-          className="shop-slot"
+          className={`shop-slot ${draggedUnit === i ? 'dragging' : ''}`}
           data-slot={i}
           onClick={() => unit && onPurchase && onPurchase(unit, i)}
         >
@@ -33,7 +55,15 @@ function Shop({ units = [], playerGold = 0, tftData, tftImages, onPurchase }) {
             <ShopUnitDisplay 
               unit={unit} 
               tftData={tftData} 
-              tftImages={tftImages} 
+              tftImages={tftImages}
+              slotIndex={i}
+              onDragStart={(slotIndex) => setDraggedUnit(slotIndex)}
+              onDragEnd={() => {
+                setDraggedUnit(null)
+                setIsDraggedOutside(false)
+              }}
+              onDragOutside={(isOutside) => setIsDraggedOutside(isOutside)}
+              onPurchase={onPurchase}
             />
           ) : (
             <div className="empty-slot"></div>
@@ -57,8 +87,9 @@ function Shop({ units = [], playerGold = 0, tftData, tftImages, onPurchase }) {
 /**
  * Component for displaying a unit in the shop
  */
-function ShopUnitDisplay({ unit, tftData, tftImages }) {
+function ShopUnitDisplay({ unit, tftData, tftImages, slotIndex, onDragStart, onDragEnd, onDragOutside, onPurchase }) {
   const imageRef = useRef(null)
+  const [dragStartPos, setDragStartPos] = useState(null)
   const championData = tftData?.champions?.[unit.id]
   
   useEffect(() => {
@@ -92,9 +123,58 @@ function ShopUnitDisplay({ unit, tftData, tftImages }) {
     }
   }, [unit.id, tftImages, championData])
   
+  const handleDragStart = (e) => {
+    e.dataTransfer.setData('text/plain', '')
+    e.dataTransfer.effectAllowed = 'move'
+    e.dataTransfer.dropEffect = 'move'
+    
+    // Create a transparent 1x1 pixel drag image to minimize visual issues
+    const canvas = document.createElement('canvas')
+    canvas.width = 1
+    canvas.height = 1
+    const ctx = canvas.getContext('2d')
+    ctx.globalAlpha = 0.01
+    e.dataTransfer.setDragImage(canvas, 0, 0)
+    
+    // Store the starting position
+    const rect = e.currentTarget.getBoundingClientRect()
+    setDragStartPos({
+      x: rect.left + rect.width / 2,
+      y: rect.top + rect.height / 2
+    })
+    
+    onDragStart?.(slotIndex)
+  }
+
+
+  const handleDragEnd = (e) => {
+    if (dragStartPos) {
+      const distance = Math.sqrt(
+        Math.pow(e.clientX - dragStartPos.x, 2) + Math.pow(e.clientY - dragStartPos.y, 2)
+      )
+      
+      // Purchase if dragged more than 80px away from starting position
+      if (distance > 50 && onPurchase) {
+        onPurchase(unit, slotIndex)
+      }
+    }
+    
+    setDragStartPos(null)
+    onDragEnd?.()
+  }
+
   return (
-    <div className="unit-display">
-      <div className={`unit-avatar`} ref={imageRef}>
+    <div 
+      className="unit-display"
+      draggable={true}
+      onDragStart={handleDragStart}
+      onDragEnd={handleDragEnd}
+      onDragOver={(e) => {
+        e.preventDefault()
+        e.dataTransfer.dropEffect = 'move'
+      }}
+    >
+      <div className={`unit-avatar`} ref={imageRef} style={{pointerEvents: 'none'}}>
         {/* Show fallback if no image URL available */}
         {!championData?.imageUrl && (
           <div className="text-placeholder">
@@ -102,7 +182,7 @@ function ShopUnitDisplay({ unit, tftData, tftImages }) {
           </div>
         )}
       </div>
-      <div className={`unit-bottom-header cost-${unit.cost}`}>
+      <div className={`unit-bottom-header cost-${unit.cost}`} style={{pointerEvents: 'none'}}>
         <span className="unit-name">
           {championData?.name || unit.name || 'Unknown'}
         </span>
