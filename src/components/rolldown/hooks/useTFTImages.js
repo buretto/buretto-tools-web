@@ -51,9 +51,9 @@ export const useTFTImages = (tftData) => {
     try {
       setLoadingImages(prev => new Set(prev).add(cacheKey))
       
-      // Handle different data structures
-      const imageIdentifier = entityData.imageUrl || entityData.image || championId
-      const image = await loadTFTImage(tftData.version, imageIdentifier, type)
+      // Always use championId to ensure mappings are applied fresh
+      // Don't use pre-generated imageUrl as it may not reflect current mappings
+      const image = await loadTFTImage(tftData.version, championId, type)
       
       setLoadedImages(prev => new Map(prev).set(cacheKey, image))
       setLoadingImages(prev => {

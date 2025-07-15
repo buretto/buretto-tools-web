@@ -83,7 +83,7 @@ class ImagePreloader {
   /**
    * Load critical images (shop units, etc.)
    */
-  async loadCriticalImages(championIds) {
+  async loadCriticalImages(championIds, version = '15.13.1') {
     if (!championIds || championIds.length === 0) {
       this.updateProgress('critical', 0, 0)
       return []
@@ -101,7 +101,7 @@ class ImagePreloader {
       if (this.abortController?.signal.aborted) break
 
       try {
-        const image = await loadTFTImage('15.13.1', championId, 'champion')
+        const image = await loadTFTImage(version, championId, 'champion')
         results.push({ championId, image, success: true })
       } catch (error) {
         console.warn(`Failed to load critical image for ${championId}:`, error)
@@ -192,7 +192,7 @@ class ImagePreloader {
 
     try {
       // Phase 1: Load critical images first
-      const criticalResults = await this.loadCriticalImages(criticalChampionIds)
+      const criticalResults = await this.loadCriticalImages(criticalChampionIds, version)
 
       // Phase 2: Background preload all set images
       this.phase = PRELOAD_PHASES.BACKGROUND
