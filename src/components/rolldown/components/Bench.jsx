@@ -17,8 +17,6 @@ function Bench({ units = [], onUnitMove, onUnitSwap, onSell, tftData, tftImages 
     }
   }, [units, tftImages])
   const handleDrop = (e, benchIndex) => {
-    console.log('🎯 Bench DROP EVENT:', { benchIndex, draggedUnit: draggedUnit?.name, dragSource })
-    
     e.preventDefault()
     e.stopPropagation()
     
@@ -36,19 +34,15 @@ function Bench({ units = [], onUnitMove, onUnitSwap, onSell, tftData, tftImages 
     if (currentDragSource === 'bench') {
       // Moving within bench or swapping
       if (existingUnit) {
-        console.log('🔄 Bench->Bench swap')
         onUnitSwap?.(currentDraggedUnit, 'bench', currentDraggedUnit.benchIndex, null, null, existingUnit, 'bench', benchIndex, null, null)
       } else {
-        console.log('🚀 Bench->Bench move')
         onUnitMove?.(currentDraggedUnit, 'bench', currentDraggedUnit.benchIndex, 'bench', benchIndex, null, null)
       }
     } else if (currentDragSource === 'board') {
       // Moving from board to bench
       if (existingUnit) {
-        console.log('🔄 Board->Bench swap')
         onUnitSwap?.(currentDraggedUnit, 'board', null, currentDraggedUnit.row, currentDraggedUnit.col, existingUnit, 'bench', benchIndex, null, null)
       } else {
-        console.log('🚀 Board->Bench move')
         onUnitMove?.(currentDraggedUnit, 'board', null, 'bench', benchIndex, null, null)
       }
     }

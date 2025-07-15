@@ -57,20 +57,10 @@ const HexTile = ({
   }, [unit, tftImages, size])
 
   const handleDrop = (e) => {
-    console.log('🎯 HexTile DROP EVENT:', { 
-      row, col, 
-      hasUnit: !!unit, 
-      unitName: unit?.name,
-      draggedUnit: draggedUnit?.name, 
-      dragSource,
-      isOpponent
-    })
-    
     e.preventDefault()
-    e.stopPropagation() // Stop event from bubbling up
+    e.stopPropagation()
     
     if (!draggedUnit || !dragSource || isOpponent) {
-      console.log('❌ Drop rejected:', { draggedUnit: !!draggedUnit, dragSource, isOpponent })
       return
     }
     
@@ -83,22 +73,16 @@ const HexTile = ({
     
     if (unit) {
       // Swap units
-      console.log('🔄 Attempting SWAP')
       if (currentDragSource === 'bench') {
-        console.log('🔄 Bench->Board swap')
         onUnitSwap?.(currentDraggedUnit, 'bench', currentDraggedUnit.benchIndex, null, null, unit, 'board', null, row, col)
       } else if (currentDragSource === 'board') {
-        console.log('🔄 Board->Board swap')
         onUnitSwap?.(currentDraggedUnit, 'board', null, currentDraggedUnit.row, currentDraggedUnit.col, unit, 'board', null, row, col)
       }
     } else {
       // Move to empty space
-      console.log('🚀 Attempting MOVE')
       if (currentDragSource === 'bench') {
-        console.log('🚀 Bench->Board move')
         onUnitMove?.(currentDraggedUnit, 'bench', currentDraggedUnit.benchIndex, 'board', null, row, col)
       } else if (currentDragSource === 'board') {
-        console.log('🚀 Board->Board move')
         onUnitMove?.(currentDraggedUnit, 'board', null, 'board', null, row, col)
       }
     }
@@ -120,7 +104,6 @@ const HexTile = ({
   }
 
   const handleUnitDragEnd = (e) => {
-    console.log('⚡ HexTile unit drag end (immediate)')
     // End drag immediately for instant response
     endDrag()
   }
@@ -140,7 +123,6 @@ const HexTile = ({
         onClick={onClick}
         onDragOver={(e) => {
           if (!isOpponent && isDragging && dragSource !== 'shop') {
-            console.log('🎯 Hex polygon DRAGOVER:', { row, col, hasUnit: !!unit, dragSource })
             e.preventDefault()
             e.stopPropagation()
             e.dataTransfer.dropEffect = 'move'
@@ -148,7 +130,6 @@ const HexTile = ({
         }}
         onDrop={(e) => {
           if (!isOpponent && isDragging && dragSource !== 'shop') {
-            console.log('🎯 Hex polygon DROP EVENT!')
             e.preventDefault()
             e.stopPropagation()
             handleDrop(e)
@@ -173,7 +154,6 @@ const HexTile = ({
               onDragEnd={handleUnitDragEnd}
               onDragOver={(e) => {
                 if (!isOpponent && isDragging && dragSource !== 'shop') {
-                  console.log('🎯 Unit image DRAGOVER:', { row, col, hasUnit: !!unit, dragSource })
                   e.preventDefault()
                   e.stopPropagation()
                   e.dataTransfer.dropEffect = 'move'
@@ -181,7 +161,6 @@ const HexTile = ({
               }}
               onDrop={(e) => {
                 if (!isOpponent && isDragging && dragSource !== 'shop') {
-                  console.log('🎯 Unit image DROP EVENT!')
                   e.preventDefault()
                   e.stopPropagation()
                   handleDrop(e)

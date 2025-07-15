@@ -24,7 +24,6 @@ export const DragProvider = ({ children }) => {
   }
 
   const endDrag = useCallback(() => {
-    console.log('🛑 DRAG STATE RESET')
     setDraggedUnit(null)
     setDragSource(null)
     setDragSourceIndex(null)
@@ -34,7 +33,6 @@ export const DragProvider = ({ children }) => {
   // Add global drag end handler to ensure drag state is always reset
   React.useEffect(() => {
     const handleGlobalDragEnd = (e) => {
-      console.log('⏰ Global drag end (50ms delay)')
       // Use a small delay to ensure all drop operations complete first
       setTimeout(() => {
         endDrag()
@@ -42,10 +40,8 @@ export const DragProvider = ({ children }) => {
     }
     
     const handleGlobalDrop = (e) => {
-      console.log('⚡ Global drop (immediate)', e.target, e.target.className, e.target.tagName)
       // Only reset if the drop wasn't handled by a valid drop zone
       setTimeout(() => {
-        console.log('⚡ Global drop reset after timeout')
         endDrag()
       }, 10)
     }

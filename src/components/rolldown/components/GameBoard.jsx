@@ -70,12 +70,10 @@ function GameBoard({ units, opponentUnits = [], tftData, tftImages, onUnitMove, 
       <div 
         style={{ position: 'relative', width: '100%', height: '100%' }}
         onDragOver={(e) => {
-          console.log('🎯 GameBoard container dragover')
           e.preventDefault()
           e.dataTransfer.dropEffect = 'move'
         }}
         onDrop={(e) => {
-          console.log('🎯 GameBoard container drop - should not reach here if HexTile handles it')
           e.preventDefault()
         }}
       >

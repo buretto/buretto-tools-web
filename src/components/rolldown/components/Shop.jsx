@@ -49,7 +49,6 @@ function Shop({ units = [], playerGold = 0, tftData, tftImages, onPurchase, onSe
   }, [units, tftImages])
 
   const handleSellDrop = (e) => {
-    console.log('🛒 Shop sell drop')
     e.preventDefault()
     e.stopPropagation()
     
@@ -68,7 +67,6 @@ function Shop({ units = [], playerGold = 0, tftData, tftImages, onPurchase, onSe
   }
 
   const handleSellDragOver = (e) => {
-    console.log('🛒 Shop sell dragover')
     e.preventDefault()
     e.stopPropagation()
     e.dataTransfer.dropEffect = 'move'
