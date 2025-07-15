@@ -8,6 +8,11 @@ import PlayerInfo from './components/PlayerInfo'
 import Timer from './components/Timer'
 import Analytics from './components/Analytics'
 import TraitsColumn from './components/TraitsColumn'
+import TFTVersionSelector from './components/TFTVersionSelector'
+import { useTFTData } from './hooks/useTFTData'
+import { useTFTImages } from './hooks/useTFTImages'
+import { useUnitPool } from './hooks/useUnitPool'
+import { useShop } from './hooks/useShop'
 import './styles/rolldown.css'
 
 const getLevelUpCost = (level) => {
@@ -24,12 +29,11 @@ const INITIAL_GAME_STATE = {
     exp: 0,
     board: [],
     bench: [],
-    shop: []
+    shop: [] // Now dynamically generated
   },
   opponent: {
     bench: [] // Opponent bench for display purposes
   },
-  unitPool: new Map(),
   analytics: {
     rollsPerMinute: 0,
     goldSpent: 0,
@@ -40,7 +44,134 @@ const INITIAL_GAME_STATE = {
 
 function RolldownTool() {
   const [gameState, setGameState] = useState(INITIAL_GAME_STATE)
+  const { 
+    data: tftData, 
+    loading: tftLoading, 
+    error: tftError, 
+    currentVersion, 
+    cachedVersions, 
+    loadVersion 
+  } = useTFTData()
   
+  const tftImages = useTFTImages(tftData)
+  
+  // Initialize pool and shop management
+  const unitPoolHook = useUnitPool(tftData, currentVersion)
+  const shopHook = useShop(tftData, currentVersion, unitPoolHook)
+  
+  // Initialize pool when tftData is loaded
+  useEffect(() => {
+    if (tftData && tftData.champions && Object.keys(tftData.champions).length > 0 && !tftLoading) {
+      console.log('Initializing pool with tftData:', Object.keys(tftData.champions).length, 'champions')
+      
+      // Just initialize pool - shop generation will happen when pool is ready
+      unitPoolHook.initializePool()
+    }
+  }, [tftData, tftLoading])
+  
+  // Generate shop when unitPool is ready and shop is empty
+  useEffect(() => {
+    if (unitPoolHook.unitPool.size > 0 && gameState.player.shop.length === 0) {
+      console.log('Pool is ready with', unitPoolHook.unitPool.size, 'units, generating initial shop...')
+      const initialShop = shopHook.generateShop(gameState.player.level)
+      console.log('Generated initial shop:', initialShop)
+      setGameState(prev => ({
+        ...prev,
+        player: {
+          ...prev.player,
+          shop: initialShop
+        }
+      }))
+    }
+  }, [unitPoolHook.unitPool.size, gameState.player.shop.length])
+  
+  // Handle shop reroll
+  const handleReroll = () => {
+    const rerollCost = shopHook.getRerollCost()
+    
+    if (gameState.player.gold >= rerollCost) {
+      const newShop = shopHook.rerollShop(gameState.player.level)
+      
+      setGameState(prev => ({
+        ...prev,
+        player: {
+          ...prev.player,
+          gold: prev.player.gold - rerollCost,
+          shop: newShop
+        },
+        analytics: {
+          ...prev.analytics,
+          goldSpent: prev.analytics.goldSpent + rerollCost,
+          actions: [...prev.analytics.actions, {
+            type: 'reroll',
+            timestamp: Date.now(),
+            cost: rerollCost
+          }]
+        }
+      }))
+    }
+  }
+  
+  // Handle unit purchase
+  const handlePurchase = (unit, shopSlotIndex) => {
+    console.log('Purchasing unit:', unit, 'at slot:', shopSlotIndex)
+    if (gameState.player.gold >= unit.cost) {
+      const purchasedUnit = shopHook.purchaseUnit(shopSlotIndex, 'bench')
+      
+      if (purchasedUnit) {
+        setGameState(prev => ({
+          ...prev,
+          player: {
+            ...prev.player,
+            gold: prev.player.gold - unit.cost,
+            bench: [...prev.player.bench, purchasedUnit],
+            shop: shopHook.currentShop // Update shop state
+          },
+          analytics: {
+            ...prev.analytics,
+            goldSpent: prev.analytics.goldSpent + unit.cost,
+            actions: [...prev.analytics.actions, {
+              type: 'purchase',
+              timestamp: Date.now(),
+              unit: unit.id,
+              cost: unit.cost
+            }]
+          }
+        }))
+      }
+    }
+  }
+  
+  // Handle unit sell
+  const handleSell = (unit, location, index) => {
+    const sellValue = Math.floor(unit.cost * 0.6) // TFT sell value is 60% of cost
+    
+    shopHook.sellUnit(unit)
+    
+    setGameState(prev => {
+      const newState = { ...prev }
+      newState.player.gold += sellValue
+      
+      // Remove from appropriate location
+      if (location === 'bench') {
+        newState.player.bench = newState.player.bench.filter((_, i) => i !== index)
+      } else if (location === 'board') {
+        newState.player.board = newState.player.board.filter((_, i) => i !== index)
+      }
+      
+      newState.analytics = {
+        ...prev.analytics,
+        actions: [...prev.analytics.actions, {
+          type: 'sell',
+          timestamp: Date.now(),
+          unit: unit.id,
+          value: sellValue
+        }]
+      }
+      
+      return newState
+    })
+  }
   
   return (
     <div className="game-root w-full h-full">
@@ -118,8 +249,16 @@ function RolldownTool() {
                   <button className="w-full bg-blue-600 hover:bg-blue-700 rounded transition-colors responsive-button-text responsive-button-padding flex-1">
                     Buy XP (4g)
                   </button>
-                  <button className="w-full bg-blue-600 hover:bg-blue-700 rounded transition-colors responsive-button-text responsive-button-padding flex-1">
-                    Refresh ($2)
+                  <button 
+                    className={`w-full rounded transition-colors responsive-button-text responsive-button-padding flex-1 ${
+                      shopHook.canAffordReroll(gameState.player.gold) 
+                        ? 'bg-green-600 hover:bg-green-700' 
+                        : 'bg-gray-600 cursor-not-allowed'
+                    }`}
+                    onClick={handleReroll}
+                    disabled={!shopHook.canAffordReroll(gameState.player.gold)}
+                  >
+                    Refresh ({shopHook.getRerollCost()}g)
                   </button>
                 </div>
               </div>
@@ -129,9 +268,10 @@ function RolldownTool() {
                 <Shop 
                   units={gameState.player.shop}
                   playerGold={gameState.player.gold}
-                  onPurchase={(unit) => {
-                    // TODO: Implement unit purchase
-                    console.log('Purchase unit', unit)
+                  tftData={tftData}
+                  tftImages={tftImages}
+                  onPurchase={(unit, shopSlotIndex) => {
+                    handlePurchase(unit, shopSlotIndex)
                   }}
                 />
               </div>
@@ -143,6 +283,15 @@ function RolldownTool() {
         <div className="traits-column">
           <TraitsColumn boardUnits={gameState.player.board} />
         </div>
+        
+        {/* TFT Version Selector - Positioned absolutely */}
+        <TFTVersionSelector
+          currentVersion={currentVersion}
+          cachedVersions={cachedVersions}
+          loading={tftLoading}
+          error={tftError}
+          onVersionSelect={loadVersion}
+        />
       </div>
     </div>
   )
