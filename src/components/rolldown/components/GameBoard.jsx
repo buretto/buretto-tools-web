@@ -4,7 +4,7 @@ import HexTile from './HexTile'
 const BOARD_ROWS = 4
 const BOARD_COLS = 7
 
-function GameBoard({ units, onUnitMove }) {
+function GameBoard({ units, opponentUnits = [], tftData, tftImages, onUnitMove, onUnitSwap, onSell }) {
   // Base hex size calculation without multiplier for consistent viewBox
   const availableHeight = window.innerHeight * 0.612 // 61.2% for game-board-area
   const availableWidth = window.innerWidth * 0.5 // 50% for game-board width
@@ -37,7 +37,9 @@ function GameBoard({ units, onUnitMove }) {
         // Offset every other row for hexagonal tessellation
         const offsetX = (row % 2 === 0) ? 0 : HEX_WIDTH * 0.44
         
-        const unit = units.find(u => u.row === row && u.col === col)
+        const unit = isOpponent 
+          ? opponentUnits.find(u => u.row === row && u.col === col) 
+          : units.find(u => u.row === row && u.col === col)
         
         tiles.push(
           <HexTile
@@ -46,7 +48,14 @@ function GameBoard({ units, onUnitMove }) {
             y={y}
             size={hexSize}
             unit={unit}
+            row={row}
+            col={col}
             isOpponent={isOpponent}
+            tftData={tftData}
+            tftImages={tftImages}
+            onUnitMove={!isOpponent ? onUnitMove : undefined}
+            onUnitSwap={!isOpponent ? onUnitSwap : undefined}
+            onSell={!isOpponent ? onSell : undefined}
             onClick={() => !isOpponent && onUnitMove && onUnitMove(row, col)}
           />
         )

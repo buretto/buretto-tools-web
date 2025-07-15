@@ -1,13 +1,15 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { Coins } from 'lucide-react'
+import { useDrag } from '../contexts/DragContext'
 
 const SHOP_SLOTS = 5
 
-function Shop({ units = [], playerGold = 0, tftData, tftImages, onPurchase }) {
+function Shop({ units = [], playerGold = 0, tftData, tftImages, onPurchase, onSell }) {
   const [draggedUnit, setDraggedUnit] = useState(null)
   const [isDraggedOutside, setIsDraggedOutside] = useState(false)
+  const { isDragging, draggedUnit: globalDraggedUnit, dragSource } = useDrag()
   
-  // Add global drag over handler to prevent default and allow dropping
+  // Add global drag handlers to ensure proper drag state management
   useEffect(() => {
     const handleDragOver = (e) => {
       e.preventDefault()
@@ -18,12 +20,20 @@ function Shop({ units = [], playerGold = 0, tftData, tftImages, onPurchase }) {
       e.preventDefault()
     }
     
+    const handleDragEnd = (e) => {
+      // Reset local drag state when any drag operation ends
+      setDraggedUnit(null)
+      setIsDraggedOutside(false)
+    }
+    
     document.addEventListener('dragover', handleDragOver)
     document.addEventListener('drop', handleDrop)
+    document.addEventListener('dragend', handleDragEnd)
     
     return () => {
       document.removeEventListener('dragover', handleDragOver)
       document.removeEventListener('drop', handleDrop)
+      document.removeEventListener('dragend', handleDragEnd)
     }
   }, [])
   
@@ -37,10 +47,42 @@ function Shop({ units = [], playerGold = 0, tftData, tftImages, onPurchase }) {
       })
     }
   }, [units, tftImages])
+
+  const handleSellDrop = (e) => {
+    e.preventDefault()
+    e.stopPropagation()
+    
+    if (globalDraggedUnit && (dragSource === 'bench' || dragSource === 'board') && onSell) {
+      const location = dragSource
+      const index = dragSource === 'bench' ? globalDraggedUnit.benchIndex : null
+      onSell(globalDraggedUnit, location, index)
+    }
+  }
   
   const renderShopSlots = () => {
     const slots = []
+    const showSellArea = isDragging && (dragSource === 'bench' || dragSource === 'board')
     
+    if (showSellArea) {
+      // Show one unified sell area covering all shop slots
+      const sellValue = globalDraggedUnit ? Math.floor(globalDraggedUnit.cost * 0.6) : 0
+      return (
+        <div
+          className="shop-slots-sell-overlay"
+          onDragOver={(e) => {
+            e.preventDefault()
+            e.dataTransfer.dropEffect = 'move'
+          }}
+          onDrop={handleSellDrop}
+        >
+          <div className="sell-text">
+            Sell for {sellValue}g
+          </div>
+        </div>
+      )
+    }
+    
+    // Show normal shop slots
     for (let i = 0; i < SHOP_SLOTS; i++) {
       const unit = units[i]
       

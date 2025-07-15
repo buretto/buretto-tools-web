@@ -1,8 +1,10 @@
 import React, { useEffect, useRef } from 'react'
+import { useDrag } from '../contexts/DragContext'
 
 const BENCH_SLOTS = 9
 
-function Bench({ units = [], onUnitMove, tftData, tftImages }) {
+function Bench({ units = [], onUnitMove, onUnitSwap, onSell, tftData, tftImages }) {
+  const { isDragging, draggedUnit, dragSource } = useDrag()
   
   // Load images for visible units
   useEffect(() => {
@@ -14,6 +16,30 @@ function Bench({ units = [], onUnitMove, tftData, tftImages }) {
       })
     }
   }, [units, tftImages])
+  const handleDrop = (e, benchIndex) => {
+    e.preventDefault()
+    
+    if (!draggedUnit || !dragSource) return
+    
+    const existingUnit = units[benchIndex]
+    
+    if (dragSource === 'bench') {
+      // Moving within bench or swapping
+      if (existingUnit) {
+        onUnitSwap?.(draggedUnit, 'bench', draggedUnit.benchIndex, null, null, existingUnit, 'bench', benchIndex, null, null)
+      } else {
+        onUnitMove?.(draggedUnit, 'bench', draggedUnit.benchIndex, 'bench', benchIndex, null, null)
+      }
+    } else if (dragSource === 'board') {
+      // Moving from board to bench
+      if (existingUnit) {
+        onUnitSwap?.(draggedUnit, 'board', null, draggedUnit.row, draggedUnit.col, existingUnit, 'bench', benchIndex, null, null)
+      } else {
+        onUnitMove?.(draggedUnit, 'board', null, 'bench', benchIndex, null, null)
+      }
+    }
+  }
+
   const renderBenchSlots = () => {
     const slots = []
     
@@ -23,15 +49,23 @@ function Bench({ units = [], onUnitMove, tftData, tftImages }) {
       slots.push(
         <div
           key={`bench-${i}`}
-          className="bench-slot"
+          className={`bench-slot ${isDragging && dragSource !== 'shop' ? 'drop-zone' : ''}`}
           data-slot={i}
-          onClick={() => onUnitMove && onUnitMove(i, null)}
+          onDragOver={(e) => {
+            e.preventDefault()
+            if (isDragging && dragSource !== 'shop') {
+              e.dataTransfer.dropEffect = 'move'
+            }
+          }}
+          onDrop={(e) => handleDrop(e, i)}
         >
           {unit && (
             <BenchUnitDisplay 
-              unit={unit} 
+              unit={unit}
+              unitIndex={i}
               tftData={tftData} 
-              tftImages={tftImages} 
+              tftImages={tftImages}
+              onSell={onSell}
             />
           )}
         </div>
@@ -53,8 +87,9 @@ function Bench({ units = [], onUnitMove, tftData, tftImages }) {
 /**
  * Component for displaying a unit in the bench
  */
-function BenchUnitDisplay({ unit, tftData, tftImages }) {
+function BenchUnitDisplay({ unit, unitIndex, tftData, tftImages, onSell }) {
   const imageRef = useRef(null)
+  const { startDrag, endDrag } = useDrag()
   
   const championData = tftData?.champions?.[unit.id]
   
@@ -89,9 +124,32 @@ function BenchUnitDisplay({ unit, tftData, tftImages }) {
       }
     }
   }, [unit.id, tftImages, championData])
+
+  const handleDragStart = (e) => {
+    const unitWithIndex = { ...unit, benchIndex: unitIndex }
+    startDrag(unitWithIndex, 'bench', unitIndex)
+    
+    // Create transparent drag image
+    const canvas = document.createElement('canvas')
+    canvas.width = 1
+    canvas.height = 1
+    const ctx = canvas.getContext('2d')
+    ctx.globalAlpha = 0.01
+    e.dataTransfer.setDragImage(canvas, 0, 0)
+  }
+
+  const handleDragEnd = (e) => {
+    endDrag()
+  }
   
   return (
-    <div className="bench-unit-image" ref={imageRef}>
+    <div 
+      className="bench-unit-image" 
+      ref={imageRef}
+      draggable={true}
+      onDragStart={handleDragStart}
+      onDragEnd={handleDragEnd}
+    >
       {/* Show fallback if no image available */}
       {!championData && (
         <div className="text-placeholder">

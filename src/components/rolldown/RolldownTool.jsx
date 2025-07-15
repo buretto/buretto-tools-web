@@ -11,6 +11,7 @@ import TraitsColumn from './components/TraitsColumn'
 import TFTVersionSelector from './components/TFTVersionSelector'
 import ImageMappingModal from './components/ImageMappingModal'
 import ImageLoadWarning from './components/ImageLoadWarning'
+import { DragProvider } from './contexts/DragContext'
 import { useTFTData } from './hooks/useTFTData'
 import { useTFTImages } from './hooks/useTFTImages'
 import { useUnitPool } from './hooks/useUnitPool'
@@ -31,11 +32,12 @@ const INITIAL_GAME_STATE = {
     level: 8,
     exp: 0,
     board: [],
-    bench: [],
+    bench: new Array(9).fill(null),
     shop: [] // Now dynamically generated
   },
   opponent: {
-    bench: [] // Opponent bench for display purposes
+    bench: [], // Opponent bench for display purposes
+    board: [] // Opponent board for display purposes
   },
   analytics: {
     rollsPerMinute: 0,
@@ -65,6 +67,7 @@ function RolldownTool() {
     cachedVersions, 
     loadVersion 
   } = useTFTData()
+  
   
   const tftImages = useTFTImages(tftData)
   
@@ -183,12 +186,19 @@ function RolldownTool() {
           const updatedShop = [...prev.player.shop]
           updatedShop[shopSlotIndex] = null
           
+          // Find first empty bench slot
+          const newBench = [...prev.player.bench]
+          const emptySlotIndex = newBench.findIndex(slot => slot === null)
+          if (emptySlotIndex !== -1) {
+            newBench[emptySlotIndex] = purchasedUnit
+          }
+          
           return {
             ...prev,
             player: {
               ...prev.player,
               gold: prev.player.gold - unit.cost,
-              bench: [...prev.player.bench, purchasedUnit],
+              bench: newBench,
               shop: updatedShop // Use explicitly updated shop
             },
             analytics: {
@@ -219,7 +229,9 @@ function RolldownTool() {
       
       // Remove from appropriate location
       if (location === 'bench') {
-        newState.player.bench = newState.player.bench.filter((_, i) => i !== index)
+        const newBench = [...newState.player.bench]
+        newBench[index] = null
+        newState.player.bench = newBench
       } else if (location === 'board') {
         newState.player.board = newState.player.board.filter((_, i) => i !== index)
       }
@@ -232,6 +244,90 @@ function RolldownTool() {
           unit: unit.id,
           value: sellValue
         }]
+      }
+      
+      return newState
+    })
+  }
+
+  // Handle unit move from bench to board or board to bench
+  const handleUnitMove = (unit, fromLocation, fromIndex, toLocation, toIndex, toRow, toCol) => {
+    setGameState(prev => {
+      const newState = { ...prev }
+      
+      // Create new bench and board arrays
+      const newBench = [...newState.player.bench]
+      const newBoard = [...newState.player.board]
+      
+      // Remove unit from source location
+      if (fromLocation === 'bench') {
+        newBench[fromIndex] = null
+      } else if (fromLocation === 'board') {
+        const boardIndex = newBoard.findIndex(u => 
+          u.row === unit.row && u.col === unit.col
+        )
+        if (boardIndex !== -1) {
+          newBoard.splice(boardIndex, 1)
+        }
+      }
+      
+      // Add unit to target location
+      if (toLocation === 'bench') {
+        // Insert at specific bench position if toIndex is provided
+        if (toIndex !== null && toIndex !== undefined) {
+          newBench[toIndex] = unit
+        } else {
+          // Find first empty slot
+          const emptySlot = newBench.findIndex(slot => slot === null)
+          if (emptySlot !== -1) {
+            newBench[emptySlot] = unit
+          }
+        }
+      } else if (toLocation === 'board') {
+        const updatedUnit = { ...unit, row: toRow, col: toCol }
+        newBoard.push(updatedUnit)
+      }
+      
+      // Update state
+      newState.player.bench = newBench
+      newState.player.board = newBoard
+      
+      return newState
+    })
+  }
+
+  // Handle unit swap between positions
+  const handleUnitSwap = (unit1, location1, index1, row1, col1, unit2, location2, index2, row2, col2) => {
+    setGameState(prev => {
+      const newState = { ...prev }
+      
+      if (location1 === 'bench' && location2 === 'bench') {
+        // Swap bench positions
+        const newBench = [...newState.player.bench]
+        newBench[index1] = unit2
+        newBench[index2] = unit1
+        newState.player.bench = newBench
+      } else if (location1 === 'board' && location2 === 'board') {
+        // Swap board positions
+        const newBoard = newState.player.board.map(u => {
+          if (u === unit1) return { ...unit2, row: row1, col: col1 }
+          if (u === unit2) return { ...unit1, row: row2, col: col2 }
+          return u
+        })
+        newState.player.board = newBoard
+      } else {
+        // Swap between bench and board
+        if (location1 === 'bench') {
+          newState.player.bench = newState.player.bench.filter((_, i) => i !== index1)
+          newState.player.board = newState.player.board.filter(u => u !== unit2)
+          newState.player.bench.push({ ...unit2 })
+          newState.player.board.push({ ...unit1, row: row2, col: col2 })
+        } else {
+          newState.player.board = newState.player.board.filter(u => u !== unit1)
+          newState.player.bench = newState.player.bench.filter((_, i) => i !== index2)
+          newState.player.board.push({ ...unit2, row: row1, col: col1 })
+          newState.player.bench.push({ ...unit1 })
+        }
       }
       
       return newState
@@ -251,8 +347,9 @@ function RolldownTool() {
   }
   
   return (
-    <div className="game-root w-full h-full">
-      <div className="game-content">
+    <DragProvider>
+      <div className="game-root w-full h-full">
+        <div className="game-content">
         {/* Bench Full Warning */}
         {benchFullWarning && (
           <div className="bench-full-warning">
@@ -319,10 +416,12 @@ function RolldownTool() {
         <div className="game-board-area">
           <GameBoard 
             units={gameState.player.board}
-            onUnitMove={(fromPos, toPos) => {
-              // TODO: Implement unit movement
-              console.log('Move unit from', fromPos, 'to', toPos)
-            }}
+            opponentUnits={gameState.opponent.board || []}
+            tftData={tftData}
+            tftImages={tftImages}
+            onUnitMove={handleUnitMove}
+            onUnitSwap={handleUnitSwap}
+            onSell={handleSell}
           />
         </div>
         
@@ -332,10 +431,9 @@ function RolldownTool() {
             units={gameState.player.bench}
             tftData={tftData}
             tftImages={tftImages}
-            onUnitMove={(fromPos, toPos) => {
-              // TODO: Implement bench movement
-              console.log('Move bench unit from', fromPos, 'to', toPos)
-            }}
+            onUnitMove={handleUnitMove}
+            onUnitSwap={handleUnitSwap}
+            onSell={handleSell}
           />
         </div>
         
@@ -394,6 +492,7 @@ function RolldownTool() {
                   onPurchase={(unit, shopSlotIndex) => {
                     handlePurchase(unit, shopSlotIndex)
                   }}
+                  onSell={handleSell}
                 />
               </div>
             </div>
@@ -421,8 +520,9 @@ function RolldownTool() {
           onClose={handleCloseMappings}
           version={mappingModalVersion}
         />
+        </div>
       </div>
-    </div>
+    </DragProvider>
   )
 }
 
