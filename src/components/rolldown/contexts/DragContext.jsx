@@ -15,20 +15,28 @@ export const DragProvider = ({ children }) => {
   const [dragSource, setDragSource] = useState(null) // 'bench', 'board', 'shop'
   const [dragSourceIndex, setDragSourceIndex] = useState(null)
   const [isDragging, setIsDragging] = useState(false)
+  const [draggedElement, setDraggedElement] = useState(null) // Track the DOM element being dragged
 
-  const startDrag = (unit, source, sourceIndex) => {
+  const startDrag = (unit, source, sourceIndex, element = null) => {
     setDraggedUnit(unit)
     setDragSource(source)
     setDragSourceIndex(sourceIndex)
     setIsDragging(true)
+    setDraggedElement(element)
   }
 
   const endDrag = useCallback(() => {
+    // Restore opacity of any dragged element
+    if (draggedElement) {
+      draggedElement.style.opacity = '1'
+    }
+    
     setDraggedUnit(null)
     setDragSource(null)
     setDragSourceIndex(null)
     setIsDragging(false)
-  }, [])
+    setDraggedElement(null)
+  }, [draggedElement])
   
   // Add global drag end handler to ensure drag state is always reset
   React.useEffect(() => {

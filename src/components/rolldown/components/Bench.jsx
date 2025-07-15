@@ -139,18 +139,78 @@ function BenchUnitDisplay({ unit, unitIndex, tftData, tftImages, onSell }) {
 
   const handleDragStart = (e) => {
     const unitWithIndex = { ...unit, benchIndex: unitIndex }
-    startDrag(unitWithIndex, 'bench', unitIndex)
+    startDrag(unitWithIndex, 'bench', unitIndex, e.currentTarget)
     
-    // Create transparent drag image
-    const canvas = document.createElement('canvas')
-    canvas.width = 1
-    canvas.height = 1
-    const ctx = canvas.getContext('2d')
-    ctx.globalAlpha = 0.01
-    e.dataTransfer.setDragImage(canvas, 0, 0)
+    // Calculate grab point relative to element and get actual dimensions
+    const rect = e.currentTarget.getBoundingClientRect()
+    const grabX = e.clientX - rect.left
+    const grabY = e.clientY - rect.top
+    const actualWidth = rect.width
+    const actualHeight = rect.height
+    
+    // Try to use the actual unit image if available
+    const loadedImage = tftImages?.getImage(unit.id, 'champion')
+    
+    if (loadedImage) {
+      // Create drag image with actual unit image using actual dimensions
+      const dragImage = document.createElement('div')
+      dragImage.style.width = `${actualWidth}px`
+      dragImage.style.height = `${actualHeight}px`
+      dragImage.style.borderRadius = '8px'
+      dragImage.style.backgroundColor = 'rgba(0,0,0,0.7)'
+      dragImage.style.position = 'absolute'
+      dragImage.style.top = '-1000px'
+      dragImage.style.pointerEvents = 'none'
+      dragImage.style.overflow = 'hidden'
+      
+      const img = document.createElement('img')
+      img.src = loadedImage.src
+      img.style.width = '100%'
+      img.style.height = '100%'
+      img.style.objectFit = 'cover'
+      img.style.borderRadius = '8px'
+      
+      dragImage.appendChild(img)
+      document.body.appendChild(dragImage)
+      e.dataTransfer.setDragImage(dragImage, grabX, grabY)
+      
+      setTimeout(() => {
+        document.body.removeChild(dragImage)
+      }, 0)
+    } else {
+      // Fallback to text-based drag image using actual dimensions
+      const dragImage = document.createElement('div')
+      dragImage.style.width = `${actualWidth}px`
+      dragImage.style.height = `${actualHeight}px`
+      dragImage.style.borderRadius = '8px'
+      dragImage.style.backgroundColor = 'rgba(0,0,0,0.8)'
+      dragImage.style.display = 'flex'
+      dragImage.style.alignItems = 'center'
+      dragImage.style.justifyContent = 'center'
+      dragImage.style.color = 'white'
+      dragImage.style.fontSize = '14px'
+      dragImage.style.fontWeight = 'bold'
+      dragImage.style.position = 'absolute'
+      dragImage.style.top = '-1000px'
+      dragImage.style.pointerEvents = 'none'
+      dragImage.textContent = championData?.name?.charAt(0) || unit.name?.charAt(0) || 'U'
+      
+      document.body.appendChild(dragImage)
+      e.dataTransfer.setDragImage(dragImage, grabX, grabY)
+      
+      setTimeout(() => {
+        document.body.removeChild(dragImage)
+      }, 0)
+    }
+    
+    // Hide the original element during drag
+    e.currentTarget.style.opacity = '0'
   }
 
   const handleDragEnd = (e) => {
+    // Restore original element opacity
+    e.currentTarget.style.opacity = '1'
+    
     // End drag immediately for instant response
     endDrag()
   }

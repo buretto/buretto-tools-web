@@ -145,6 +145,7 @@ function Shop({ units = [], playerGold = 0, tftData, tftImages, onPurchase, onSe
 function ShopUnitDisplay({ unit, tftData, tftImages, slotIndex, onDragStart, onDragEnd, onDragOutside, onPurchase }) {
   const imageRef = useRef(null)
   const [dragStartPos, setDragStartPos] = useState(null)
+  const [draggedElement, setDraggedElement] = useState(null)
   const championData = tftData?.champions?.[unit.id]
   
   useEffect(() => {
@@ -177,22 +178,133 @@ function ShopUnitDisplay({ unit, tftData, tftImages, slotIndex, onDragStart, onD
       }
     }
   }, [unit.id, tftImages, championData])
+
+  // Cleanup effect to restore opacity if component unmounts during drag
+  useEffect(() => {
+    return () => {
+      if (draggedElement) {
+        draggedElement.style.opacity = '1'
+      }
+    }
+  }, [draggedElement])
   
   const handleDragStart = (e) => {
     e.dataTransfer.setData('text/plain', '')
     e.dataTransfer.effectAllowed = 'move'
     e.dataTransfer.dropEffect = 'move'
     
-    // Create a transparent 1x1 pixel drag image to minimize visual issues
-    const canvas = document.createElement('canvas')
-    canvas.width = 1
-    canvas.height = 1
-    const ctx = canvas.getContext('2d')
-    ctx.globalAlpha = 0.01
-    e.dataTransfer.setDragImage(canvas, 0, 0)
+    // Calculate grab point relative to element and get actual dimensions
+    const rect = e.currentTarget.getBoundingClientRect()
+    const grabX = e.clientX - rect.left
+    const grabY = e.clientY - rect.top
+    const actualWidth = rect.width
+    const actualHeight = rect.height
+    
+    // Clone the unit display and copy computed styles
+    const dragImage = e.currentTarget.cloneNode(true)
+    dragImage.style.position = 'absolute'
+    dragImage.style.top = '-1000px'
+    dragImage.style.pointerEvents = 'none'
+    dragImage.style.width = `${actualWidth}px`
+    dragImage.style.height = `${actualHeight}px`
+    dragImage.style.opacity = '1'
+    dragImage.style.filter = 'none'
+    dragImage.style.transform = 'none'
+    
+    // Copy the main container styles to ensure no tinting
+    const originalMainStyles = window.getComputedStyle(e.currentTarget)
+    dragImage.style.backgroundColor = originalMainStyles.backgroundColor
+    dragImage.style.borderRadius = originalMainStyles.borderRadius
+    
+    // Copy computed styles for the bottom header and its children
+    const originalBottomHeader = e.currentTarget.querySelector('.unit-bottom-header')
+    const clonedBottomHeader = dragImage.querySelector('.unit-bottom-header')
+    
+    if (originalBottomHeader && clonedBottomHeader) {
+      const originalStyles = window.getComputedStyle(originalBottomHeader)
+      clonedBottomHeader.style.backgroundColor = originalStyles.backgroundColor
+      clonedBottomHeader.style.color = originalStyles.color
+      clonedBottomHeader.style.fontSize = originalStyles.fontSize
+      clonedBottomHeader.style.fontWeight = originalStyles.fontWeight
+      clonedBottomHeader.style.padding = originalStyles.padding
+      clonedBottomHeader.style.borderRadius = originalStyles.borderRadius
+      clonedBottomHeader.style.height = originalStyles.height
+      clonedBottomHeader.style.minHeight = originalStyles.minHeight
+      clonedBottomHeader.style.maxHeight = originalStyles.maxHeight
+      clonedBottomHeader.style.display = originalStyles.display
+      clonedBottomHeader.style.alignItems = originalStyles.alignItems
+      clonedBottomHeader.style.justifyContent = originalStyles.justifyContent
+      
+      // Copy styles for unit name
+      const originalUnitName = originalBottomHeader.querySelector('.unit-name')
+      const clonedUnitName = clonedBottomHeader.querySelector('.unit-name')
+      if (originalUnitName && clonedUnitName) {
+        const nameStyles = window.getComputedStyle(originalUnitName)
+        clonedUnitName.style.color = nameStyles.color
+        clonedUnitName.style.fontSize = nameStyles.fontSize
+        clonedUnitName.style.fontWeight = nameStyles.fontWeight
+      }
+      
+      // Copy styles for cost icon
+      const originalCostIcon = originalBottomHeader.querySelector('.unit-cost-icon')
+      const clonedCostIcon = clonedBottomHeader.querySelector('.unit-cost-icon')
+      if (originalCostIcon && clonedCostIcon) {
+        const iconStyles = window.getComputedStyle(originalCostIcon)
+        clonedCostIcon.style.color = iconStyles.color
+        clonedCostIcon.style.width = iconStyles.width
+        clonedCostIcon.style.height = iconStyles.height
+        clonedCostIcon.style.transform = iconStyles.transform
+        clonedCostIcon.style.filter = iconStyles.filter
+      }
+      
+      // Copy styles for cost text
+      const originalCostText = originalBottomHeader.querySelector('.unit-cost')
+      const clonedCostText = clonedBottomHeader.querySelector('.unit-cost')
+      if (originalCostText && clonedCostText) {
+        const costStyles = window.getComputedStyle(originalCostText)
+        clonedCostText.style.color = costStyles.color
+        clonedCostText.style.fontSize = costStyles.fontSize
+        clonedCostText.style.fontWeight = costStyles.fontWeight
+      }
+      
+      // Copy styles for cost container (this is what handles the flex layout)
+      const originalCostContainer = originalBottomHeader.querySelector('.unit-cost-container')
+      const clonedCostContainer = clonedBottomHeader.querySelector('.unit-cost-container')
+      if (originalCostContainer && clonedCostContainer) {
+        const containerStyles = window.getComputedStyle(originalCostContainer)
+        clonedCostContainer.style.display = containerStyles.display
+        clonedCostContainer.style.alignItems = containerStyles.alignItems
+        clonedCostContainer.style.gap = containerStyles.gap
+        clonedCostContainer.style.paddingRight = containerStyles.paddingRight
+        clonedCostContainer.style.paddingLeft = containerStyles.paddingLeft
+        clonedCostContainer.style.flexDirection = containerStyles.flexDirection
+      }
+    }
+    
+    // Force full opacity on all child elements to combat browser tinting
+    const allElements = dragImage.querySelectorAll('*')
+    allElements.forEach(element => {
+      element.style.opacity = '1'
+      element.style.filter = 'none'
+    })
+    
+    // Also set on the main drag image
+    dragImage.style.opacity = '1'
+    dragImage.style.filter = 'opacity(1) !important'
+    
+    document.body.appendChild(dragImage)
+    e.dataTransfer.setDragImage(dragImage, grabX, grabY)
+    
+    // Hide the original element during drag and track it
+    e.currentTarget.style.opacity = '0'
+    setDraggedElement(e.currentTarget)
+    
+    // Clean up the temporary element after drag starts
+    setTimeout(() => {
+      document.body.removeChild(dragImage)
+    }, 0)
     
     // Store the starting position
-    const rect = e.currentTarget.getBoundingClientRect()
     setDragStartPos({
       x: rect.left + rect.width / 2,
       y: rect.top + rect.height / 2
@@ -203,6 +315,12 @@ function ShopUnitDisplay({ unit, tftData, tftImages, slotIndex, onDragStart, onD
 
 
   const handleDragEnd = (e) => {
+    // Restore original element opacity
+    if (draggedElement) {
+      draggedElement.style.opacity = '1'
+      setDraggedElement(null)
+    }
+    
     if (dragStartPos) {
       const distance = Math.sqrt(
         Math.pow(e.clientX - dragStartPos.x, 2) + Math.pow(e.clientY - dragStartPos.y, 2)

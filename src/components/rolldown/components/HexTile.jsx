@@ -92,18 +92,78 @@ const HexTile = ({
     if (isOpponent) return
     
     const unitWithPosition = { ...unit, row, col }
-    startDrag(unitWithPosition, 'board', null)
+    startDrag(unitWithPosition, 'board', null, e.currentTarget)
     
-    // Create transparent drag image
-    const canvas = document.createElement('canvas')
-    canvas.width = 1
-    canvas.height = 1
-    const ctx = canvas.getContext('2d')
-    ctx.globalAlpha = 0.01
-    e.dataTransfer.setDragImage(canvas, 0, 0)
+    // Calculate grab point relative to element
+    const rect = e.currentTarget.getBoundingClientRect()
+    const grabX = e.clientX - rect.left
+    const grabY = e.clientY - rect.top
+    
+    // Try to use the actual unit image if available
+    const loadedImage = tftImages?.getImage(unit.id, 'champion')
+    
+    if (loadedImage) {
+      // Create drag image with actual unit image
+      const dragImage = document.createElement('div')
+      dragImage.style.width = '50px'
+      dragImage.style.height = '50px'
+      dragImage.style.borderRadius = '50%'
+      dragImage.style.backgroundColor = 'rgba(0,0,0,0.7)'
+      dragImage.style.border = '2px solid #fff'
+      dragImage.style.position = 'absolute'
+      dragImage.style.top = '-1000px'
+      dragImage.style.pointerEvents = 'none'
+      dragImage.style.overflow = 'hidden'
+      
+      const img = document.createElement('img')
+      img.src = loadedImage.src
+      img.style.width = '100%'
+      img.style.height = '100%'
+      img.style.objectFit = 'cover'
+      img.style.borderRadius = '50%'
+      
+      dragImage.appendChild(img)
+      document.body.appendChild(dragImage)
+      e.dataTransfer.setDragImage(dragImage, grabX, grabY)
+      
+      setTimeout(() => {
+        document.body.removeChild(dragImage)
+      }, 0)
+    } else {
+      // Fallback to text-based drag image
+      const dragImage = document.createElement('div')
+      dragImage.style.width = '50px'
+      dragImage.style.height = '50px'
+      dragImage.style.borderRadius = '50%'
+      dragImage.style.backgroundColor = 'rgba(0,0,0,0.8)'
+      dragImage.style.border = '2px solid #fff'
+      dragImage.style.display = 'flex'
+      dragImage.style.alignItems = 'center'
+      dragImage.style.justifyContent = 'center'
+      dragImage.style.color = 'white'
+      dragImage.style.fontSize = '14px'
+      dragImage.style.fontWeight = 'bold'
+      dragImage.style.position = 'absolute'
+      dragImage.style.top = '-1000px'
+      dragImage.style.pointerEvents = 'none'
+      dragImage.textContent = unit.name?.charAt(0) || 'U'
+      
+      document.body.appendChild(dragImage)
+      e.dataTransfer.setDragImage(dragImage, grabX, grabY)
+      
+      setTimeout(() => {
+        document.body.removeChild(dragImage)
+      }, 0)
+    }
+    
+    // Hide the original element during drag
+    e.currentTarget.style.opacity = '0'
   }
 
   const handleUnitDragEnd = (e) => {
+    // Restore original element opacity
+    e.currentTarget.style.opacity = '1'
+    
     // End drag immediately for instant response
     endDrag()
   }
