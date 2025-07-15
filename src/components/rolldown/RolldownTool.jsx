@@ -259,7 +259,10 @@ function RolldownTool() {
         newBench[index] = null
         newState.player.bench = newBench
       } else if (location === 'board') {
-        newState.player.board = newState.player.board.filter((_, i) => i !== index)
+        // For board units, find by row/col position instead of array index
+        newState.player.board = newState.player.board.filter(boardUnit => 
+          !(boardUnit.row === unit.row && boardUnit.col === unit.col)
+        )
       }
       
       newState.analytics = {
