@@ -300,35 +300,46 @@ function RolldownTool() {
   const handleUnitSwap = (unit1, location1, index1, row1, col1, unit2, location2, index2, row2, col2) => {
     setGameState(prev => {
       const newState = { ...prev }
+      const newBench = [...newState.player.bench]
+      const newBoard = [...newState.player.board]
       
       if (location1 === 'bench' && location2 === 'bench') {
         // Swap bench positions
-        const newBench = [...newState.player.bench]
         newBench[index1] = unit2
         newBench[index2] = unit1
-        newState.player.bench = newBench
       } else if (location1 === 'board' && location2 === 'board') {
-        // Swap board positions
-        const newBoard = newState.player.board.map(u => {
-          if (u === unit1) return { ...unit2, row: row1, col: col1 }
-          if (u === unit2) return { ...unit1, row: row2, col: col2 }
-          return u
-        })
-        newState.player.board = newBoard
+        // Swap board positions - find units by position
+        const unit1Index = newBoard.findIndex(u => u.row === unit1.row && u.col === unit1.col)
+        const unit2Index = newBoard.findIndex(u => u.row === unit2.row && u.col === unit2.col)
+        
+        if (unit1Index !== -1 && unit2Index !== -1) {
+          // Update positions
+          newBoard[unit1Index] = { ...unit2, row: row1, col: col1 }
+          newBoard[unit2Index] = { ...unit1, row: row2, col: col2 }
+        }
       } else {
         // Swap between bench and board
-        if (location1 === 'bench') {
-          newState.player.bench = newState.player.bench.filter((_, i) => i !== index1)
-          newState.player.board = newState.player.board.filter(u => u !== unit2)
-          newState.player.bench.push({ ...unit2 })
-          newState.player.board.push({ ...unit1, row: row2, col: col2 })
-        } else {
-          newState.player.board = newState.player.board.filter(u => u !== unit1)
-          newState.player.bench = newState.player.bench.filter((_, i) => i !== index2)
-          newState.player.board.push({ ...unit2, row: row1, col: col1 })
-          newState.player.bench.push({ ...unit1 })
+        if (location1 === 'bench' && location2 === 'board') {
+          // Remove unit1 from bench, remove unit2 from board
+          newBench[index1] = { ...unit2 } // Place unit2 in bench position
+          
+          const unit2BoardIndex = newBoard.findIndex(u => u.row === unit2.row && u.col === unit2.col)
+          if (unit2BoardIndex !== -1) {
+            newBoard[unit2BoardIndex] = { ...unit1, row: row2, col: col2 } // Place unit1 in board position
+          }
+        } else if (location1 === 'board' && location2 === 'bench') {
+          // Remove unit1 from board, remove unit2 from bench
+          newBench[index2] = { ...unit1 } // Place unit1 in bench position
+          
+          const unit1BoardIndex = newBoard.findIndex(u => u.row === unit1.row && u.col === unit1.col)
+          if (unit1BoardIndex !== -1) {
+            newBoard[unit1BoardIndex] = { ...unit2, row: row1, col: col1 } // Place unit2 in board position
+          }
         }
       }
+      
+      newState.player.bench = newBench
+      newState.player.board = newBoard
       
       return newState
     })

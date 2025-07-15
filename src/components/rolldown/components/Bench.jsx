@@ -139,7 +139,10 @@ function BenchUnitDisplay({ unit, unitIndex, tftData, tftImages, onSell }) {
   }
 
   const handleDragEnd = (e) => {
-    endDrag()
+    // Force end drag after a small delay to ensure all operations complete
+    setTimeout(() => {
+      endDrag()
+    }, 100)
   }
   
   return (

@@ -61,28 +61,8 @@ function Shop({ units = [], playerGold = 0, tftData, tftImages, onPurchase, onSe
   
   const renderShopSlots = () => {
     const slots = []
-    const showSellArea = isDragging && (dragSource === 'bench' || dragSource === 'board')
     
-    if (showSellArea) {
-      // Show one unified sell area covering all shop slots
-      const sellValue = globalDraggedUnit ? Math.floor(globalDraggedUnit.cost * 0.6) : 0
-      return (
-        <div
-          className="shop-slots-sell-overlay"
-          onDragOver={(e) => {
-            e.preventDefault()
-            e.dataTransfer.dropEffect = 'move'
-          }}
-          onDrop={handleSellDrop}
-        >
-          <div className="sell-text">
-            Sell for {sellValue}g
-          </div>
-        </div>
-      )
-    }
-    
-    // Show normal shop slots
+    // Always render shop slots for consistent layout
     for (let i = 0; i < SHOP_SLOTS; i++) {
       const unit = units[i]
       
@@ -116,11 +96,34 @@ function Shop({ units = [], playerGold = 0, tftData, tftImages, onPurchase, onSe
     
     return slots
   }
+
+  const renderSellOverlay = () => {
+    const showSellArea = isDragging && (dragSource === 'bench' || dragSource === 'board')
+    
+    if (!showSellArea) return null
+    
+    const sellValue = globalDraggedUnit ? Math.floor(globalDraggedUnit.cost * 0.6) : 0
+    return (
+      <div
+        className="shop-slots-sell-overlay"
+        onDragOver={(e) => {
+          e.preventDefault()
+          e.dataTransfer.dropEffect = 'move'
+        }}
+        onDrop={handleSellDrop}
+      >
+        <div className="sell-text">
+          Sell for {sellValue}g
+        </div>
+      </div>
+    )
+  }
   
   return (
     <div className="shop-container">
       <div className="shop-slots">
         {renderShopSlots()}
+        {renderSellOverlay()}
       </div>
     </div>
   )
