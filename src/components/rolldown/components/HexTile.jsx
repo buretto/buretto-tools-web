@@ -140,17 +140,23 @@ const HexTile = ({
         onClick={onClick}
         onDragOver={(e) => {
           if (!isOpponent && isDragging && dragSource !== 'shop') {
-            console.log('🎯 HexTile DRAGOVER:', { row, col, hasUnit: !!unit, dragSource })
+            console.log('🎯 Hex polygon DRAGOVER:', { row, col, hasUnit: !!unit, dragSource })
             e.preventDefault()
             e.stopPropagation()
             e.dataTransfer.dropEffect = 'move'
           }
         }}
         onDrop={(e) => {
-          e.stopPropagation()
-          handleDrop(e)
+          if (!isOpponent && isDragging && dragSource !== 'shop') {
+            console.log('🎯 Hex polygon DROP EVENT!')
+            e.preventDefault()
+            e.stopPropagation()
+            handleDrop(e)
+          }
         }}
       />
+      
+      
       {unit && (
         <g>
           {/* Unit image container */}
@@ -166,13 +172,20 @@ const HexTile = ({
               onDragStart={handleUnitDragStart}
               onDragEnd={handleUnitDragEnd}
               onDragOver={(e) => {
-                // Let drag over events pass through to the polygon
-                e.stopPropagation()
+                if (!isOpponent && isDragging && dragSource !== 'shop') {
+                  console.log('🎯 Unit image DRAGOVER:', { row, col, hasUnit: !!unit, dragSource })
+                  e.preventDefault()
+                  e.stopPropagation()
+                  e.dataTransfer.dropEffect = 'move'
+                }
               }}
               onDrop={(e) => {
-                // Let drop events pass through to the polygon
-                e.stopPropagation()
-                handleDrop(e)
+                if (!isOpponent && isDragging && dragSource !== 'shop') {
+                  console.log('🎯 Unit image DROP EVENT!')
+                  e.preventDefault()
+                  e.stopPropagation()
+                  handleDrop(e)
+                }
               }}
               style={{
                 width: '100%',
@@ -184,11 +197,13 @@ const HexTile = ({
                 borderRadius: '50%',
                 border: '2px solid #fff',
                 cursor: !isOpponent ? 'grab' : 'default',
-                pointerEvents: isOpponent ? 'none' : 'auto'
+                pointerEvents: isOpponent ? 'none' : 'auto',
+                position: 'relative',
+                zIndex: 10
               }}
             >
               {/* Fallback text */}
-              <span style={{ color: 'white', fontSize: '14px', fontWeight: 'bold' }}>
+              <span style={{ color: 'white', fontSize: '14px', fontWeight: 'bold', pointerEvents: 'none' }}>
                 {unit.name?.charAt(0) || 'U'}
               </span>
             </div>

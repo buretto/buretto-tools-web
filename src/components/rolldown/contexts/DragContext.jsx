@@ -42,7 +42,7 @@ export const DragProvider = ({ children }) => {
     }
     
     const handleGlobalDrop = (e) => {
-      console.log('⚡ Global drop (immediate)', e.target)
+      console.log('⚡ Global drop (immediate)', e.target, e.target.className, e.target.tagName)
       // Only reset if the drop wasn't handled by a valid drop zone
       setTimeout(() => {
         console.log('⚡ Global drop reset after timeout')
