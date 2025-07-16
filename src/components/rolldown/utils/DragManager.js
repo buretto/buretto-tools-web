@@ -60,9 +60,15 @@ class DragManager {
 
     // Don't modify overflow styles - use alternative positioning approach instead
 
-    // Use transform-based approach (more stable than fixed positioning)
-    element.style.zIndex = '999999'
+    // Use transform-based approach for all units
     element.style.position = 'relative' // Break out of parent stacking context
+    
+    // Common drag styles
+    if (this.dragData?.source === 'board') {
+      element.style.zIndex = '9999999' // Even higher z-index for board units
+    } else {
+      element.style.zIndex = '999999'
+    }
     element.style.transition = 'none'
     element.style.pointerEvents = 'none' // This prevents interference
     
