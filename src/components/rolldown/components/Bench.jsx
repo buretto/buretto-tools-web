@@ -122,6 +122,7 @@ function BenchUnitDisplay({ unit, unitIndex, tftData, tftImages, onSell }) {
         imgElement.style.width = '100%'
         imgElement.style.height = '100%'
         imgElement.style.objectFit = 'cover'
+        imgElement.style.objectPosition = '75% center' // Show more of the right side where units are
         imgElement.style.borderRadius = '8px'
         
         imageRef.current.appendChild(imgElement)

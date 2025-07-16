@@ -81,6 +81,7 @@ const HexTile = ({
         imgElement.style.width = `${size * 1.6}px`
         imgElement.style.height = `${size * 1.6}px`
         imgElement.style.objectFit = 'cover'
+        imgElement.style.objectPosition = '75% center' // Show more of the right side where units are
         imgElement.style.borderRadius = '50%'
         imgElement.style.pointerEvents = 'none'
         
