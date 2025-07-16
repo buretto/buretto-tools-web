@@ -19,7 +19,7 @@ class DragManager {
     this.lastMousePos = { x: 0, y: 0 }
     this.grabOffset = { x: 0, y: 0 }
     this.animationId = null
-    this.interpolationFactor = 0.15 // Smooth following - not physics based
+    this.interpolationFactor = 0.4 
     this.onDragEnd = null
     this.dragData = null
     this.stateChangeListeners = []
