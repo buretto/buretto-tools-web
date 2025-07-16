@@ -650,13 +650,15 @@ body.dragging-active foreignObject {
 
 /* Reduce hex tile visual priority during drag to prevent layering issues */
 body.dragging-active .hex-tile {
-  stroke-width: 1 !important;
-  opacity: 0.8 !important;
+  stroke-width: 0 !important;
+  stroke: none !important;
+  opacity: 0.6 !important;
 }
 
 body.dragging-active .hex-tile.drop-zone {
-  stroke-width: 2 !important;
-  opacity: 0.9 !important;
+  stroke-width: 1 !important;
+  stroke: rgba(255, 255, 255, 0.5) !important;
+  opacity: 0.8 !important;
 }
 
 /* Ensure shop UI elements don't interfere with dragged elements */
@@ -665,6 +667,34 @@ body.dragging-active .refresh-btn,
 body.dragging-active .player-level-display,
 body.dragging-active .shop-area-content {
   z-index: 1 !important;
+}
+
+/* Force bench and shop areas to lower z-index during board drag */
+body.dragging-active .bench-area,
+body.dragging-active .shop-area {
+  z-index: 1 !important;
+}
+
+/* Boost board area z-index during drag operations */
+body.dragging-active .game-board-area {
+  z-index: 9999998 !important;
+  position: relative;
+}
+
+/* Ensure SVG and foreignObject elements also get high z-index */
+body.dragging-active .hex-game-board {
+  z-index: 9999998 !important;
+  position: relative;
+}
+
+body.dragging-active svg {
+  z-index: 9999998 !important;
+  position: relative;
+}
+
+body.dragging-active foreignObject {
+  z-index: 9999998 !important;
+  position: relative;
 }
 
 .unit-display[draggable="true"] {
