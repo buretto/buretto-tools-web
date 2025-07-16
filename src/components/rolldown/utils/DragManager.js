@@ -436,7 +436,15 @@ class DragManager {
     const hexTiles = document.querySelectorAll('.hex-tile.player')
     hexTiles.forEach(tile => {
       if (shouldHighlight) {
+        // Temporarily disable transitions to prevent flashing when element reconnects
+        const originalTransition = tile.style.transition
+        tile.style.transition = 'none'
         tile.classList.add('drop-zone')
+        
+        // Restore transition after a frame
+        requestAnimationFrame(() => {
+          tile.style.transition = originalTransition
+        })
       } else {
         tile.classList.remove('drop-zone')
         tile.classList.remove('hovered')
@@ -447,7 +455,15 @@ class DragManager {
     const benchSlots = document.querySelectorAll('.bench-container .bench-slot')
     benchSlots.forEach(slot => {
       if (shouldHighlight) {
+        // Temporarily disable transitions to prevent flashing when element reconnects
+        const originalTransition = slot.style.transition
+        slot.style.transition = 'none'
         slot.classList.add('drop-zone')
+        
+        // Restore transition after a frame
+        requestAnimationFrame(() => {
+          slot.style.transition = originalTransition
+        })
       } else {
         slot.classList.remove('drop-zone')
         slot.classList.remove('hovered')
