@@ -1,5 +1,15 @@
 /* TFT Rolldown Tool Styles */
 
+/* Prevent text selection and blue highlighting for entire rolldown tool */
+.game-root {
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
 /* Drag and Drop Styles */
 .drop-zone {
   transition: all 0.2s ease;
