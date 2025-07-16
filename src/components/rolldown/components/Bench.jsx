@@ -77,13 +77,6 @@ function Bench({ units = [], onUnitMove, onUnitSwap, onSell, tftData, tftImages 
             key={`bench-${i}`}
             className={`bench-slot ${dragManager.isActive && dragManager.currentDragData?.source !== 'shop' ? 'drop-zone' : ''}`}
             data-slot={i}
-            onDragOver={(e) => {
-              e.preventDefault()
-              e.stopPropagation()
-              if (dragManager.isActive && dragManager.currentDragData?.source !== 'shop') {
-                e.dataTransfer.dropEffect = 'move'
-              }
-            }}
           >
             {children}
           </div>

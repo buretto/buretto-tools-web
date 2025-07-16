@@ -11,7 +11,6 @@ import TraitsColumn from './components/TraitsColumn'
 import TFTVersionSelector from './components/TFTVersionSelector'
 import ImageMappingModal from './components/ImageMappingModal'
 import ImageLoadWarning from './components/ImageLoadWarning'
-import { DragProvider } from './contexts/DragContext'
 import { useTFTData } from './hooks/useTFTData'
 import { useTFTImages } from './hooks/useTFTImages'
 import { useUnitPool } from './hooks/useUnitPool'
@@ -71,31 +70,6 @@ function RolldownTool() {
   
   const tftImages = useTFTImages(tftData)
   
-  // Add a comprehensive drag end handler to ensure the drag state always resets
-  useEffect(() => {
-    const handleWindowDragEnd = (e) => {
-      // Force drag end after any drag operation ends - small delay only as fallback
-      setTimeout(() => {
-        // Dispatch custom event to force drag context reset
-        const event = new CustomEvent('forceDragEnd')
-        document.dispatchEvent(event)
-      }, 50)
-    }
-    
-    const handleWindowDrop = (e) => {
-      // Force drag end immediately after any drop operation
-      const event = new CustomEvent('forceDragEnd')
-      document.dispatchEvent(event)
-    }
-    
-    window.addEventListener('dragend', handleWindowDragEnd, true)
-    window.addEventListener('drop', handleWindowDrop, true)
-    
-    return () => {
-      window.removeEventListener('dragend', handleWindowDragEnd, true)
-      window.removeEventListener('drop', handleWindowDrop, true)
-    }
-  }, [])
   
   // Initialize pool and shop management
   const unitPoolHook = useUnitPool(tftData, currentVersion)
@@ -402,7 +376,6 @@ function RolldownTool() {
   }
   
   return (
-    <DragProvider>
       <div className="game-root w-full h-full">
         <div className="game-content">
         {/* Bench Full Warning */}
@@ -577,7 +550,6 @@ function RolldownTool() {
         />
         </div>
       </div>
-    </DragProvider>
   )
 }
 

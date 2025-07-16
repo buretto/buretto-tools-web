@@ -69,13 +69,6 @@ function GameBoard({ units, opponentUnits = [], tftData, tftImages, onUnitMove, 
     <div className="game-board bg-transparent flex justify-center items-center w-full h-full">
       <div 
         style={{ position: 'relative', width: '100%', height: '100%' }}
-        onDragOver={(e) => {
-          e.preventDefault()
-          e.dataTransfer.dropEffect = 'move'
-        }}
-        onDrop={(e) => {
-          e.preventDefault()
-        }}
       >
         <svg 
           viewBox={`0 0 ${BOARD_WIDTH} ${TOTAL_HEIGHT}`}

@@ -125,13 +125,6 @@ const HexTile = ({
           pointerEvents: isOpponent ? 'none' : 'all'
         }}
         onClick={onClick}
-        onDragOver={(e) => {
-          if (!isOpponent && dragManager.isActive && dragManager.currentDragData?.source !== 'shop') {
-            e.preventDefault()
-            e.stopPropagation()
-            e.dataTransfer.dropEffect = 'move'
-          }
-        }}
       />
       
       
@@ -147,13 +140,6 @@ const HexTile = ({
             <div 
               ref={imageRef}
               onMouseDown={handleUnitMouseDown}
-              onDragOver={(e) => {
-                if (!isOpponent && dragManager.isActive && dragManager.currentDragData?.source !== 'shop') {
-                  e.preventDefault()
-                  e.stopPropagation()
-                  e.dataTransfer.dropEffect = 'move'
-                }
-              }}
               style={{
                 width: '100%',
                 height: '100%',

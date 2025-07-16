@@ -37,11 +37,6 @@ function Shop({ units = [], playerGold = 0, tftData, tftImages, onPurchase, onSe
     }
   }, [units, tftImages])
 
-  const handleSellDragOver = (e) => {
-    e.preventDefault()
-    e.stopPropagation()
-    e.dataTransfer.dropEffect = 'move'
-  }
   
   const renderShopSlots = () => {
     const slots = []
@@ -135,7 +130,6 @@ function Shop({ units = [], playerGold = 0, tftData, tftImages, onPurchase, onSe
         }}
         className="shop-slots-sell-overlay"
         style={{ display: 'none' }} // Hidden by default
-        onDragOver={handleSellDragOver}
       >
         <div className="sell-text">
           Sell for 0g
