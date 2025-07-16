@@ -65,7 +65,7 @@ const HexTile = ({
     ? (unit ? 'rgba(239, 68, 68, 0.3)' : 'rgba(239, 68, 68, 0.1)')
     : (unit ? 'rgba(59, 130, 246, 0.3)' : 'rgba(59, 130, 246, 0.1)')
   
-  const strokeColor = isOpponent ? '#EF4444' : '#3B82F6'
+  const strokeColor = isOpponent ? '#EF4444' : '#6087c7ff'
 
   // Load unit image
   useEffect(() => {

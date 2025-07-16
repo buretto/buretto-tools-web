@@ -71,6 +71,11 @@ class DragManager {
     // Add dragging-active class immediately to prevent hover transforms
     document.body.classList.add('dragging-active')
     
+    // Add source-specific drag class for more granular styling
+    if (this.dragData?.source) {
+      document.body.classList.add(`dragging-from-${this.dragData.source}`)
+    }
+    
     // Add dragging class to element immediately for proper z-index
     element.classList.add('dragging')
     
@@ -219,6 +224,11 @@ class DragManager {
     document.body.style.webkitUserSelect = ''
     document.body.style.cursor = ''
     document.body.classList.remove('dragging-active')
+    
+    // Remove source-specific drag class
+    if (this.dragData?.source) {
+      document.body.classList.remove(`dragging-from-${this.dragData.source}`)
+    }
 
     // Check all registered drop zones first
     const enhancedEvent = {
@@ -391,6 +401,11 @@ class DragManager {
     document.body.style.userSelect = ''
     document.body.style.webkitUserSelect = ''
     document.body.classList.remove('dragging-active')
+    
+    // Remove source-specific drag class
+    if (this.dragData?.source) {
+      document.body.classList.remove(`dragging-from-${this.dragData.source}`)
+    }
     
     // No overflow styles to restore since we don't modify them
     

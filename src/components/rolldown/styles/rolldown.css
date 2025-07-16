@@ -249,6 +249,8 @@
 
 .hex-tile.opponent {
   pointer-events: none;
+  stroke: none !important;
+  stroke-width: 0 !important;
 }
 
 /* Unit Cost Colors */
@@ -649,16 +651,33 @@ body.dragging-active foreignObject {
 }
 
 /* Reduce hex tile visual priority during drag to prevent layering issues */
-body.dragging-active .hex-tile {
+/* Only disable borders when dragging from bench or board, not from shop */
+body.dragging-from-bench .hex-tile,
+body.dragging-from-board .hex-tile {
   stroke-width: 0 !important;
   stroke: none !important;
   opacity: 0.6 !important;
 }
 
-body.dragging-active .hex-tile.drop-zone {
+body.dragging-from-bench .hex-tile.drop-zone,
+body.dragging-from-board .hex-tile.drop-zone {
   stroke-width: 1 !important;
   stroke: rgba(255, 255, 255, 0.5) !important;
   opacity: 0.8 !important;
+}
+
+/* Make bench drop zones more subtle when dragging from bench or board */
+body.dragging-from-bench .bench-slot.drop-zone,
+body.dragging-from-board .bench-slot.drop-zone {
+  border: 1px solid rgba(255, 255, 255, 0.3) !important;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.3) !important;
+}
+
+body.dragging-from-bench .bench-slot.drop-zone.hovered,
+body.dragging-from-board .bench-slot.drop-zone.hovered {
+  background-color: rgba(255, 255, 255, 0.1) !important;
+  border: 1px solid rgba(255, 255, 255, 0.4) !important;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.4) !important;
 }
 
 /* Ensure shop UI elements don't interfere with dragged elements */
