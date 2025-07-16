@@ -13,6 +13,8 @@ class DragManager {
     this.originalPosition = ''
     this.originalScrollTop = 0
     this.originalScrollLeft = 0
+    this.originalParent = null
+    this.originalNextSibling = null
     this.startPos = { x: 0, y: 0 }
     this.currentPos = { x: 0, y: 0 }
     this.targetPos = { x: 0, y: 0 }
@@ -22,6 +24,8 @@ class DragManager {
     this.interpolationFactor = 0.4 
     this.onDragEnd = null
     this.dragData = null
+    this.originalParent = null
+    this.originalNextSibling = null
     this.stateChangeListeners = []
     this.dropZones = [] // Registered drop zones
     this.dragThreshold = 2 // Minimum pixels to move before visual drag starts
@@ -78,6 +82,11 @@ class DragManager {
     
     // Add dragging class to element immediately for proper z-index
     element.classList.add('dragging')
+    
+    // Special handling for board units - move to end of SVG to ensure they render last
+    if (this.dragData?.source === 'board') {
+      this.handleBoardUnitDOMOrder(element)
+    }
     
     this.startPos = { x: rect.left, y: rect.top }
     this.currentPos = { x: 0, y: 0 } // Transform offset from original position
@@ -202,6 +211,11 @@ class DragManager {
       this.dragElement.style.display = ''
       this.dragElement.style.cursor = ''
       this.dragElement.classList.remove('dragging')
+    }
+    
+    // Restore board unit DOM order if needed
+    if (this.dragData?.source === 'board') {
+      this.restoreBoardUnitDOMOrder()
     }
     
     // No overflow styles to restore since we don't modify them
@@ -437,6 +451,50 @@ class DragManager {
     }
   }
   
+  /**
+   * Handle DOM order for board units to ensure they render last in SVG
+   */
+  handleBoardUnitDOMOrder(element) {
+    // Find the parent <g> element that contains this board unit
+    const parentG = element.closest('g')
+    if (!parentG) return
+    
+    // Find the SVG container
+    const svg = parentG.closest('svg')
+    if (!svg) return
+    
+    // Store original position for restoration
+    this.originalParent = parentG.parentNode
+    this.originalNextSibling = parentG.nextSibling
+    
+    // Move the <g> element to the end of the SVG so it renders last
+    svg.appendChild(parentG)
+    
+    console.log('🎯 Moved board unit to end of SVG for proper rendering order')
+  }
+
+  /**
+   * Restore board unit DOM order
+   */
+  restoreBoardUnitDOMOrder() {
+    if (this.originalParent && this.dragElement) {
+      const parentG = this.dragElement.closest('g')
+      if (parentG) {
+        // Restore original position
+        if (this.originalNextSibling) {
+          this.originalParent.insertBefore(parentG, this.originalNextSibling)
+        } else {
+          this.originalParent.appendChild(parentG)
+        }
+        console.log('🔄 Restored board unit to original DOM position')
+      }
+    }
+    
+    // Clear references
+    this.originalParent = null
+    this.originalNextSibling = null
+  }
+
   /**
    * Add listener for drag state changes
    */

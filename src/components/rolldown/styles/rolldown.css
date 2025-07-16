@@ -688,33 +688,48 @@ body.dragging-active .shop-area-content {
   z-index: 1 !important;
 }
 
-/* Force bench and shop areas to lower z-index during board drag */
-body.dragging-active .bench-area,
-body.dragging-active .shop-area {
+/* Force bench and shop areas to lower z-index only when dragging FROM board */
+/* This prevents board units from appearing below these areas */
+body.dragging-from-board .bench-area,
+body.dragging-from-board .shop-area {
   z-index: 1 !important;
 }
 
-/* Boost board area z-index during drag operations */
-body.dragging-active .game-board-area {
+/* Only boost board area z-index when dragging FROM board */
+/* This prevents other dragged elements from being trapped in lower stacking contexts */
+body.dragging-from-board .game-board-area {
   z-index: 9999998 !important;
   position: relative;
 }
 
-/* Ensure SVG and foreignObject elements also get high z-index */
-body.dragging-active .hex-game-board {
+/* Ensure SVG and foreignObject elements also get high z-index when dragging from board */
+body.dragging-from-board .hex-game-board {
   z-index: 9999998 !important;
   position: relative;
 }
 
-body.dragging-active svg {
+body.dragging-from-board svg {
   z-index: 9999998 !important;
   position: relative;
 }
 
-body.dragging-active foreignObject {
+body.dragging-from-board foreignObject {
   z-index: 9999998 !important;
   position: relative;
 }
+
+/* Boost shop area z-index when dragging FROM shop */
+body.dragging-from-shop .shop-area {
+  z-index: 9999998 !important;
+  position: relative;
+}
+
+/* Boost bench area z-index when dragging FROM bench */
+body.dragging-from-bench .bench-area {
+  z-index: 9999998 !important;
+  position: relative;
+}
+
 
 .unit-display[draggable="true"] {
   cursor: grab;
