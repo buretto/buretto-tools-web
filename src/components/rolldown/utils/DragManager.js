@@ -66,6 +66,9 @@ class DragManager {
     element.style.transition = 'none'
     element.style.pointerEvents = 'none' // This prevents interference
     
+    // Add dragging-active class immediately to prevent hover transforms
+    document.body.classList.add('dragging-active')
+    
     this.startPos = { x: rect.left, y: rect.top }
     this.currentPos = { x: 0, y: 0 } // Transform offset from original position
     this.targetPos = { x: 0, y: 0 } // Target offset from original position
@@ -139,7 +142,6 @@ class DragManager {
         this.dragElement.style.cursor = 'grabbing'
       }
       document.body.style.cursor = 'grabbing'
-      document.body.classList.add('dragging-active')
     }
     
     // Calculate transform offset from original position
