@@ -16,14 +16,23 @@
 }
 
 .hex-tile.drop-zone {
-  fill: rgba(34, 197, 94, 0.3) !important;
-  stroke: #22c55e !important;
+  stroke: #ffffff !important;
+  stroke-width: 3 !important;
+}
+
+.hex-tile.drop-zone.hovered {
+  fill: rgba(255, 255, 255, 0.2) !important;
+  stroke: #ffffff !important;
   stroke-width: 3 !important;
 }
 
 .bench-slot.drop-zone {
-  background-color: rgba(34, 197, 94, 0.3);
-  border: 2px solid #22c55e;
+  border: 2px solid #ffffff;
+}
+
+.bench-slot.drop-zone.hovered {
+  background-color: rgba(255, 255, 255, 0.2);
+  border: 2px solid #ffffff;
 }
 
 .shop-slots-sell-overlay {

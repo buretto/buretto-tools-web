@@ -26,6 +26,7 @@ class DragManager {
     this.dropZones = [] // Registered drop zones
     this.dragThreshold = 8 // Minimum pixels to move before visual drag starts
     this.hasMetThreshold = false // Track if threshold has been met
+    this.currentHoveredElement = null // Track currently hovered drop zone
 
     // Bind methods to preserve context
     this.handleMouseMove = this.handleMouseMove.bind(this)
@@ -146,6 +147,11 @@ class DragManager {
     // Only apply visual effects after threshold is met
     if (this.hasMetThreshold && !isNaN(newX) && !isNaN(newY) && isFinite(newX) && isFinite(newY)) {
       this.targetPos = { x: newX, y: newY }
+    }
+    
+    // Update hover highlighting if drag is active
+    if (this.hasMetThreshold) {
+      this.updateHoverHighlighting(e)
     }
   }
 
@@ -374,6 +380,7 @@ class DragManager {
     this.startPos = { x: 0, y: 0 }
     this.lastMousePos = { x: 0, y: 0 }
     this.hasMetThreshold = false
+    this.currentHoveredElement = null
     this.originalScrollTop = 0
     this.originalScrollLeft = 0
   }
@@ -432,6 +439,7 @@ class DragManager {
         tile.classList.add('drop-zone')
       } else {
         tile.classList.remove('drop-zone')
+        tile.classList.remove('hovered')
       }
     })
     
@@ -442,8 +450,51 @@ class DragManager {
         slot.classList.add('drop-zone')
       } else {
         slot.classList.remove('drop-zone')
+        slot.classList.remove('hovered')
       }
     })
+  }
+
+  /**
+   * Update hover highlighting for the currently hovered drop zone
+   */
+  updateHoverHighlighting(e) {
+    const dragData = this.dragData
+    const shouldHighlight = this.isDragging && dragData?.source !== 'shop'
+    
+    if (!shouldHighlight) return
+    
+    // Clear previous hover state
+    if (this.currentHoveredElement) {
+      this.currentHoveredElement.classList.remove('hovered')
+    }
+    
+    // Find the element under the mouse cursor
+    const elementUnderMouse = document.elementFromPoint(e.clientX, e.clientY)
+    
+    // Check if it's a valid drop zone
+    let targetElement = null
+    
+    // Check for hex tiles
+    if (elementUnderMouse?.classList.contains('hex-tile') && elementUnderMouse.classList.contains('player')) {
+      targetElement = elementUnderMouse
+    }
+    // Check for bench slots
+    else if (elementUnderMouse?.classList.contains('bench-slot') && elementUnderMouse.closest('.bench-container')) {
+      targetElement = elementUnderMouse
+    }
+    // Check if we're inside a bench slot (child element)
+    else if (elementUnderMouse?.closest('.bench-container .bench-slot')) {
+      targetElement = elementUnderMouse.closest('.bench-container .bench-slot')
+    }
+    
+    // Apply hover state to the target element
+    if (targetElement && targetElement.classList.contains('drop-zone')) {
+      targetElement.classList.add('hovered')
+      this.currentHoveredElement = targetElement
+    } else {
+      this.currentHoveredElement = null
+    }
   }
   
   /**
