@@ -10,7 +10,6 @@ class DragManager {
     this.originalTransform = ''
     this.originalZIndex = ''
     this.originalPosition = ''
-    this.originalOverflowStyles = []
     this.originalScrollTop = 0
     this.originalScrollLeft = 0
     this.startPos = { x: 0, y: 0 }
@@ -56,24 +55,7 @@ class DragManager {
     this.originalZIndex = element.style.zIndex || ''
     this.originalPosition = element.style.position || ''
 
-    // Store original styles for restoration
-    this.originalOverflowStyles = []
-    
-    // Temporarily set overflow visible on all parent containers to allow dragging outside bounds
-    let parent = element.parentElement
-    while (parent && parent !== document.body) {
-      const computedStyle = window.getComputedStyle(parent)
-      if (computedStyle.overflow !== 'visible' || computedStyle.overflowX !== 'visible' || computedStyle.overflowY !== 'visible') {
-        this.originalOverflowStyles.push({
-          element: parent,
-          overflow: parent.style.overflow,
-          overflowX: parent.style.overflowX,
-          overflowY: parent.style.overflowY
-        })
-        parent.style.overflow = 'visible'
-      }
-      parent = parent.parentElement
-    }
+    // Don't modify overflow styles - use alternative positioning approach instead
 
     // Use transform-based approach (more stable than fixed positioning)
     element.style.zIndex = '999999'
@@ -190,15 +172,7 @@ class DragManager {
       this.dragElement.style.cursor = ''
     }
     
-    // Restore overflow styles on parent containers
-    if (this.originalOverflowStyles) {
-      this.originalOverflowStyles.forEach(({ element, overflow, overflowX, overflowY }) => {
-        element.style.overflow = overflow
-        element.style.overflowX = overflowX
-        element.style.overflowY = overflowY
-      })
-      this.originalOverflowStyles = []
-    }
+    // No overflow styles to restore since we don't modify them
 
     // Stop animation
     this.stopAnimation()
@@ -335,15 +309,7 @@ class DragManager {
     document.body.style.userSelect = ''
     document.body.style.webkitUserSelect = ''
     
-    // Restore overflow styles (safety net)
-    if (this.originalOverflowStyles) {
-      this.originalOverflowStyles.forEach(({ element, overflow, overflowX, overflowY }) => {
-        element.style.overflow = overflow
-        element.style.overflowX = overflowX
-        element.style.overflowY = overflowY
-      })
-      this.originalOverflowStyles = []
-    }
+    // No overflow styles to restore since we don't modify them
     
     // Reset all state
     this.dragElement = null
