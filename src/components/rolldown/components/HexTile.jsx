@@ -121,7 +121,7 @@ const HexTile = ({
         strokeWidth="2"
         className={`hex-tile ${isOpponent ? 'opponent' : 'player'}`}
         style={{ 
-          cursor: isOpponent ? 'default' : 'pointer',
+          cursor: 'default', // Default cursor for all hex tiles (empty or with units)
           pointerEvents: isOpponent ? 'none' : 'all'
         }}
         onClick={onClick}

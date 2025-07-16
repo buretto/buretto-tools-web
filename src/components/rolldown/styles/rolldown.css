@@ -516,7 +516,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  cursor: pointer;
+  cursor: default; /* Default cursor for empty slots */
   transition: all 0.2s ease;
   position: relative;
   flex-shrink: 1;
