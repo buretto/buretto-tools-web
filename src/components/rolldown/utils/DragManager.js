@@ -55,17 +55,36 @@ class DragManager {
     this.dragData = options.dragData || null
     this.onDragEnd = options.onDragEnd || null
 
-    // Get starting position
+    // Get starting position and capture EXACT dimensions before any style changes
     const rect = element.getBoundingClientRect()
+    const exactWidth = rect.width
+    const exactHeight = rect.height
     
     // Store original styles for restoration
     this.originalTransform = element.style.transform || ''
     this.originalZIndex = element.style.zIndex || ''
     this.originalPosition = element.style.position || ''
     this.originalCursor = element.style.cursor || ''
+    this.originalWidth = element.style.width || ''
+    this.originalHeight = element.style.height || ''
 
     // Don't modify overflow styles - use alternative positioning approach instead
 
+    // Lock exact dimensions BEFORE applying any other styles to prevent flexbox compression
+    element.style.width = `${exactWidth}px`
+    element.style.height = `${exactHeight}px`
+    
+    // For shop units, also lock the unit-avatar dimensions to prevent flex compression
+    if (this.dragData?.source === 'shop') {
+      const unitAvatar = element.querySelector('.unit-avatar')
+      if (unitAvatar) {
+        const avatarRect = unitAvatar.getBoundingClientRect()
+        unitAvatar.style.width = `${avatarRect.width}px`
+        unitAvatar.style.height = `${avatarRect.height}px`
+        unitAvatar.style.flex = 'none' // Remove flex behavior during drag
+      }
+    }
+    
     // Use transform-based approach for all units
     element.style.position = 'relative' // Break out of parent stacking context
     
@@ -212,6 +231,20 @@ class DragManager {
       this.dragElement.style.visibility = ''
       this.dragElement.style.display = ''
       this.dragElement.style.cursor = this.originalCursor
+      // Restore original dimensions
+      this.dragElement.style.width = this.originalWidth
+      this.dragElement.style.height = this.originalHeight
+      
+      // For shop units, restore unit-avatar styles
+      if (this.dragData?.source === 'shop') {
+        const unitAvatar = this.dragElement.querySelector('.unit-avatar')
+        if (unitAvatar) {
+          unitAvatar.style.width = ''
+          unitAvatar.style.height = ''
+          unitAvatar.style.flex = ''
+        }
+      }
+      
       this.dragElement.classList.remove('dragging')
     }
     
@@ -372,7 +405,8 @@ class DragManager {
     }
 
     // Use CSS transform for positioning (works with overflow: visible)
-    const transform = `${this.originalTransform} translate(${Math.round(this.currentPos.x)}px, ${Math.round(this.currentPos.y)}px)`
+    // Only use translate, ignore any original transforms that might cause scaling
+    const transform = `translate(${Math.round(this.currentPos.x)}px, ${Math.round(this.currentPos.y)}px)`
     this.dragElement.style.transform = transform
     
     // Ensure element stays visible and on top
@@ -433,6 +467,8 @@ class DragManager {
     this.originalZIndex = ''
     this.originalPosition = ''
     this.originalCursor = ''
+    this.originalWidth = ''
+    this.originalHeight = ''
     this.grabOffset = { x: 0, y: 0 }
     this.currentPos = { x: 0, y: 0 }
     this.targetPos = { x: 0, y: 0 }

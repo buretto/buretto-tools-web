@@ -421,7 +421,6 @@ body:not(.dragging-active) .hex-tile.player .hex-unit-display {
 
 .shop-slot:hover {
   border-color: rgb(75 85 99); /* border-gray-600 */
-  transform: translateY(-2px);
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
 }
 
@@ -620,6 +619,7 @@ body:not(.dragging-active) .hex-tile.player .hex-unit-display {
   /* Override aspect ratio constraint that can cause height compression */
   aspect-ratio: unset !important;
 }
+
 
 /* Global cursor override during drag operations */
 body.dragging-active * {
