@@ -300,6 +300,9 @@ class DragManager {
         this.originalZIndex = replacementElement.style.zIndex || ''
         this.originalPosition = replacementElement.style.position || ''
         
+        // Refresh highlighting after element recovery
+        this.updateDropZoneHighlighting()
+        
         // Continue with transform
       } else {
         console.warn('❌ No replacement element found, terminating visual drag')
@@ -422,7 +425,7 @@ class DragManager {
     const dragData = this.dragData
     const shouldHighlight = isActive && dragData?.source !== 'shop'
     
-    // Find all hex tiles (drop zones)
+    // Find all hex tiles (drop zones) - only player tiles
     const hexTiles = document.querySelectorAll('.hex-tile.player')
     hexTiles.forEach(tile => {
       if (shouldHighlight) {
@@ -432,8 +435,8 @@ class DragManager {
       }
     })
     
-    // Find all bench slots (drop zones) 
-    const benchSlots = document.querySelectorAll('.bench-slot')
+    // Find only player bench slots (not opponent bench slots)
+    const benchSlots = document.querySelectorAll('.bench-container .bench-slot')
     benchSlots.forEach(slot => {
       if (shouldHighlight) {
         slot.classList.add('drop-zone')

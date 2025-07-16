@@ -527,6 +527,25 @@
   transform: translateY(-2px);
 }
 
+.opponent-bench-slot {
+  /* Same styles as bench-slot but for opponent bench */
+  flex: 1;
+  aspect-ratio: 1.32;
+  min-width: 0;
+  max-width: 100%;
+  background: rgb(55 65 81);
+  border: 1px solid rgb(75 85 99);
+  border-radius: 4px;
+  padding: 0.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: default; /* Different cursor for opponent */
+  transition: all 0.2s ease;
+  position: relative;
+  flex-shrink: 1;
+}
+
 .bench-slot .unit-display {
   width: 100%;
   height: 100%;

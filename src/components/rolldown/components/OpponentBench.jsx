@@ -12,7 +12,7 @@ function OpponentBench({ units = [], label = "Opponent Bench" }) {
       slots.push(
         <div
           key={`opponent-bench-${i}`}
-          className="bench-slot"
+          className="opponent-bench-slot"
           data-slot={i}
         >
           {unit && (
