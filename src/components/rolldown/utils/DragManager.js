@@ -372,11 +372,8 @@ class DragManager {
     }
 
     // Use CSS transform for positioning (works with overflow: visible)
-    const transform = `${this.originalTransform} translate(${Math.round(this.currentPos.x)}px, ${Math.round(this.currentPos.y)}px) scale(0.95)`
+    const transform = `${this.originalTransform} translate(${Math.round(this.currentPos.x)}px, ${Math.round(this.currentPos.y)}px)`
     this.dragElement.style.transform = transform
-    this.dragElement.style.opacity = '0.9'
-    this.dragElement.style.filter = 'brightness(1.1)'
-    this.dragElement.style.boxShadow = '0 8px 25px rgba(0, 0, 0, 0.3)'
     
     // Ensure element stays visible and on top
     this.dragElement.style.visibility = 'visible'
