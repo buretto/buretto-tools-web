@@ -7,6 +7,7 @@ class DragManager {
   constructor() {
     this.isDragging = false
     this.dragElement = null
+    this.dragOriginElement = null // Track which element started the drag
     this.originalTransform = ''
     this.originalZIndex = ''
     this.originalPosition = ''
@@ -44,6 +45,7 @@ class DragManager {
     if (this.isDragging) return
     this.isDragging = true
     this.dragElement = element
+    this.dragOriginElement = element // Store which element started this drag
     this.dragData = options.dragData || null
     this.onDragEnd = options.onDragEnd || null
 
@@ -86,6 +88,9 @@ class DragManager {
 
     // Start animation loop
     this.startAnimation()
+    
+    // Update drop zone highlighting immediately (direct DOM, no React re-renders)
+    this.updateDropZoneHighlighting()
     
     // Notify state change after drag setup is complete
     // Use setTimeout to avoid React re-renders during the same event cycle
@@ -216,6 +221,9 @@ class DragManager {
       this.onDragEnd(enhancedEvent, this.dragData)
     }
 
+    // Clear drop zone highlighting immediately (direct DOM, no React re-renders)
+    this.updateDropZoneHighlighting()
+    
     // Notify listeners that drag has ended
     this.notifyStateChange()
     
@@ -236,8 +244,13 @@ class DragManager {
   startAnimation() {
     if (this.animationId) return
 
+    console.log('🟢 Animation loop started')
+
     const animate = () => {
-      if (!this.isDragging) return
+      if (!this.isDragging) {
+        console.log('🔍 Animation stopped - isDragging false')
+        return
+      }
 
       // Smooth interpolation towards target
       this.currentPos.x += (this.targetPos.x - this.currentPos.x) * this.interpolationFactor
@@ -267,6 +280,33 @@ class DragManager {
   updateDragElementTransform() {
     if (!this.dragElement || !this.hasMetThreshold) return
 
+    // Check if element is still connected to DOM
+    const isConnected = this.dragElement.isConnected
+    const isInDocument = document.contains(this.dragElement)
+    
+    // If element is no longer connected to DOM, try to find the replacement
+    if (!isConnected || !isInDocument) {
+      console.log('🔍 Element disconnected, attempting recovery...')
+      
+      // Try to find a replacement element with the same className
+      const replacementElement = document.querySelector(`.${this.dragElement.className.split(' ').join('.')}`)
+      
+      if (replacementElement && replacementElement.isConnected) {
+        console.log('✅ Found replacement element, updating reference')
+        this.dragElement = replacementElement
+        
+        // Restore original styles on new element
+        this.originalTransform = replacementElement.style.transform || ''
+        this.originalZIndex = replacementElement.style.zIndex || ''
+        this.originalPosition = replacementElement.style.position || ''
+        
+        // Continue with transform
+      } else {
+        console.warn('❌ No replacement element found, terminating visual drag')
+        return
+      }
+    }
+
     // Use CSS transform for positioning (works with overflow: visible)
     const transform = `${this.originalTransform} translate(${Math.round(this.currentPos.x)}px, ${Math.round(this.currentPos.y)}px) scale(0.95)`
     this.dragElement.style.transform = transform
@@ -277,6 +317,9 @@ class DragManager {
     // Ensure element stays visible and on top
     this.dragElement.style.visibility = 'visible'
     this.dragElement.style.display = 'block'
+    this.dragElement.style.zIndex = '999999'
+    this.dragElement.style.transition = 'none'
+    this.dragElement.style.pointerEvents = 'none'
   }
 
   /**
@@ -316,6 +359,7 @@ class DragManager {
     
     // Reset all state
     this.dragElement = null
+    this.dragOriginElement = null
     this.dragData = null
     this.onDragEnd = null
     this.originalTransform = ''
@@ -366,6 +410,35 @@ class DragManager {
         listener()
       } catch (error) {
         console.warn('Error in drag state listener:', error)
+      }
+    })
+  }
+  
+  /**
+   * Update drop zone highlighting via direct DOM manipulation (no React re-renders)
+   */
+  updateDropZoneHighlighting() {
+    const isActive = this.isDragging
+    const dragData = this.dragData
+    const shouldHighlight = isActive && dragData?.source !== 'shop'
+    
+    // Find all hex tiles (drop zones)
+    const hexTiles = document.querySelectorAll('.hex-tile.player')
+    hexTiles.forEach(tile => {
+      if (shouldHighlight) {
+        tile.classList.add('drop-zone')
+      } else {
+        tile.classList.remove('drop-zone')
+      }
+    })
+    
+    // Find all bench slots (drop zones) 
+    const benchSlots = document.querySelectorAll('.bench-slot')
+    benchSlots.forEach(slot => {
+      if (shouldHighlight) {
+        slot.classList.add('drop-zone')
+      } else {
+        slot.classList.remove('drop-zone')
       }
     })
   }

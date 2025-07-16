@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react'
+import React, { useEffect, useRef } from 'react'
 import { useDragManager, useDropZone } from '../hooks/useDragManager'
 import dragManager from '../utils/DragManager'
 
@@ -18,23 +18,9 @@ const HexTile = ({
   onClick = () => {} 
 }) => {
   const imageRef = useRef(null)
-  const [forceRerender, setForceRerender] = useState(0)
   
   // New drag system
   const { createDragHandler } = useDragManager()
-  
-  // Listen for drag state changes to trigger re-renders for highlighting
-  useEffect(() => {
-    const handleDragStateChange = () => {
-      setForceRerender(prev => prev + 1)
-    }
-    
-    dragManager.addStateChangeListener(handleDragStateChange)
-    
-    return () => {
-      dragManager.removeStateChangeListener(handleDragStateChange)
-    }
-  }, [])
   
   // Drop zone for this hex tile using new system
   const { dropZoneRef } = useDropZone(
@@ -133,7 +119,7 @@ const HexTile = ({
         fill={fillColor}
         stroke={strokeColor}
         strokeWidth="2"
-        className={`hex-tile ${isOpponent ? 'opponent' : 'player'} ${dragManager.isActive && dragManager.currentDragData?.source !== 'shop' && !isOpponent ? 'drop-zone' : ''}`}
+        className={`hex-tile ${isOpponent ? 'opponent' : 'player'}`}
         style={{ 
           cursor: isOpponent ? 'default' : 'pointer',
           pointerEvents: isOpponent ? 'none' : 'all'

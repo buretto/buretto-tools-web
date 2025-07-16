@@ -8,6 +8,7 @@ import dragManager from '../utils/DragManager'
 
 export const useDragManager = () => {
   const elementRef = useRef(null)
+  const lastDraggedElementRef = useRef(null) // Track the last element this hook dragged
 
   /**
    * Start dragging an element
@@ -18,6 +19,9 @@ export const useDragManager = () => {
    */
   const startDrag = useCallback((e, dragData, onDragEnd = null, customDragImage = null) => {
     const element = e.currentTarget
+    
+    // Track that this hook is managing this element's drag
+    lastDraggedElementRef.current = element
     
     // Prevent any default browser behavior immediately
     e.preventDefault()
@@ -77,16 +81,9 @@ export const useDragManager = () => {
     }
   }, [startDrag])
 
-  /**
-   * Cleanup on unmount
-   */
-  useEffect(() => {
-    return () => {
-      if (dragManager.isActive) {
-        dragManager.forceEnd()
-      }
-    }
-  }, [])
+  // Removed cleanup effect that was causing drag cancellations
+  // The DragManager already handles proper cleanup via mouse events and browser unload
+  // Component unmounting during a drag should not terminate the drag operation
 
   return {
     startDrag,

@@ -1,12 +1,10 @@
-import React, { useEffect, useRef, useState } from 'react'
+import React, { useEffect, useRef } from 'react'
 import { useDragManager, useDropZone } from '../hooks/useDragManager'
 import dragManager from '../utils/DragManager'
 
 const BENCH_SLOTS = 9
 
 function Bench({ units = [], onUnitMove, onUnitSwap, onSell, tftData, tftImages }) {
-  const [forceRerender, setForceRerender] = useState(0)
-  
   // Create drop zones for each bench slot using new system
   const createBenchDropHandler = (benchIndex) => {
     return (e, dragData) => {
@@ -33,19 +31,6 @@ function Bench({ units = [], onUnitMove, onUnitSwap, onSell, tftData, tftImages 
       }
     }
   }
-  
-  // Listen for drag state changes to trigger immediate re-renders
-  useEffect(() => {
-    const handleDragStateChange = () => {
-      setForceRerender(prev => prev + 1)
-    }
-    
-    dragManager.addStateChangeListener(handleDragStateChange)
-    
-    return () => {
-      dragManager.removeStateChangeListener(handleDragStateChange)
-    }
-  }, [])
   
   // Load images for visible units
   useEffect(() => {
@@ -75,7 +60,7 @@ function Bench({ units = [], onUnitMove, onUnitSwap, onSell, tftData, tftImages 
           <div
             ref={dropZoneRef}
             key={`bench-${i}`}
-            className={`bench-slot ${dragManager.isActive && dragManager.currentDragData?.source !== 'shop' ? 'drop-zone' : ''}`}
+            className="bench-slot"
             data-slot={i}
           >
             {children}
