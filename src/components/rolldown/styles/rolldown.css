@@ -27,12 +27,14 @@
 }
 
 .bench-slot.drop-zone {
-  border: 2px solid #ffffff;
+  border: 1px solid #ffffff;
+  box-shadow: 0 0 0 1px #ffffff;
 }
 
 .bench-slot.drop-zone.hovered {
   background-color: rgba(255, 255, 255, 0.2);
-  border: 2px solid #ffffff;
+  border: 1px solid #ffffff;
+  box-shadow: 0 0 0 1px #ffffff;
 }
 
 .shop-slots-sell-overlay {
