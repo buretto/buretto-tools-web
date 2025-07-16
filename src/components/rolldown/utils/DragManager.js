@@ -299,8 +299,21 @@ class DragManager {
     if (!isConnected || !isInDocument) {
       console.log('🔍 Element disconnected, attempting recovery...')
       
-      // Try to find a replacement element with the same className
-      const replacementElement = document.querySelector(`.${this.dragElement.className.split(' ').join('.')}`)
+      let replacementElement = null
+      
+      // For bench units, use more specific selector with unitIndex
+      if (this.dragData?.source === 'bench' && this.dragData?.unitIndex !== undefined) {
+        // Find the specific bench slot, then look for the unit image within it
+        const benchSlot = document.querySelector(`.bench-container .bench-slot[data-slot="${this.dragData.unitIndex}"]`)
+        if (benchSlot) {
+          replacementElement = benchSlot.querySelector('.bench-unit-image')
+        }
+      }
+      
+      // Fallback to original className-based search for other sources
+      if (!replacementElement) {
+        replacementElement = document.querySelector(`.${this.dragElement.className.split(' ').join('.')}`)
+      }
       
       if (replacementElement && replacementElement.isConnected) {
         console.log('✅ Found replacement element, updating reference')
