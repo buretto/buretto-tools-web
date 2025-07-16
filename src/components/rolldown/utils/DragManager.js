@@ -148,6 +148,9 @@ class DragManager {
         this.dragElement.style.cursor = 'grabbing'
       }
       document.body.style.cursor = 'grabbing'
+      
+      // Notify that visual drag has started (for sell overlay, etc.)
+      this.notifyStateChange()
     }
     
     // Calculate transform offset from original position
@@ -423,6 +426,7 @@ class DragManager {
    * Add listener for drag state changes
    */
   addStateChangeListener(listener) {
+    console.log('➕ Adding drag state listener, total will be:', this.stateChangeListeners.length + 1)
     this.stateChangeListeners.push(listener)
   }
   
@@ -440,6 +444,11 @@ class DragManager {
    * Notify all listeners of state change
    */
   notifyStateChange() {
+    console.log('🔔 Notifying drag state change:', {
+      isActive: this.isDragging,
+      dragData: this.dragData,
+      listeners: this.stateChangeListeners.length
+    })
     this.stateChangeListeners.forEach(listener => {
       try {
         listener()

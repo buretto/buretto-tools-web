@@ -98,6 +98,13 @@ function Shop({ units = [], playerGold = 0, tftData, tftImages, onPurchase, onSe
       const dragData = dragManager.currentDragData
       const shouldShow = isActive && dragData?.source !== 'shop'
       
+      console.log('🛒 Sell overlay update:', {
+        isActive,
+        dragData,
+        shouldShow,
+        sellOverlayExists: !!sellOverlayRef.current
+      })
+      
       if (shouldShow) {
         const sellValue = dragData?.unit ? Math.floor(dragData.unit.cost * 0.6) : 0
         sellOverlayRef.current.style.display = 'flex'
