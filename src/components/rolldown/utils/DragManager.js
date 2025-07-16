@@ -63,17 +63,16 @@ class DragManager {
     // Use transform-based approach for all units
     element.style.position = 'relative' // Break out of parent stacking context
     
-    // Common drag styles
-    if (this.dragData?.source === 'board') {
-      element.style.zIndex = '9999999' // Even higher z-index for board units
-    } else {
-      element.style.zIndex = '999999'
-    }
+    // Common drag styles - use highest z-index for all dragged elements
+    element.style.zIndex = '9999999' // Highest z-index for all dragged elements
     element.style.transition = 'none'
     element.style.pointerEvents = 'none' // This prevents interference
     
     // Add dragging-active class immediately to prevent hover transforms
     document.body.classList.add('dragging-active')
+    
+    // Add dragging class to element immediately for proper z-index
+    element.classList.add('dragging')
     
     this.startPos = { x: rect.left, y: rect.top }
     this.currentPos = { x: 0, y: 0 } // Transform offset from original position
@@ -197,6 +196,7 @@ class DragManager {
       this.dragElement.style.visibility = ''
       this.dragElement.style.display = ''
       this.dragElement.style.cursor = ''
+      this.dragElement.classList.remove('dragging')
     }
     
     // No overflow styles to restore since we don't modify them

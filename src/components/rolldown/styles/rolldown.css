@@ -599,8 +599,9 @@
 .dragging {
   opacity: 0.7;
   transform: scale(1.05) translateZ(0);
-  z-index: 999999;
+  z-index: 9999999;
   cursor: grabbing;
+  position: relative;
 }
 
 /* Global cursor override during drag operations */
@@ -609,8 +610,21 @@ body.dragging-active * {
 }
 
 /* Disable hover animations during drag to prevent stacking context issues */
-body.dragging-active .bench-slot:hover {
+body.dragging-active .bench-slot:hover,
+body.dragging-active .shop-slot:hover,
+body.dragging-active .unit-card:hover,
+body.dragging-active .hex-tile.player:hover {
   transform: none !important;
+}
+
+/* Disable all transitions during drag operations to prevent delays */
+body.dragging-active .bench-slot,
+body.dragging-active .shop-slot,
+body.dragging-active .unit-card,
+body.dragging-active .hex-tile,
+body.dragging-active .unit-display,
+body.dragging-active .unit-avatar {
+  transition: none !important;
 }
 
 /* Remove clipping during drag to prevent clipping of dragged elements */
@@ -632,6 +646,25 @@ body.dragging-active svg {
 
 body.dragging-active foreignObject {
   overflow: visible !important;
+}
+
+/* Reduce hex tile visual priority during drag to prevent layering issues */
+body.dragging-active .hex-tile {
+  stroke-width: 1 !important;
+  opacity: 0.8 !important;
+}
+
+body.dragging-active .hex-tile.drop-zone {
+  stroke-width: 2 !important;
+  opacity: 0.9 !important;
+}
+
+/* Ensure shop UI elements don't interfere with dragged elements */
+body.dragging-active .shop-slots-sell-overlay,
+body.dragging-active .refresh-btn,
+body.dragging-active .player-level-display,
+body.dragging-active .shop-area-content {
+  z-index: 1 !important;
 }
 
 .unit-display[draggable="true"] {
