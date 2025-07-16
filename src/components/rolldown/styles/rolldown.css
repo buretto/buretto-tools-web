@@ -247,6 +247,21 @@
   stroke-width: 3;
 }
 
+/* Board units should show grab cursor when hoverable and not dragging */
+.hex-tile.player foreignObject {
+  cursor: grab;
+}
+
+/* Target the unit display div inside foreignObject more specifically */
+.hex-tile.player .hex-unit-display {
+  cursor: grab !important;
+}
+
+/* Ensure grab cursor shows through when not dragging - use class for specificity */
+body:not(.dragging-active) .hex-tile.player .hex-unit-display {
+  cursor: grab !important;
+}
+
 .hex-tile.opponent {
   pointer-events: none;
   stroke: none !important;

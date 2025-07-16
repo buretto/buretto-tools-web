@@ -139,6 +139,7 @@ const HexTile = ({
           >
             <div 
               ref={imageRef}
+              className="hex-unit-display"
               onMouseDown={handleUnitMouseDown}
               style={{
                 width: '100%',

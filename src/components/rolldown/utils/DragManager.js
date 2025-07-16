@@ -11,6 +11,7 @@ class DragManager {
     this.originalTransform = ''
     this.originalZIndex = ''
     this.originalPosition = ''
+    this.originalCursor = ''
     this.originalScrollTop = 0
     this.originalScrollLeft = 0
     this.originalParent = null
@@ -61,6 +62,7 @@ class DragManager {
     this.originalTransform = element.style.transform || ''
     this.originalZIndex = element.style.zIndex || ''
     this.originalPosition = element.style.position || ''
+    this.originalCursor = element.style.cursor || ''
 
     // Don't modify overflow styles - use alternative positioning approach instead
 
@@ -209,13 +211,15 @@ class DragManager {
       this.dragElement.style.boxShadow = ''
       this.dragElement.style.visibility = ''
       this.dragElement.style.display = ''
-      this.dragElement.style.cursor = ''
+      this.dragElement.style.cursor = this.originalCursor
       this.dragElement.classList.remove('dragging')
     }
     
     // Restore board unit DOM order if needed
     if (this.dragData?.source === 'board') {
       this.restoreBoardUnitDOMOrder()
+      // Force refresh cursor styles for all board units after board operations
+      this.refreshBoardUnitCursors()
     }
     
     // No overflow styles to restore since we don't modify them
@@ -431,6 +435,7 @@ class DragManager {
     this.originalTransform = ''
     this.originalZIndex = ''
     this.originalPosition = ''
+    this.originalCursor = ''
     this.grabOffset = { x: 0, y: 0 }
     this.currentPos = { x: 0, y: 0 }
     this.targetPos = { x: 0, y: 0 }
@@ -493,6 +498,21 @@ class DragManager {
     // Clear references
     this.originalParent = null
     this.originalNextSibling = null
+  }
+
+  /**
+   * Force refresh cursor styles for all board units
+   */
+  refreshBoardUnitCursors() {
+    // Find all board unit display elements
+    const boardUnits = document.querySelectorAll('.hex-tile.player .hex-unit-display')
+    
+    boardUnits.forEach(unitElement => {
+      // Force the cursor style to be grab for player units
+      unitElement.style.cursor = 'grab'
+    })
+    
+    console.log('🔄 Refreshed cursor styles for', boardUnits.length, 'board units')
   }
 
   /**
