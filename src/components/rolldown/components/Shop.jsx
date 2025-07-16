@@ -1,42 +1,31 @@
-import React, { useEffect, useRef, useState } from 'react'
+import React, { useEffect, useRef, useState, useCallback } from 'react'
 import { Coins } from 'lucide-react'
-import { useDrag } from '../contexts/DragContext'
+import { useDragManager, useDropZone } from '../hooks/useDragManager'
+import dragManager from '../utils/DragManager'
 
 const SHOP_SLOTS = 5
 
 function Shop({ units = [], playerGold = 0, tftData, tftImages, onPurchase, onSell }) {
-  const [draggedUnit, setDraggedUnit] = useState(null)
-  const [isDraggedOutside, setIsDraggedOutside] = useState(false)
-  const { isDragging, draggedUnit: globalDraggedUnit, dragSource, endDrag } = useDrag()
+  // Track ongoing drags to prevent click handlers from interfering
+  const dragDistanceRef = useRef(0)
+  const isDragActiveRef = useRef(false)
   
-  // Add global drag handlers to ensure proper drag state management
-  useEffect(() => {
-    const handleDragOver = (e) => {
-      e.preventDefault()
-      e.dataTransfer.dropEffect = 'move'
+  // New drop zone for selling
+  const { dropZoneRef } = useDropZone(
+    (e, dragData) => {
+      // Handle sell drop
+      if (dragData && (dragData.source === 'bench' || dragData.source === 'board') && onSell) {
+        const location = dragData.source
+        const index = dragData.source === 'bench' ? dragData.unit.benchIndex : null
+        onSell(dragData.unit, location, index)
+      }
+    },
+    (dragData) => {
+      // Can drop if it's from bench or board
+      return dragData && (dragData.source === 'bench' || dragData.source === 'board')
     }
-    
-    const handleDrop = (e) => {
-      e.preventDefault()
-    }
-    
-    const handleDragEnd = (e) => {
-      // Reset local drag state when any drag operation ends
-      setDraggedUnit(null)
-      setIsDraggedOutside(false)
-    }
-    
-    document.addEventListener('dragover', handleDragOver)
-    document.addEventListener('drop', handleDrop)
-    document.addEventListener('dragend', handleDragEnd)
-    
-    return () => {
-      document.removeEventListener('dragover', handleDragOver)
-      document.removeEventListener('drop', handleDrop)
-      document.removeEventListener('dragend', handleDragEnd)
-    }
-  }, [])
-  
+  )
+
   // Load images for visible units
   useEffect(() => {
     if (tftImages && units.length > 0) {
@@ -47,24 +36,6 @@ function Shop({ units = [], playerGold = 0, tftData, tftImages, onPurchase, onSe
       })
     }
   }, [units, tftImages])
-
-  const handleSellDrop = (e) => {
-    e.preventDefault()
-    e.stopPropagation()
-    
-    // Store drag data locally before clearing it
-    const currentDraggedUnit = globalDraggedUnit
-    const currentDragSource = dragSource
-    
-    // Reset drag state immediately
-    endDrag()
-    
-    if (currentDraggedUnit && (currentDragSource === 'bench' || currentDragSource === 'board') && onSell) {
-      const location = currentDragSource
-      const index = currentDragSource === 'bench' ? currentDraggedUnit.benchIndex : null
-      onSell(currentDraggedUnit, location, index)
-    }
-  }
 
   const handleSellDragOver = (e) => {
     e.preventDefault()
@@ -82,9 +53,23 @@ function Shop({ units = [], playerGold = 0, tftData, tftImages, onPurchase, onSe
       slots.push(
         <div
           key={`shop-${i}`}
-          className={`shop-slot ${draggedUnit === i ? 'dragging' : ''}`}
+          className="shop-slot"
           data-slot={i}
-          onClick={() => unit && onPurchase && onPurchase(unit, i)}
+          onClick={(e) => {
+            // Prevent event propagation
+            e.stopPropagation()
+            
+            // Only allow click purchase if no drag occurred (distance < threshold)
+            if (unit && onPurchase && !isDragActiveRef.current && dragDistanceRef.current < 10) {
+              onPurchase(unit, i)
+            }
+            
+            // Reset drag tracking after any click
+            setTimeout(() => {
+              isDragActiveRef.current = false
+              dragDistanceRef.current = 0
+            }, 10)
+          }}
         >
           {unit ? (
             <ShopUnitDisplay 
@@ -92,13 +77,9 @@ function Shop({ units = [], playerGold = 0, tftData, tftImages, onPurchase, onSe
               tftData={tftData} 
               tftImages={tftImages}
               slotIndex={i}
-              onDragStart={(slotIndex) => setDraggedUnit(slotIndex)}
-              onDragEnd={() => {
-                setDraggedUnit(null)
-                setIsDraggedOutside(false)
-              }}
-              onDragOutside={(isOutside) => setIsDraggedOutside(isOutside)}
               onPurchase={onPurchase}
+              dragDistanceRef={dragDistanceRef}
+              isDragActiveRef={isDragActiveRef}
             />
           ) : (
             <div className="empty-slot"></div>
@@ -110,20 +91,54 @@ function Shop({ units = [], playerGold = 0, tftData, tftImages, onPurchase, onSe
     return slots
   }
 
+  // Always render the overlay but control visibility via CSS and manual updates
+  const sellOverlayRef = useRef(null)
+  
+  // Update sell overlay visibility based on drag state (without causing re-renders)
+  useEffect(() => {
+    const updateSellOverlay = () => {
+      if (!sellOverlayRef.current) return
+      
+      const isActive = dragManager.isActive
+      const dragData = dragManager.currentDragData
+      const shouldShow = isActive && dragData?.source !== 'shop'
+      
+      if (shouldShow) {
+        const sellValue = dragData?.unit ? Math.floor(dragData.unit.cost * 0.6) : 0
+        sellOverlayRef.current.style.display = 'flex'
+        const sellText = sellOverlayRef.current.querySelector('.sell-text')
+        if (sellText) {
+          sellText.textContent = `Sell for ${sellValue}g`
+        }
+      } else {
+        sellOverlayRef.current.style.display = 'none'
+      }
+    }
+    
+    // Update immediately
+    updateSellOverlay()
+    
+    // Set up polling to check drag state (since we can't use state change events)
+    const pollInterval = setInterval(updateSellOverlay, 16) // ~60fps
+    
+    return () => {
+      clearInterval(pollInterval)
+    }
+  }, [])
+
   const renderSellOverlay = () => {
-    const showSellArea = isDragging && (dragSource === 'bench' || dragSource === 'board')
-    
-    if (!showSellArea) return null
-    
-    const sellValue = globalDraggedUnit ? Math.floor(globalDraggedUnit.cost * 0.6) : 0
     return (
       <div
+        ref={(el) => {
+          sellOverlayRef.current = el
+          if (dropZoneRef) dropZoneRef.current = el
+        }}
         className="shop-slots-sell-overlay"
+        style={{ display: 'none' }} // Hidden by default
         onDragOver={handleSellDragOver}
-        onDrop={handleSellDrop}
       >
         <div className="sell-text">
-          Sell for {sellValue}g
+          Sell for 0g
         </div>
       </div>
     )
@@ -142,11 +157,13 @@ function Shop({ units = [], playerGold = 0, tftData, tftImages, onPurchase, onSe
 /**
  * Component for displaying a unit in the shop
  */
-function ShopUnitDisplay({ unit, tftData, tftImages, slotIndex, onDragStart, onDragEnd, onDragOutside, onPurchase }) {
+function ShopUnitDisplay({ unit, tftData, tftImages, slotIndex, onPurchase, dragDistanceRef, isDragActiveRef }) {
   const imageRef = useRef(null)
   const [dragStartPos, setDragStartPos] = useState(null)
-  const [draggedElement, setDraggedElement] = useState(null)
   const championData = tftData?.champions?.[unit.id]
+  
+  // New drag system
+  const { createDragHandler } = useDragManager()
   
   useEffect(() => {
     if (tftImages && unit.id && imageRef.current) {
@@ -179,173 +196,83 @@ function ShopUnitDisplay({ unit, tftData, tftImages, slotIndex, onDragStart, onD
     }
   }, [unit.id, tftImages, championData])
 
-  // Cleanup effect to restore opacity if component unmounts during drag
-  useEffect(() => {
-    return () => {
-      if (draggedElement) {
-        draggedElement.style.opacity = '1'
-      }
-    }
-  }, [draggedElement])
-  
-  const handleDragStart = (e) => {
-    e.dataTransfer.setData('text/plain', '')
-    e.dataTransfer.effectAllowed = 'move'
-    e.dataTransfer.dropEffect = 'move'
+  // Stable drag end handler using useCallback
+  const handleDragEnd = useCallback((e, dragData) => {
+    // Get current mouse position (enhanced by drag manager)
+    const mouseX = e?.clientX || 0
+    const mouseY = e?.clientY || 0
     
-    // Calculate grab point relative to element and get actual dimensions
-    const rect = e.currentTarget.getBoundingClientRect()
-    const grabX = e.clientX - rect.left
-    const grabY = e.clientY - rect.top
-    const actualWidth = rect.width
-    const actualHeight = rect.height
-    
-    // Clone the unit display and copy computed styles
-    const dragImage = e.currentTarget.cloneNode(true)
-    dragImage.style.position = 'absolute'
-    dragImage.style.top = '-1000px'
-    dragImage.style.pointerEvents = 'none'
-    dragImage.style.width = `${actualWidth}px`
-    dragImage.style.height = `${actualHeight}px`
-    dragImage.style.opacity = '1'
-    dragImage.style.filter = 'none'
-    dragImage.style.transform = 'none'
-    
-    // Copy the main container styles to ensure no tinting
-    const originalMainStyles = window.getComputedStyle(e.currentTarget)
-    dragImage.style.backgroundColor = originalMainStyles.backgroundColor
-    dragImage.style.borderRadius = originalMainStyles.borderRadius
-    
-    // Copy computed styles for the bottom header and its children
-    const originalBottomHeader = e.currentTarget.querySelector('.unit-bottom-header')
-    const clonedBottomHeader = dragImage.querySelector('.unit-bottom-header')
-    
-    if (originalBottomHeader && clonedBottomHeader) {
-      const originalStyles = window.getComputedStyle(originalBottomHeader)
-      clonedBottomHeader.style.backgroundColor = originalStyles.backgroundColor
-      clonedBottomHeader.style.color = originalStyles.color
-      clonedBottomHeader.style.fontSize = originalStyles.fontSize
-      clonedBottomHeader.style.fontWeight = originalStyles.fontWeight
-      clonedBottomHeader.style.padding = originalStyles.padding
-      clonedBottomHeader.style.borderRadius = originalStyles.borderRadius
-      clonedBottomHeader.style.height = originalStyles.height
-      clonedBottomHeader.style.minHeight = originalStyles.minHeight
-      clonedBottomHeader.style.maxHeight = originalStyles.maxHeight
-      clonedBottomHeader.style.display = originalStyles.display
-      clonedBottomHeader.style.alignItems = originalStyles.alignItems
-      clonedBottomHeader.style.justifyContent = originalStyles.justifyContent
-      
-      // Copy styles for unit name
-      const originalUnitName = originalBottomHeader.querySelector('.unit-name')
-      const clonedUnitName = clonedBottomHeader.querySelector('.unit-name')
-      if (originalUnitName && clonedUnitName) {
-        const nameStyles = window.getComputedStyle(originalUnitName)
-        clonedUnitName.style.color = nameStyles.color
-        clonedUnitName.style.fontSize = nameStyles.fontSize
-        clonedUnitName.style.fontWeight = nameStyles.fontWeight
-      }
-      
-      // Copy styles for cost icon
-      const originalCostIcon = originalBottomHeader.querySelector('.unit-cost-icon')
-      const clonedCostIcon = clonedBottomHeader.querySelector('.unit-cost-icon')
-      if (originalCostIcon && clonedCostIcon) {
-        const iconStyles = window.getComputedStyle(originalCostIcon)
-        clonedCostIcon.style.color = iconStyles.color
-        clonedCostIcon.style.width = iconStyles.width
-        clonedCostIcon.style.height = iconStyles.height
-        clonedCostIcon.style.transform = iconStyles.transform
-        clonedCostIcon.style.filter = iconStyles.filter
-      }
-      
-      // Copy styles for cost text
-      const originalCostText = originalBottomHeader.querySelector('.unit-cost')
-      const clonedCostText = clonedBottomHeader.querySelector('.unit-cost')
-      if (originalCostText && clonedCostText) {
-        const costStyles = window.getComputedStyle(originalCostText)
-        clonedCostText.style.color = costStyles.color
-        clonedCostText.style.fontSize = costStyles.fontSize
-        clonedCostText.style.fontWeight = costStyles.fontWeight
-      }
-      
-      // Copy styles for cost container (this is what handles the flex layout)
-      const originalCostContainer = originalBottomHeader.querySelector('.unit-cost-container')
-      const clonedCostContainer = clonedBottomHeader.querySelector('.unit-cost-container')
-      if (originalCostContainer && clonedCostContainer) {
-        const containerStyles = window.getComputedStyle(originalCostContainer)
-        clonedCostContainer.style.display = containerStyles.display
-        clonedCostContainer.style.alignItems = containerStyles.alignItems
-        clonedCostContainer.style.gap = containerStyles.gap
-        clonedCostContainer.style.paddingRight = containerStyles.paddingRight
-        clonedCostContainer.style.paddingLeft = containerStyles.paddingLeft
-        clonedCostContainer.style.flexDirection = containerStyles.flexDirection
-      }
-    }
-    
-    // Force full opacity on all child elements to combat browser tinting
-    const allElements = dragImage.querySelectorAll('*')
-    allElements.forEach(element => {
-      element.style.opacity = '1'
-      element.style.filter = 'none'
-    })
-    
-    // Also set on the main drag image
-    dragImage.style.opacity = '1'
-    dragImage.style.filter = 'opacity(1) !important'
-    
-    document.body.appendChild(dragImage)
-    e.dataTransfer.setDragImage(dragImage, grabX, grabY)
-    
-    // Hide the original element during drag and track it
-    e.currentTarget.style.opacity = '0'
-    setDraggedElement(e.currentTarget)
-    
-    // Clean up the temporary element after drag starts
-    setTimeout(() => {
-      document.body.removeChild(dragImage)
-    }, 0)
-    
-    // Store the starting position
-    setDragStartPos({
-      x: rect.left + rect.width / 2,
-      y: rect.top + rect.height / 2
-    })
-    
-    onDragStart?.(slotIndex)
-  }
-
-
-  const handleDragEnd = (e) => {
-    // Restore original element opacity
-    if (draggedElement) {
-      draggedElement.style.opacity = '1'
-      setDraggedElement(null)
-    }
-    
+    // Calculate distance moved from start position
+    let distance = 0
     if (dragStartPos) {
-      const distance = Math.sqrt(
-        Math.pow(e.clientX - dragStartPos.x, 2) + Math.pow(e.clientY - dragStartPos.y, 2)
+      distance = Math.sqrt(
+        Math.pow(mouseX - dragStartPos.x, 2) + Math.pow(mouseY - dragStartPos.y, 2)
       )
+    }
+    
+    // Update shared drag tracking
+    if (dragDistanceRef) {
+      dragDistanceRef.current = distance
+    }
+    if (isDragActiveRef) {
+      isDragActiveRef.current = distance > 10 // Consider it a drag if moved > 10px
+    }
+    
+    // Check if mouse is outside shop container - use more specific selector
+    const shopContainer = document.querySelector('.shop-container') || 
+                          document.querySelector('.shop-slots')
+    
+    if (shopContainer && dragStartPos) {
+      const shopRect = shopContainer.getBoundingClientRect()
+      const isOutsideShop = mouseX < shopRect.left || 
+                           mouseX > shopRect.right || 
+                           mouseY < shopRect.top || 
+                           mouseY > shopRect.bottom
       
-      // Purchase if dragged more than 80px away from starting position
-      if (distance > 50 && onPurchase) {
+      // Purchase if BOTH conditions are met:
+      // 1. Dragged outside shop bounds
+      // 2. Moved minimum distance (prevents accidental clicks)
+      if (isOutsideShop && distance > 15 && onPurchase) {
         onPurchase(unit, slotIndex)
       }
     }
     
     setDragStartPos(null)
-    onDragEnd?.()
-  }
+  }, [unit, slotIndex, onPurchase, dragStartPos, dragDistanceRef, isDragActiveRef])
+
+  // Stable mouse down handler using useCallback
+  const handleMouseDown = useCallback((e) => {
+    // Reset drag tracking at start
+    if (dragDistanceRef) {
+      dragDistanceRef.current = 0
+    }
+    if (isDragActiveRef) {
+      isDragActiveRef.current = false
+    }
+    
+    // Store starting mouse position for distance calculation
+    setDragStartPos({
+      x: e.clientX,
+      y: e.clientY
+    })
+    
+    // Call the drag handler
+    const dragHandler = createDragHandler(
+      { unit, slotIndex, source: 'shop' }, // drag data
+      handleDragEnd // end callback
+    )
+    dragHandler(e)
+  }, [unit, slotIndex, createDragHandler, handleDragEnd, dragDistanceRef, isDragActiveRef])
 
   return (
     <div 
       className="unit-display"
-      draggable={true}
-      onDragStart={handleDragStart}
-      onDragEnd={handleDragEnd}
-      onDragOver={(e) => {
-        e.preventDefault()
-        e.dataTransfer.dropEffect = 'move'
+      onMouseDown={(e) => {
+        // Stop event from bubbling to parent shop-slot
+        e.stopPropagation()
+        handleMouseDown(e)
       }}
+      style={{ cursor: 'pointer' }}
     >
       <div className={`unit-avatar`} ref={imageRef} style={{pointerEvents: 'none'}}>
         {/* Show fallback if no image URL available */}
