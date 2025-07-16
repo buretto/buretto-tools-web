@@ -10,16 +10,9 @@ export const useTFTImages = (tftData) => {
   const [imageErrors, setImageErrors] = useState(new Map())
   const [cacheStats, setCacheStats] = useState({ imagesLoaded: 0, spritesLoaded: 0, loadingInProgress: 0 })
 
-  // Update cache stats periodically
+  // Update cache stats on demand only
   useEffect(() => {
-    const updateStats = () => {
-      setCacheStats(getCacheStats())
-    }
-    
-    const interval = setInterval(updateStats, 5000) // Update every 5 seconds
-    updateStats() // Initial update
-    
-    return () => clearInterval(interval)
+    setCacheStats(getCacheStats()) // Initial update only
   }, [])
 
   /**
