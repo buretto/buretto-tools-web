@@ -24,7 +24,7 @@ class DragManager {
     this.dragData = null
     this.stateChangeListeners = []
     this.dropZones = [] // Registered drop zones
-    this.dragThreshold = 8 // Minimum pixels to move before visual drag starts
+    this.dragThreshold = 2 // Minimum pixels to move before visual drag starts
     this.hasMetThreshold = false // Track if threshold has been met
     this.currentHoveredElement = null // Track currently hovered drop zone
 
@@ -62,6 +62,7 @@ class DragManager {
 
     // Use transform-based approach (more stable than fixed positioning)
     element.style.zIndex = '999999'
+    element.style.position = 'relative' // Break out of parent stacking context
     element.style.transition = 'none'
     element.style.pointerEvents = 'none' // This prevents interference
     
@@ -138,6 +139,7 @@ class DragManager {
         this.dragElement.style.cursor = 'grabbing'
       }
       document.body.style.cursor = 'grabbing'
+      document.body.classList.add('dragging-active')
     }
     
     // Calculate transform offset from original position
@@ -205,6 +207,7 @@ class DragManager {
     document.body.style.userSelect = ''
     document.body.style.webkitUserSelect = ''
     document.body.style.cursor = ''
+    document.body.classList.remove('dragging-active')
 
     // Check all registered drop zones first
     const enhancedEvent = {
@@ -363,6 +366,7 @@ class DragManager {
     // Reset text selection
     document.body.style.userSelect = ''
     document.body.style.webkitUserSelect = ''
+    document.body.classList.remove('dragging-active')
     
     // No overflow styles to restore since we don't modify them
     
