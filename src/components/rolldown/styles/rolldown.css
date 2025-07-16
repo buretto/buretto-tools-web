@@ -81,8 +81,10 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  overflow: hidden;
+  clip-path: inset(0);
   background: #1a1a1a;
+  will-change: transform;
+  contain: layout;
 }
 
 .game-content {
@@ -130,7 +132,9 @@
   display: flex;
   align-items: center;
   justify-content: center; /* GameBoard stays centered */
-  overflow: hidden;
+  clip-path: inset(0);
+  will-change: transform;
+  contain: layout;
 }
 
 .game-board-area .game-board {
@@ -148,7 +152,9 @@
   height: 17%;
   display: flex;
   align-items: stretch; /* Allow content to fill area */
-  overflow: hidden; /* Prevent content from spilling outside container */
+  clip-path: inset(0); /* Prevent content from spilling outside container */
+  will-change: transform;
+  contain: layout;
 }
 
 .shop-area-content {
@@ -607,11 +613,11 @@ body.dragging-active .bench-slot:hover {
   transform: none !important;
 }
 
-/* Allow overflow during drag to prevent clipping of dragged elements */
+/* Remove clipping during drag to prevent clipping of dragged elements */
 body.dragging-active .game-root,
 body.dragging-active .game-board-area,
 body.dragging-active .shop-area {
-  overflow: visible !important;
+  clip-path: none !important;
 }
 
 /* Prevent SVG clipping during drag operations */
