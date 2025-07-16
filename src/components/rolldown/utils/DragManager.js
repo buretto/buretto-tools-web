@@ -87,8 +87,11 @@ class DragManager {
     // Start animation loop
     this.startAnimation()
     
-    // DO NOT notify state change here - it causes React re-renders that destroy the component mid-drag
-    // State change notification will happen in endDrag() instead
+    // Notify state change after drag setup is complete
+    // Use setTimeout to avoid React re-renders during the same event cycle
+    setTimeout(() => {
+      this.notifyStateChange()
+    }, 0)
   }
 
   /**

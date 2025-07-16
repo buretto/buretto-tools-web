@@ -89,7 +89,7 @@ function Shop({ units = [], playerGold = 0, tftData, tftImages, onPurchase, onSe
   // Always render the overlay but control visibility via CSS and manual updates
   const sellOverlayRef = useRef(null)
   
-  // Update sell overlay visibility based on drag state (without causing re-renders)
+  // Update sell overlay visibility based on drag state using proper state change events
   useEffect(() => {
     const updateSellOverlay = () => {
       if (!sellOverlayRef.current) return
@@ -113,11 +113,11 @@ function Shop({ units = [], playerGold = 0, tftData, tftImages, onPurchase, onSe
     // Update immediately
     updateSellOverlay()
     
-    // Set up polling to check drag state (since we can't use state change events)
-    const pollInterval = setInterval(updateSellOverlay, 16) // ~60fps
+    // Listen for drag state changes
+    dragManager.addStateChangeListener(updateSellOverlay)
     
     return () => {
-      clearInterval(pollInterval)
+      dragManager.removeStateChangeListener(updateSellOverlay)
     }
   }, [])
 
