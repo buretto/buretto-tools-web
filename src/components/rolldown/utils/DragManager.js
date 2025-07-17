@@ -711,26 +711,84 @@ class DragManager {
   }
   
   /**
-   * Update shop container opacity during drag from shop
+   * Apply fading styles using hybrid approach: 
+   * - Background/border styles for shop slots and buttons
+   * - Individual opacity for unit-displays (except dragged one)
    */
-  updateShopContainerOpacity() {
-    const shopWrapper = document.querySelector('.shop-wrapper')
+  applyShopFadingStyles() {
+    // 1. Fade backgrounds and borders of all shop slots
+    const shopSlots = document.querySelectorAll('.shop-slot')
+    shopSlots.forEach(slot => {
+      slot.style.setProperty('background-color', 'rgba(31, 41, 55, 0.3)', 'important')
+      slot.style.setProperty('border-color', 'rgba(55, 65, 81, 0.3)', 'important')
+    })
+    
+    // 2. Fade background and borders of player buttons section
     const playerButtonsSection = document.querySelector('.player-buttons-section')
-    
-    // Apply opacity to both shop children
-    if (shopWrapper) {
-      shopWrapper.style.setProperty('opacity', '0.3', 'important')
-      shopWrapper.style.transition = 'opacity 0.2s ease'
-    }
     if (playerButtonsSection) {
-      playerButtonsSection.style.setProperty('opacity', '0.3', 'important')
-      playerButtonsSection.style.transition = 'opacity 0.2s ease'
+      playerButtonsSection.style.setProperty('background-color', 'rgba(31, 41, 55, 0.3)', 'important')
+      playerButtonsSection.style.setProperty('border-color', 'rgba(55, 65, 81, 0.3)', 'important')
+      
+      // Also fade the buttons inside
+      const buttons = playerButtonsSection.querySelectorAll('button')
+      buttons.forEach(button => {
+        button.style.setProperty('opacity', '0.6', 'important')
+      })
     }
     
-    // Then restore full opacity specifically for the dragged unit-display element
+    // 3. Fade all unit-displays individually (except the dragged one)
+    const unitDisplays = document.querySelectorAll('.unit-display')
+    unitDisplays.forEach(unitDisplay => {
+      // Skip the dragged element
+      if (this.dragElement && (unitDisplay === this.dragElement || this.dragElement.contains(unitDisplay) || unitDisplay.contains(this.dragElement))) {
+        return
+      }
+      unitDisplay.style.setProperty('opacity', '0.6', 'important')
+    })
+    
+    // 4. Ensure dragged unit-display stays at full opacity
     if (this.dragElement) {
       this.dragElement.style.setProperty('opacity', '1', 'important')
     }
+  }
+
+  /**
+   * Remove all shop fading styles
+   */
+  removeShopFadingStyles() {
+    // 1. Restore shop slot backgrounds and borders
+    const shopSlots = document.querySelectorAll('.shop-slot')
+    shopSlots.forEach(slot => {
+      slot.style.removeProperty('background-color')
+      slot.style.removeProperty('border-color')
+    })
+    
+    // 2. Restore player buttons section
+    const playerButtonsSection = document.querySelector('.player-buttons-section')
+    if (playerButtonsSection) {
+      playerButtonsSection.style.removeProperty('background-color')
+      playerButtonsSection.style.removeProperty('border-color')
+      
+      // Restore buttons
+      const buttons = playerButtonsSection.querySelectorAll('button')
+      buttons.forEach(button => {
+        button.style.removeProperty('opacity')
+      })
+    }
+    
+    // 3. Restore all unit-displays
+    const unitDisplays = document.querySelectorAll('.unit-display')
+    unitDisplays.forEach(unitDisplay => {
+      unitDisplay.style.removeProperty('opacity')
+    })
+  }
+
+  /**
+   * Update shop container opacity during drag from shop
+   */
+  updateShopContainerOpacity() {
+    // Apply hybrid fading styles
+    this.applyShopFadingStyles()
   }
   
   /**
@@ -770,31 +828,13 @@ class DragManager {
     const wasOverShop = this.isOverShopContainer
     this.isOverShopContainer = isOverShopArea
     
-    // Update opacity based on cursor position
+    // Update fading based on cursor position
     if (this.isOverShopContainer && !wasOverShop) {
-      // Entering shop area - apply transparency to both children
-      if (shopWrapper) {
-        shopWrapper.style.setProperty('opacity', '0.3', 'important')
-      }
-      if (playerButtonsSection) {
-        playerButtonsSection.style.setProperty('opacity', '0.3', 'important')
-      }
-      // Keep dragged element at full opacity
-      if (this.dragElement) {
-        this.dragElement.style.setProperty('opacity', '1', 'important')
-      }
+      // Entering shop area - apply hybrid fading styles
+      this.applyShopFadingStyles()
     } else if (!this.isOverShopContainer && wasOverShop) {
-      // Leaving shop area - restore full opacity to both children
-      if (shopWrapper) {
-        shopWrapper.style.setProperty('opacity', '1', 'important')
-      }
-      if (playerButtonsSection) {
-        playerButtonsSection.style.setProperty('opacity', '1', 'important')
-      }
-      // Keep dragged element at full opacity
-      if (this.dragElement) {
-        this.dragElement.style.setProperty('opacity', '1', 'important')
-      }
+      // Leaving shop area - restore all styles
+      this.removeShopFadingStyles()
     }
   }
   
@@ -802,18 +842,8 @@ class DragManager {
    * Restore shop container opacity
    */
   restoreShopContainerOpacity() {
-    const shopWrapper = document.querySelector('.shop-wrapper')
-    const playerButtonsSection = document.querySelector('.player-buttons-section')
-    
-    // Restore opacity for both shop children
-    if (shopWrapper) {
-      shopWrapper.style.removeProperty('opacity')
-      shopWrapper.style.removeProperty('transition')
-    }
-    if (playerButtonsSection) {
-      playerButtonsSection.style.removeProperty('opacity')
-      playerButtonsSection.style.removeProperty('transition')
-    }
+    // Remove all hybrid fading styles
+    this.removeShopFadingStyles()
   }
   
   /**
