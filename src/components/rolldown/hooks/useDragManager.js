@@ -32,14 +32,12 @@ export const useDragManager = () => {
     const grabX = e.clientX - rect.left
     const grabY = e.clientY - rect.top
     
+    
     // Set grab offset in drag manager
     dragManager.setGrabOffset(grabX, grabY)
     
-    // Update target position to current mouse position
-    dragManager.targetPos = {
-      x: e.clientX - grabX,
-      y: e.clientY - grabY
-    }
+    // Set initial start position for mouse movement calculations
+    dragManager.startPos = { x: e.clientX, y: e.clientY }
     
     // Start the drag immediately (no delay)
     dragManager.startDrag(element, {

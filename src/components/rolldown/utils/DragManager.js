@@ -86,31 +86,30 @@ class DragManager {
       }
     }
     
-    // Use transform-based approach for all units
-    element.style.position = 'relative' // Break out of parent stacking context
-    
-    // Common drag styles - use highest z-index for all dragged elements
-    element.style.zIndex = '9999999' // Highest z-index for all dragged elements
+    // Don't apply position and visual styles immediately - wait for threshold
+    // Store styles to apply later when threshold is met
     element.style.transition = 'none'
-    element.style.pointerEvents = 'none' // This prevents interference
+    element.style.pointerEvents = 'none' // This prevents interference during mouse events
     
-    // Add dragging-active class immediately to prevent hover transforms
-    document.body.classList.add('dragging-active')
+    // Don't add dragging-active class immediately - wait for threshold
     
     // Add source-specific drag class for more granular styling
     if (this.dragData?.source) {
       document.body.classList.add(`dragging-from-${this.dragData.source}`)
     }
     
-    // Add dragging class to element immediately for proper z-index
-    element.classList.add('dragging')
+    // Don't add dragging class immediately - wait for threshold
     
     // Special handling for board units - move to end of SVG to ensure they render last
     if (this.dragData?.source === 'board') {
       this.handleBoardUnitDOMOrder(element)
     }
     
-    this.startPos = { x: rect.left, y: rect.top }
+    // startPos is now set by useDragManager to the mouse position, don't override it
+    // Only set if it hasn't been set yet
+    if (!this.startPos || (this.startPos.x === 0 && this.startPos.y === 0)) {
+      this.startPos = { x: rect.left, y: rect.top }
+    }
     this.currentPos = { x: 0, y: 0 } // Transform offset from original position
     this.targetPos = { x: 0, y: 0 } // Target offset from original position
 
@@ -171,13 +170,25 @@ class DragManager {
     
     // Calculate distance from start position
     const distanceFromStart = Math.sqrt(
-      Math.pow(e.clientX - (this.startPos.x + this.grabOffset.x), 2) + 
-      Math.pow(e.clientY - (this.startPos.y + this.grabOffset.y), 2)
+      Math.pow(e.clientX - this.startPos.x, 2) + 
+      Math.pow(e.clientY - this.startPos.y, 2)
     )
     
     // Only start visual drag effects after threshold is met
     if (!this.hasMetThreshold && distanceFromStart >= this.dragThreshold) {
       this.hasMetThreshold = true
+      
+      
+      // Apply positioning styles when threshold is met
+      if (this.dragElement) {
+        // Don't override position - let existing CSS positioning work
+        this.dragElement.style.zIndex = '9999999' // Highest z-index for all dragged elements
+        this.dragElement.classList.add('dragging')
+      }
+      
+      // Add dragging-active class when threshold is met
+      document.body.classList.add('dragging-active')
+      
       // Change cursor to indicate dragging has started
       if (this.dragElement) {
         this.dragElement.style.cursor = 'grabbing'
@@ -193,13 +204,15 @@ class DragManager {
       this.notifyStateChange()
     }
     
-    // Calculate transform offset from original position
-    const newX = e.clientX - this.startPos.x - this.grabOffset.x
-    const newY = e.clientY - this.startPos.y - this.grabOffset.y
+    // Calculate transform to keep grab point under cursor
+    // Simple approach: just move by the mouse delta
+    const newX = e.clientX - this.startPos.x
+    const newY = e.clientY - this.startPos.y
     
     // Only apply visual effects after threshold is met
     if (this.hasMetThreshold && !isNaN(newX) && !isNaN(newY) && isFinite(newX) && isFinite(newY)) {
       this.targetPos = { x: newX, y: newY }
+      
     }
     
     // Update hover highlighting if drag is active

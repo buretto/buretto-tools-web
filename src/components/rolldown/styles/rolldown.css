@@ -620,7 +620,7 @@ body:not(.dragging-active) .hex-tile.player .hex-unit-display {
 .dragging {
   z-index: 9999999;
   cursor: grabbing;
-  position: relative;
+  /* Don't override position - let existing positioning work */
   /* Override aspect ratio constraint that can cause height compression */
   aspect-ratio: unset !important;
 }
