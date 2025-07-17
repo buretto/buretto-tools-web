@@ -425,15 +425,17 @@ body:not(.dragging-active) .hex-tile.player .hex-unit-display {
 }
 
 .shop-slot .unit-display {
-  width: 100%;
-  height: 100%;
+  position: absolute;
+  top: 0.5rem; /* Match shop-slot padding */
+  left: 0.5rem;
+  right: 0.5rem;
+  bottom: 0.5rem;
   display: flex;
   flex-direction: column;
   align-items: stretch;
   justify-content: flex-start;
   gap: 0;
-  position: relative;
-  z-index: 1; /* Ensure content appears above dark background */
+  z-index: 2; /* Ensure unit display appears above empty slot */
 }
 
 .shop-slot .unit-avatar {
@@ -507,13 +509,16 @@ body:not(.dragging-active) .hex-tile.player .hex-unit-display {
   border: 1px solid rgb(75 85 99); /* Lighter inset border */
   color: rgb(71, 91, 132); /* text-gray-500 */
   font-size: 0.875rem;
-  width: 85%;
-  height: 85%;
+  width: 70%;
+  height: 70%;
   display: flex;
   align-items: center;
   justify-content: center;
-  position: relative;
-  z-index: 1; /* Ensure empty slot appears above dark background */
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 1; /* Below unit display but above background */
 }
 
 /* Bench Styles */
@@ -621,6 +626,7 @@ body:not(.dragging-active) .hex-tile.player .hex-unit-display {
 }
 
 
+
 /* Global cursor override during drag operations */
 body.dragging-active * {
   cursor: grabbing !important;
@@ -649,6 +655,14 @@ body.dragging-active .game-root,
 body.dragging-active .game-board-area,
 body.dragging-active .shop-area {
   clip-path: none !important;
+}
+
+/* Ensure shop containers don't clip dragged units */
+body.dragging-active .shop-container,
+body.dragging-active .shop-wrapper,
+body.dragging-active .shop-slots,
+body.dragging-active .shop-slot {
+  overflow: visible !important;
 }
 
 /* Prevent SVG clipping during drag operations */

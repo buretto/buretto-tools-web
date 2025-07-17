@@ -69,7 +69,11 @@ function Shop({ units = [], playerGold = 0, tftData, tftImages, onPurchase, onSe
             }, 200)
           }}
         >
-          {unit ? (
+          {/* Always render empty slot background */}
+          <div className="empty-slot"></div>
+          
+          {/* Render unit display on top if unit exists */}
+          {unit && (
             <ShopUnitDisplay 
               unit={unit} 
               tftData={tftData} 
@@ -78,8 +82,6 @@ function Shop({ units = [], playerGold = 0, tftData, tftImages, onPurchase, onSe
               onPurchase={onPurchase}
               isDragActiveRef={isDragActiveRef}
             />
-          ) : (
-            <div className="empty-slot"></div>
           )}
         </div>
       )
