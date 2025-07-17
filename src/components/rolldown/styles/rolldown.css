@@ -573,7 +573,6 @@ body:not(.dragging-active) .hex-tile.player .hex-unit-display {
 
 .bench-slot:hover {
   border-color: rgb(107 114 128); /* border-gray-500 */
-  transform: translateY(-2px);
 }
 
 .opponent-bench-slot {
