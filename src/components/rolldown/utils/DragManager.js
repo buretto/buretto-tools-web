@@ -100,6 +100,12 @@ class DragManager {
     
     // Don't add dragging class immediately - wait for threshold
     
+    // Set grabbing cursor immediately for bench and board units (not shop)
+    if (this.dragData?.source === 'bench' || this.dragData?.source === 'board') {
+      element.style.setProperty('cursor', 'grabbing', 'important')
+      document.body.style.cursor = 'grabbing'
+    }
+    
     // Special handling for board units - move to end of SVG to ensure they render last
     if (this.dragData?.source === 'board') {
       this.handleBoardUnitDOMOrder(element)
@@ -189,11 +195,13 @@ class DragManager {
       // Add dragging-active class when threshold is met
       document.body.classList.add('dragging-active')
       
-      // Change cursor to indicate dragging has started
-      if (this.dragElement) {
-        this.dragElement.style.cursor = 'grabbing'
+      // Change cursor to indicate dragging has started (only for shop units - bench/board already set)
+      if (this.dragData?.source === 'shop') {
+        if (this.dragElement) {
+          this.dragElement.style.cursor = 'grabbing'
+        }
+        document.body.style.cursor = 'grabbing'
       }
-      document.body.style.cursor = 'grabbing'
       
       // Apply shop container transparency for shop units
       if (this.dragData?.source === 'shop') {
@@ -254,7 +262,7 @@ class DragManager {
       this.dragElement.style.boxShadow = ''
       this.dragElement.style.visibility = ''
       this.dragElement.style.display = ''
-      this.dragElement.style.cursor = this.originalCursor
+      this.dragElement.style.removeProperty('cursor')
       // Restore original dimensions
       this.dragElement.style.width = this.originalWidth
       this.dragElement.style.height = this.originalHeight

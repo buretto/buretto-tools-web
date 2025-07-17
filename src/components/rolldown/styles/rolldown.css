@@ -262,6 +262,7 @@ body:not(.dragging-active) .hex-tile.player .hex-unit-display {
   cursor: grab !important;
 }
 
+
 .hex-tile.opponent {
   pointer-events: none;
   stroke: none !important;
@@ -629,6 +630,12 @@ body:not(.dragging-active) .hex-tile.player .hex-unit-display {
 
 /* Global cursor override during drag operations */
 body.dragging-active * {
+  cursor: grabbing !important;
+}
+
+/* Override cursor for bench and board units immediately when dragging starts */
+body.dragging-from-bench *,
+body.dragging-from-board * {
   cursor: grabbing !important;
 }
 
