@@ -211,29 +211,47 @@ function ShopUnitDisplay({ unit, tftData, tftImages, slotIndex, onPurchase, isDr
       isDragActiveRef.current = true
     }
     
-    // Check if mouse is outside shop-container-wrapper for purchase
-    const shopContainerWrapper = document.querySelector('.shop-container-wrapper')
+    // Check if mouse is outside both shop children (shop-wrapper and player-buttons-section)
+    const shopWrapper = document.querySelector('.shop-wrapper')
+    const playerButtonsSection = document.querySelector('.player-buttons-section')
     
-    if (shopContainerWrapper) {
-      const shopRect = shopContainerWrapper.getBoundingClientRect()
-      const isOutsideShopWrapper = mouseX < shopRect.left || 
-                                  mouseX > shopRect.right || 
-                                  mouseY < shopRect.top || 
-                                  mouseY > shopRect.bottom
-      
-      console.log('🛒 Drag end check:', {
-        unit: unit?.name,
-        isOutsideShopWrapper,
-        mousePos: { mouseX, mouseY },
-        shopRect: shopRect ? { left: shopRect.left, right: shopRect.right, top: shopRect.top, bottom: shopRect.bottom } : null,
-        willPurchase: isOutsideShopWrapper
-      })
-      
-      // Purchase if cursor is outside shop-container-wrapper bounds
-      if (isOutsideShopWrapper && onPurchase) {
-        console.log('🛒 Purchasing via drag outside wrapper')
-        onPurchase(unit, slotIndex)
+    let isOutsideShopArea = true
+    
+    // Check if cursor is inside shop-wrapper
+    if (shopWrapper) {
+      const shopRect = shopWrapper.getBoundingClientRect()
+      const isInsideShop = mouseX >= shopRect.left && 
+                          mouseX <= shopRect.right && 
+                          mouseY >= shopRect.top && 
+                          mouseY <= shopRect.bottom
+      if (isInsideShop) {
+        isOutsideShopArea = false
       }
+    }
+    
+    // Check if cursor is inside player-buttons-section
+    if (playerButtonsSection && isOutsideShopArea) {
+      const buttonsRect = playerButtonsSection.getBoundingClientRect()
+      const isInsideButtons = mouseX >= buttonsRect.left && 
+                             mouseX <= buttonsRect.right && 
+                             mouseY >= buttonsRect.top && 
+                             mouseY <= buttonsRect.bottom
+      if (isInsideButtons) {
+        isOutsideShopArea = false
+      }
+    }
+    
+    console.log('🛒 Drag end check:', {
+      unit: unit?.name,
+      isOutsideShopArea,
+      mousePos: { mouseX, mouseY },
+      willPurchase: isOutsideShopArea
+    })
+    
+    // Purchase if cursor is outside both shop children bounds
+    if (isOutsideShopArea && onPurchase) {
+      console.log('🛒 Purchasing via drag outside shop area')
+      onPurchase(unit, slotIndex)
     }
   }, [unit, slotIndex, onPurchase, isDragActiveRef])
 

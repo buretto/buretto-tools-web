@@ -714,16 +714,22 @@ class DragManager {
    * Update shop container opacity during drag from shop
    */
   updateShopContainerOpacity() {
-    const shopContainer = document.querySelector('.shop-container-wrapper')
-    if (shopContainer) {
-      // Apply opacity to the entire container
-      shopContainer.style.setProperty('opacity', '0.3', 'important')
-      shopContainer.style.transition = 'opacity 0.2s ease'
-      
-      // Then restore full opacity specifically for the dragged unit-display element
-      if (this.dragElement) {
-        this.dragElement.style.setProperty('opacity', '1', 'important')
-      }
+    const shopWrapper = document.querySelector('.shop-wrapper')
+    const playerButtonsSection = document.querySelector('.player-buttons-section')
+    
+    // Apply opacity to both shop children
+    if (shopWrapper) {
+      shopWrapper.style.setProperty('opacity', '0.3', 'important')
+      shopWrapper.style.transition = 'opacity 0.2s ease'
+    }
+    if (playerButtonsSection) {
+      playerButtonsSection.style.setProperty('opacity', '0.3', 'important')
+      playerButtonsSection.style.transition = 'opacity 0.2s ease'
+    }
+    
+    // Then restore full opacity specifically for the dragged unit-display element
+    if (this.dragElement) {
+      this.dragElement.style.setProperty('opacity', '1', 'important')
     }
   }
   
@@ -731,29 +737,60 @@ class DragManager {
    * Update shop container state based on cursor position
    */
   updateShopContainerState(e) {
-    const shopContainer = document.querySelector('.shop-container-wrapper')
-    if (!shopContainer) return
+    // Check if cursor is inside either shop child (shop-wrapper or player-buttons-section)
+    const shopWrapper = document.querySelector('.shop-wrapper')
+    const playerButtonsSection = document.querySelector('.player-buttons-section')
     
-    const rect = shopContainer.getBoundingClientRect()
+    let isOverShopArea = false
+    
+    // Check if cursor is inside shop-wrapper
+    if (shopWrapper) {
+      const shopRect = shopWrapper.getBoundingClientRect()
+      const isInsideShop = e.clientX >= shopRect.left && 
+                          e.clientX <= shopRect.right && 
+                          e.clientY >= shopRect.top && 
+                          e.clientY <= shopRect.bottom
+      if (isInsideShop) {
+        isOverShopArea = true
+      }
+    }
+    
+    // Check if cursor is inside player-buttons-section
+    if (playerButtonsSection && !isOverShopArea) {
+      const buttonsRect = playerButtonsSection.getBoundingClientRect()
+      const isInsideButtons = e.clientX >= buttonsRect.left && 
+                             e.clientX <= buttonsRect.right && 
+                             e.clientY >= buttonsRect.top && 
+                             e.clientY <= buttonsRect.bottom
+      if (isInsideButtons) {
+        isOverShopArea = true
+      }
+    }
+    
     const wasOverShop = this.isOverShopContainer
-    this.isOverShopContainer = (
-      e.clientX >= rect.left &&
-      e.clientX <= rect.right &&
-      e.clientY >= rect.top &&
-      e.clientY <= rect.bottom
-    )
+    this.isOverShopContainer = isOverShopArea
     
     // Update opacity based on cursor position
     if (this.isOverShopContainer && !wasOverShop) {
-      // Entering shop container - apply transparency to container
-      shopContainer.style.setProperty('opacity', '0.3', 'important')
+      // Entering shop area - apply transparency to both children
+      if (shopWrapper) {
+        shopWrapper.style.setProperty('opacity', '0.3', 'important')
+      }
+      if (playerButtonsSection) {
+        playerButtonsSection.style.setProperty('opacity', '0.3', 'important')
+      }
       // Keep dragged element at full opacity
       if (this.dragElement) {
         this.dragElement.style.setProperty('opacity', '1', 'important')
       }
     } else if (!this.isOverShopContainer && wasOverShop) {
-      // Leaving shop container - restore full opacity to container
-      shopContainer.style.setProperty('opacity', '1', 'important')
+      // Leaving shop area - restore full opacity to both children
+      if (shopWrapper) {
+        shopWrapper.style.setProperty('opacity', '1', 'important')
+      }
+      if (playerButtonsSection) {
+        playerButtonsSection.style.setProperty('opacity', '1', 'important')
+      }
       // Keep dragged element at full opacity
       if (this.dragElement) {
         this.dragElement.style.setProperty('opacity', '1', 'important')
@@ -765,11 +802,17 @@ class DragManager {
    * Restore shop container opacity
    */
   restoreShopContainerOpacity() {
-    const shopContainer = document.querySelector('.shop-container-wrapper')
-    if (shopContainer) {
-      // Restore opacity for the container
-      shopContainer.style.removeProperty('opacity')
-      shopContainer.style.removeProperty('transition')
+    const shopWrapper = document.querySelector('.shop-wrapper')
+    const playerButtonsSection = document.querySelector('.player-buttons-section')
+    
+    // Restore opacity for both shop children
+    if (shopWrapper) {
+      shopWrapper.style.removeProperty('opacity')
+      shopWrapper.style.removeProperty('transition')
+    }
+    if (playerButtonsSection) {
+      playerButtonsSection.style.removeProperty('opacity')
+      playerButtonsSection.style.removeProperty('transition')
     }
   }
   
