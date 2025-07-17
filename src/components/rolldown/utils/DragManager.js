@@ -757,6 +757,15 @@ class DragManager {
         return
       }
       unitDisplay.style.setProperty('opacity', '0.6', 'important')
+      
+      // Hide empty slot inset for shop slots that contain units but are not being dragged
+      const shopSlot = unitDisplay.closest('.shop-slot')
+      if (shopSlot) {
+        const emptySlot = shopSlot.querySelector('.empty-slot')
+        if (emptySlot) {
+          emptySlot.style.setProperty('opacity', '0', 'important')
+        }
+      }
     })
     
     // 4. Ensure dragged unit-display stays at full opacity
@@ -793,6 +802,12 @@ class DragManager {
     const unitDisplays = document.querySelectorAll('.unit-display')
     unitDisplays.forEach(unitDisplay => {
       unitDisplay.style.removeProperty('opacity')
+    })
+    
+    // 4. Restore all empty slot insets
+    const emptySlots = document.querySelectorAll('.empty-slot')
+    emptySlots.forEach(emptySlot => {
+      emptySlot.style.removeProperty('opacity')
     })
   }
 
