@@ -32,6 +32,7 @@ class DragManager {
     this.dragThreshold = 2 // Minimum pixels to move before visual drag starts
     this.hasMetThreshold = false // Track if threshold has been met
     this.currentHoveredElement = null // Track currently hovered drop zone
+    this.isOverShopContainer = false // Track if cursor is over shop container wrapper
 
     // Bind methods to preserve context
     this.handleMouseMove = this.handleMouseMove.bind(this)
@@ -183,6 +184,11 @@ class DragManager {
       }
       document.body.style.cursor = 'grabbing'
       
+      // Apply shop container transparency for shop units
+      if (this.dragData?.source === 'shop') {
+        this.updateShopContainerOpacity()
+      }
+      
       // Notify that visual drag has started (for sell overlay, etc.)
       this.notifyStateChange()
     }
@@ -199,6 +205,11 @@ class DragManager {
     // Update hover highlighting if drag is active
     if (this.hasMetThreshold) {
       this.updateHoverHighlighting(e)
+      
+      // Update shop container state for shop units
+      if (this.dragData?.source === 'shop') {
+        this.updateShopContainerState(e)
+      }
     }
   }
 
@@ -299,11 +310,17 @@ class DragManager {
     
     // Call end callback with accurate mouse position if no drop zone handled it
     if (!dropHandled && this.onDragEnd) {
+      console.log('🎯 Calling drag end callback:', this.dragData)
       this.onDragEnd(enhancedEvent, this.dragData)
+    } else {
+      console.log('🎯 No drag end callback called:', { dropHandled, hasCallback: !!this.onDragEnd })
     }
 
     // Clear drop zone highlighting immediately (direct DOM, no React re-renders)
     this.updateDropZoneHighlighting()
+    
+    // Restore shop container opacity
+    this.restoreShopContainerOpacity()
     
     // Notify listeners that drag has ended
     this.notifyStateChange()
@@ -476,6 +493,7 @@ class DragManager {
     this.lastMousePos = { x: 0, y: 0 }
     this.hasMetThreshold = false
     this.currentHoveredElement = null
+    this.isOverShopContainer = false
     this.originalScrollTop = 0
     this.originalScrollLeft = 0
   }
@@ -690,6 +708,76 @@ class DragManager {
     if (index > -1) {
       this.dropZones.splice(index, 1)
     }
+  }
+  
+  /**
+   * Update shop container opacity during drag from shop
+   */
+  updateShopContainerOpacity() {
+    const shopContainer = document.querySelector('.shop-container-wrapper')
+    if (shopContainer) {
+      // Apply opacity to the entire container
+      shopContainer.style.setProperty('opacity', '0.3', 'important')
+      shopContainer.style.transition = 'opacity 0.2s ease'
+      
+      // Then restore full opacity specifically for the dragged unit-display element
+      if (this.dragElement) {
+        this.dragElement.style.setProperty('opacity', '1', 'important')
+      }
+    }
+  }
+  
+  /**
+   * Update shop container state based on cursor position
+   */
+  updateShopContainerState(e) {
+    const shopContainer = document.querySelector('.shop-container-wrapper')
+    if (!shopContainer) return
+    
+    const rect = shopContainer.getBoundingClientRect()
+    const wasOverShop = this.isOverShopContainer
+    this.isOverShopContainer = (
+      e.clientX >= rect.left &&
+      e.clientX <= rect.right &&
+      e.clientY >= rect.top &&
+      e.clientY <= rect.bottom
+    )
+    
+    // Update opacity based on cursor position
+    if (this.isOverShopContainer && !wasOverShop) {
+      // Entering shop container - apply transparency to container
+      shopContainer.style.setProperty('opacity', '0.3', 'important')
+      // Keep dragged element at full opacity
+      if (this.dragElement) {
+        this.dragElement.style.setProperty('opacity', '1', 'important')
+      }
+    } else if (!this.isOverShopContainer && wasOverShop) {
+      // Leaving shop container - restore full opacity to container
+      shopContainer.style.setProperty('opacity', '1', 'important')
+      // Keep dragged element at full opacity
+      if (this.dragElement) {
+        this.dragElement.style.setProperty('opacity', '1', 'important')
+      }
+    }
+  }
+  
+  /**
+   * Restore shop container opacity
+   */
+  restoreShopContainerOpacity() {
+    const shopContainer = document.querySelector('.shop-container-wrapper')
+    if (shopContainer) {
+      // Restore opacity for the container
+      shopContainer.style.removeProperty('opacity')
+      shopContainer.style.removeProperty('transition')
+    }
+  }
+  
+  /**
+   * Check if cursor is currently over shop container
+   */
+  get isOverShopContainerWrapper() {
+    return this.isOverShopContainer
   }
 }
 

@@ -7,7 +7,6 @@ const SHOP_SLOTS = 5
 
 function Shop({ units = [], playerGold = 0, tftData, tftImages, onPurchase, onSell }) {
   // Track ongoing drags to prevent click handlers from interfering
-  const dragDistanceRef = useRef(0)
   const isDragActiveRef = useRef(false)
   
   // New drop zone for selling
@@ -54,16 +53,20 @@ function Shop({ units = [], playerGold = 0, tftData, tftImages, onPurchase, onSe
             // Prevent event propagation
             e.stopPropagation()
             
-            // Only allow click purchase if no drag occurred (distance < threshold)
-            if (unit && onPurchase && !isDragActiveRef.current && dragDistanceRef.current < 10) {
+            // Only allow click purchase if no drag occurred
+            console.log('🛒 Shop slot click:', {
+              unit: unit?.name,
+              isDragActive: isDragActiveRef.current
+            })
+            if (unit && onPurchase && !isDragActiveRef.current) {
+              console.log('🛒 Purchasing via click')
               onPurchase(unit, i)
             }
             
-            // Reset drag tracking after any click
+            // Reset drag tracking after any click (longer delay to ensure drag completes first)
             setTimeout(() => {
               isDragActiveRef.current = false
-              dragDistanceRef.current = 0
-            }, 10)
+            }, 200)
           }}
         >
           {unit ? (
@@ -73,7 +76,6 @@ function Shop({ units = [], playerGold = 0, tftData, tftImages, onPurchase, onSe
               tftImages={tftImages}
               slotIndex={i}
               onPurchase={onPurchase}
-              dragDistanceRef={dragDistanceRef}
               isDragActiveRef={isDragActiveRef}
             />
           ) : (
@@ -158,9 +160,8 @@ function Shop({ units = [], playerGold = 0, tftData, tftImages, onPurchase, onSe
 /**
  * Component for displaying a unit in the shop
  */
-function ShopUnitDisplay({ unit, tftData, tftImages, slotIndex, onPurchase, dragDistanceRef, isDragActiveRef }) {
+function ShopUnitDisplay({ unit, tftData, tftImages, slotIndex, onPurchase, isDragActiveRef }) {
   const imageRef = useRef(null)
-  const [dragStartPos, setDragStartPos] = useState(null)
   const championData = tftData?.champions?.[unit.id]
   
   // New drag system
@@ -199,63 +200,51 @@ function ShopUnitDisplay({ unit, tftData, tftImages, slotIndex, onPurchase, drag
 
   // Stable drag end handler using useCallback
   const handleDragEnd = useCallback((e, dragData) => {
+    console.log('🎯 handleDragEnd called with:', { e, dragData })
+    
     // Get current mouse position (enhanced by drag manager)
     const mouseX = e?.clientX || 0
     const mouseY = e?.clientY || 0
     
-    // Calculate distance moved from start position
-    let distance = 0
-    if (dragStartPos) {
-      distance = Math.sqrt(
-        Math.pow(mouseX - dragStartPos.x, 2) + Math.pow(mouseY - dragStartPos.y, 2)
-      )
-    }
-    
-    // Update shared drag tracking
-    if (dragDistanceRef) {
-      dragDistanceRef.current = distance
-    }
+    // Mark this as a drag operation since handleDragEnd was called by drag manager
     if (isDragActiveRef) {
-      isDragActiveRef.current = distance > 10 // Consider it a drag if moved > 10px
+      isDragActiveRef.current = true
     }
     
-    // Check if mouse is outside shop container - use more specific selector
-    const shopContainer = document.querySelector('.shop-container') || 
-                          document.querySelector('.shop-slots')
+    // Check if mouse is outside shop-container-wrapper for purchase
+    const shopContainerWrapper = document.querySelector('.shop-container-wrapper')
     
-    if (shopContainer && dragStartPos) {
-      const shopRect = shopContainer.getBoundingClientRect()
-      const isOutsideShop = mouseX < shopRect.left || 
-                           mouseX > shopRect.right || 
-                           mouseY < shopRect.top || 
-                           mouseY > shopRect.bottom
+    if (shopContainerWrapper) {
+      const shopRect = shopContainerWrapper.getBoundingClientRect()
+      const isOutsideShopWrapper = mouseX < shopRect.left || 
+                                  mouseX > shopRect.right || 
+                                  mouseY < shopRect.top || 
+                                  mouseY > shopRect.bottom
       
-      // Purchase if BOTH conditions are met:
-      // 1. Dragged outside shop bounds
-      // 2. Moved minimum distance (prevents accidental clicks)
-      if (isOutsideShop && distance > 15 && onPurchase) {
+      console.log('🛒 Drag end check:', {
+        unit: unit?.name,
+        isOutsideShopWrapper,
+        mousePos: { mouseX, mouseY },
+        shopRect: shopRect ? { left: shopRect.left, right: shopRect.right, top: shopRect.top, bottom: shopRect.bottom } : null,
+        willPurchase: isOutsideShopWrapper
+      })
+      
+      // Purchase if cursor is outside shop-container-wrapper bounds
+      if (isOutsideShopWrapper && onPurchase) {
+        console.log('🛒 Purchasing via drag outside wrapper')
         onPurchase(unit, slotIndex)
       }
     }
-    
-    setDragStartPos(null)
-  }, [unit, slotIndex, onPurchase, dragStartPos, dragDistanceRef, isDragActiveRef])
+  }, [unit, slotIndex, onPurchase, isDragActiveRef])
 
   // Stable mouse down handler using useCallback
   const handleMouseDown = useCallback((e) => {
     // Reset drag tracking at start
-    if (dragDistanceRef) {
-      dragDistanceRef.current = 0
-    }
     if (isDragActiveRef) {
       isDragActiveRef.current = false
     }
     
-    // Store starting mouse position for distance calculation
-    setDragStartPos({
-      x: e.clientX,
-      y: e.clientY
-    })
+    // No need to store position for distance calculation anymore
     
     // Call the drag handler
     const dragHandler = createDragHandler(
@@ -263,7 +252,7 @@ function ShopUnitDisplay({ unit, tftData, tftImages, slotIndex, onPurchase, drag
       handleDragEnd // end callback
     )
     dragHandler(e)
-  }, [unit, slotIndex, createDragHandler, handleDragEnd, dragDistanceRef, isDragActiveRef])
+  }, [unit, slotIndex, createDragHandler, handleDragEnd, isDragActiveRef])
 
   return (
     <div 
