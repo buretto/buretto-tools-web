@@ -681,15 +681,16 @@ body.dragging-active foreignObject {
 
 /* Reduce hex tile visual priority during drag to prevent layering issues */
 /* Only disable borders when dragging from bench or board, not from shop */
-body.dragging-from-bench .hex-tile,
-body.dragging-from-board .hex-tile {
+/* Only affect player tiles, not opponent tiles */
+body.dragging-from-bench .hex-tile.player,
+body.dragging-from-board .hex-tile.player {
   stroke-width: 0 !important;
   stroke: none !important;
   opacity: 0.6 !important;
 }
 
-body.dragging-from-bench .hex-tile.drop-zone,
-body.dragging-from-board .hex-tile.drop-zone {
+body.dragging-from-bench .hex-tile.player.drop-zone,
+body.dragging-from-board .hex-tile.player.drop-zone {
   stroke-width: 1 !important;
   stroke: rgba(255, 255, 255, 0.5) !important;
   opacity: 0.8 !important;

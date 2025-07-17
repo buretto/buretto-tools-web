@@ -148,7 +148,6 @@ const HexTile = ({
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                backgroundColor: 'rgba(0,0,0,0.7)',
                 borderRadius: '50%',
                 cursor: !isOpponent ? 'grab' : 'default',
                 pointerEvents: isOpponent ? 'none' : 'auto',
