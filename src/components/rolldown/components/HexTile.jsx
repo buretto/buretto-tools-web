@@ -18,6 +18,7 @@ const HexTile = ({
   onClick = () => {} 
 }) => {
   const imageRef = useRef(null)
+  const polygonRef = useRef(null)
   
   // New drag system
   const { createDragHandler } = useDragManager()
@@ -113,46 +114,88 @@ const HexTile = ({
   }
   
   return (
-    <g>
+    <g ref={dropZoneRef}>
       <polygon
-        ref={dropZoneRef}
+        ref={polygonRef}
         points={points.join(' ')}
         fill={fillColor}
         stroke={strokeColor}
         strokeWidth="2"
         className={`hex-tile ${isOpponent ? 'opponent' : 'player'}`}
         style={{ 
-          cursor: 'default', // Default cursor for all hex tiles (empty or with units)
+          cursor: unit && !isOpponent ? 'grab' : 'default',
           pointerEvents: isOpponent ? 'none' : 'all'
         }}
         onClick={onClick}
+        onMouseDown={!unit && !isOpponent ? onClick : undefined}
       />
       
-      
       {unit && (
-        <g>
-          {/* Unit image container */}
-          <foreignObject
-            x={x - size * 0.56}
-            y={y - size * 0.56}
-            width={size * 1.12}
-            height={size * 1.12}
+        <foreignObject
+          x={x - size}
+          y={y - size}
+          width={size * 2}
+          height={size * 2}
+          style={{ pointerEvents: isOpponent ? 'none' : 'auto' }}
+        >
+          <div 
+            className="hex-unit-container"
+            onMouseEnter={(e) => {
+              if (!isOpponent && polygonRef.current) {
+                // Check if we're in a drag operation
+                const isDragging = document.body.classList.contains('dragging-active')
+                
+                if (isDragging) {
+                  // Apply drag hover effect manually
+                  if (polygonRef.current.classList.contains('drop-zone')) {
+                    polygonRef.current.classList.add('hovered')
+                  }
+                } else {
+                  // Apply regular hover effect manually
+                  polygonRef.current.style.stroke = '#60A5FA'
+                  polygonRef.current.style.strokeWidth = '3'
+                }
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (!isOpponent && polygonRef.current) {
+                // Check if we're in a drag operation
+                const isDragging = document.body.classList.contains('dragging-active')
+                
+                if (isDragging) {
+                  // Remove drag hover effect
+                  polygonRef.current.classList.remove('hovered')
+                } else {
+                  // Remove regular hover effect
+                  polygonRef.current.style.stroke = strokeColor
+                  polygonRef.current.style.strokeWidth = '2'
+                }
+              }
+            }}
+            style={{
+              width: '100%',
+              height: '100%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              position: 'relative'
+            }}
           >
             <div 
               ref={imageRef}
               className="hex-unit-display"
+              data-row={row}
+              data-col={col}
               onMouseDown={handleUnitMouseDown}
               style={{
-                width: '100%',
-                height: '100%',
+                width: '56%', // Equivalent to original size * 1.12 / (size * 2) 
+                height: '56%',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 borderRadius: '50%',
                 cursor: !isOpponent ? 'grab' : 'default',
-                pointerEvents: isOpponent ? 'none' : 'auto',
-                position: 'relative',
-                zIndex: 10
+                position: 'relative'
               }}
             >
               {/* Fallback text */}
@@ -160,8 +203,8 @@ const HexTile = ({
                 {unit.name?.charAt(0) || 'U'}
               </span>
             </div>
-          </foreignObject>
-        </g>
+          </div>
+        </foreignObject>
       )}
     </g>
   )

@@ -478,6 +478,14 @@ class DragManager {
         }
       }
       
+      // For board units, use row/col position to find the specific hex tile
+      else if (this.dragData?.source === 'board' && this.dragData?.unit?.row !== undefined && this.dragData?.unit?.col !== undefined) {
+        // Find the specific hex unit display by row/col
+        const row = this.dragData.unit.row
+        const col = this.dragData.unit.col
+        replacementElement = document.querySelector(`.hex-unit-display[data-row="${row}"][data-col="${col}"]`)
+      }
+      
       // Fallback to original className-based search for other sources
       if (!replacementElement) {
         replacementElement = document.querySelector(`.${this.dragElement.className.split(' ').join('.')}`)
@@ -755,6 +763,14 @@ class DragManager {
     // Check for hex tiles
     if (elementUnderMouse?.classList.contains('hex-tile') && elementUnderMouse.classList.contains('player')) {
       targetElement = elementUnderMouse
+    }
+    // Check if we're inside a hex unit container or display (when hovering over unit on hex tile)
+    else if (elementUnderMouse?.classList.contains('hex-unit-container') || elementUnderMouse?.classList.contains('hex-unit-display')) {
+      // Find the parent hex tile
+      const hexTile = elementUnderMouse.closest('g')?.querySelector('.hex-tile.player')
+      if (hexTile) {
+        targetElement = hexTile
+      }
     }
     // Check for bench slots
     else if (elementUnderMouse?.classList.contains('bench-slot') && elementUnderMouse.closest('.bench-container')) {

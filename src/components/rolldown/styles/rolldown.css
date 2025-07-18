@@ -247,6 +247,12 @@
   stroke-width: 3;
 }
 
+/* Hex unit container styling - fills entire hex tile area for dragging */
+.hex-unit-container {
+  /* This creates a draggable area that covers the entire hex tile */
+  position: relative;
+}
+
 /* Board units should show grab cursor when hoverable and not dragging */
 .hex-tile.player foreignObject {
   cursor: grab;
