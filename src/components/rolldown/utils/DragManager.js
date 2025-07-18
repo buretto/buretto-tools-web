@@ -220,10 +220,47 @@ class DragManager {
     }
     
     // Calculate transform to keep grab point under cursor
-    // Move by mouse delta, accounting for grab offset
-    const newX = e.clientX - this.startPos.x - this.grabOffset.x
-    const newY = e.clientY - this.startPos.y - this.grabOffset.y
+    // For board units (inside SVG), we need to handle coordinates differently
+    let newX, newY
     
+    if (this.dragData?.source === 'board' && this.dragElement) {
+      const svg = this.dragElement.closest('svg')
+      if (svg) {
+        // Get the CTM (Current Transformation Matrix) to convert screen to SVG coordinates
+        const ctm = svg.getScreenCTM()
+        if (ctm) {
+          // Convert only the mouse movement delta to SVG coordinates
+          const mouseDeltaX = e.clientX - this.startPos.x
+          const mouseDeltaY = e.clientY - this.startPos.y
+          
+          const screenDelta = svg.createSVGPoint()
+          screenDelta.x = mouseDeltaX
+          screenDelta.y = mouseDeltaY
+          const svgDelta = screenDelta.matrixTransform(ctm.inverse())
+          
+          // Apply grab offset in SVG coordinate space
+          const grabOffsetSvg = svg.createSVGPoint()
+          grabOffsetSvg.x = this.grabOffset.x
+          grabOffsetSvg.y = this.grabOffset.y
+          const svgGrabOffset = grabOffsetSvg.matrixTransform(ctm.inverse())
+          
+          newX = svgDelta.x - svgGrabOffset.x
+          newY = svgDelta.y - svgGrabOffset.y
+        } else {
+          // Fallback if CTM is not available
+          newX = e.clientX - this.startPos.x - this.grabOffset.x
+          newY = e.clientY - this.startPos.y - this.grabOffset.y
+        }
+      } else {
+        // Fallback if SVG is not found
+        newX = e.clientX - this.startPos.x - this.grabOffset.x
+        newY = e.clientY - this.startPos.y - this.grabOffset.y
+      }
+    } else {
+      // Regular DOM elements - use screen coordinates
+      newX = e.clientX - this.startPos.x - this.grabOffset.x
+      newY = e.clientY - this.startPos.y - this.grabOffset.y
+    }
     
     // Only apply visual effects after threshold is met
     if (this.hasMetThreshold && !isNaN(newX) && !isNaN(newY) && isFinite(newX) && isFinite(newY)) {
