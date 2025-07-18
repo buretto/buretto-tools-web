@@ -32,6 +32,13 @@ export const useDragManager = () => {
     let grabX = e.clientX - rect.left
     let grabY = e.clientY - rect.top
     
+    // For hex unit displays, adjust grab offset to center since the draggable element
+    // is smaller than the clickable area and centered within it
+    if (element.classList.contains('hex-unit-display')) {
+      grabX = rect.width / 2
+      grabY = rect.height / 2
+    }
+    
     
     
     // Set grab offset in drag manager
