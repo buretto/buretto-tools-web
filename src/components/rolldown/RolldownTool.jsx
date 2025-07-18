@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { Star } from 'lucide-react'
+import { Star, Coins } from 'lucide-react'
 import GameBoard from './components/GameBoard'
 import Shop from './components/Shop'
 import Bench from './components/Bench'
@@ -16,6 +16,7 @@ import { useTFTImages } from './hooks/useTFTImages'
 import { useUnitPool } from './hooks/useUnitPool'
 import { useShop } from './hooks/useShop'
 import { startImagePreloading, setPreloadCallbacks, getPreloadProgress, PRELOAD_PHASES } from './utils/imagePreloader'
+import { getShopOdds, getSetFromVersion } from './data/shopOdds'
 import './styles/rolldown.css'
 
 const getLevelUpCost = (level) => {
@@ -484,6 +485,59 @@ function RolldownTool() {
                     className="bg-blue-400 h-1 rounded-full transition-all duration-300"
                     style={{ width: `${(gameState.player.exp / getLevelUpCost(gameState.player.level)) * 100}%` }}
                   />
+                </div>
+              </div>
+            </div>
+            
+            {/* Shop Odds Display */}
+            <div className="shop-odds-section">
+              {(() => {
+                const currentSet = getSetFromVersion(currentVersion)
+                const shopOdds = getShopOdds(currentSet, currentVersion, gameState.player.level)
+                if (!shopOdds) return null
+                
+                return (
+                  <div className="shop-odds-container">
+                    {shopOdds.slice(0, 5).map((percentage, index) => {
+                      const cost = index + 1
+                      const costClass = `cost-${cost}`
+                      
+                      // Define shapes for each cost tier
+                      const renderShape = (cost) => {
+                        if (cost <= 2) {
+                          return <div className={`tier-shape tier-circle ${costClass}`} />
+                        } else if (cost === 3) {
+                          return <div className={`tier-shape tier-triangle ${costClass}`} />
+                        } else if (cost === 4) {
+                          return <div className={`tier-shape tier-pentagon ${costClass}`} />
+                        } else if (cost === 5) {
+                          return <div className={`tier-shape tier-hexagon ${costClass}`} />
+                        }
+                        return null
+                      }
+                      
+                      return (
+                        <div key={cost} className="shop-odds-item">
+                          {renderShape(cost)}
+                          <span className={`shop-odds-text ${costClass}`}>
+                            {percentage}%
+                          </span>
+                        </div>
+                      )
+                    })}
+                  </div>
+                )
+              })()}
+            </div>
+            
+            {/* Player Gold Display */}
+            <div className="player-gold-section">
+              <div className="player-gold-container">
+                <div className="player-gold-display">
+                  <Coins className="player-gold-icon" />
+                  <span className="player-gold-text">
+                    {gameState.player.gold}
+                  </span>
                 </div>
               </div>
             </div>
