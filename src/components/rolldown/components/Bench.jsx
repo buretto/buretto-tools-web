@@ -123,7 +123,7 @@ function BenchUnitDisplay({ unit, unitIndex, tftData, tftImages, onSell }) {
         imgElement.style.height = '100%'
         imgElement.style.objectFit = 'cover'
         imgElement.style.objectPosition = '75% center' // Show more of the right side where units are
-        imgElement.style.borderRadius = '8px'
+        imgElement.style.borderRadius = '4px' // Match bench-slot border-radius
         
         imageRef.current.appendChild(imgElement)
       } else if (tftImages.isImageLoading(unit.id, 'champion')) {

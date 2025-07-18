@@ -1195,9 +1195,15 @@ body.dragging-from-bench .bench-area {
 
 /* Bench unit image styling */
 .bench-unit-image {
+  /* Position absolutely to fill entire bench slot, ignoring padding */
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
   width: 100%;
   height: 100%;
-  border-radius: 8px;
+  border-radius: 4px; /* Match bench-slot border-radius */
   display: flex;
   align-items: center;
   justify-content: center;
