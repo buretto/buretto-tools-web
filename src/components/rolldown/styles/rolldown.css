@@ -1302,11 +1302,9 @@ body.dragging-from-bench .bench-area {
 }
 
 .tier-triangle {
-  width: 0;
-  height: 0;
-  border-left: max(1.5px, 0.3cqw) solid transparent;
-  border-right: max(1.5px, 0.3cqw) solid transparent;
-  border-bottom: max(2.5px, 0.5cqw) solid;
+  width: max(3px, 0.6cqw);
+  height: max(3px, 0.6cqw);
+  clip-path: polygon(50% 0%, 0% 100%, 100% 100%);
 }
 
 .tier-diamond {
@@ -1338,8 +1336,7 @@ body.dragging-from-bench .bench-area {
 }
 
 .tier-triangle.cost-1 {
-  background-color: transparent;
-  border-bottom-color: #9CA3AF;
+  background-color: #9CA3AF;
 }
 
 .tier-pentagon.cost-1::before {
@@ -1355,8 +1352,7 @@ body.dragging-from-bench .bench-area {
 }
 
 .tier-triangle.cost-2 {
-  background-color: transparent;
-  border-bottom-color: #22C55E;
+  background-color: #22C55E;
 }
 
 .tier-pentagon.cost-2::before {
@@ -1372,8 +1368,7 @@ body.dragging-from-bench .bench-area {
 }
 
 .tier-triangle.cost-3 {
-  background-color: transparent;
-  border-bottom-color: #3B82F6;
+  background-color: #3B82F6;
 }
 
 .tier-pentagon.cost-3::before {
