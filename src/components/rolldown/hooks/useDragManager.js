@@ -29,8 +29,9 @@ export const useDragManager = () => {
     
     // Calculate grab offset (where mouse grabbed the element)
     const rect = element.getBoundingClientRect()
-    const grabX = e.clientX - rect.left
-    const grabY = e.clientY - rect.top
+    let grabX = e.clientX - rect.left
+    let grabY = e.clientY - rect.top
+    
     
     
     // Set grab offset in drag manager

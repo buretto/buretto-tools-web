@@ -92,6 +92,7 @@ class DragManager {
     element.style.transition = 'none'
     element.style.pointerEvents = 'none' // This prevents interference during mouse events
     
+    
     // Don't add dragging-active class immediately - wait for threshold
     
     // Add source-specific drag class for more granular styling
@@ -222,6 +223,7 @@ class DragManager {
     // Move by mouse delta, accounting for grab offset
     const newX = e.clientX - this.startPos.x - this.grabOffset.x
     const newY = e.clientY - this.startPos.y - this.grabOffset.y
+    
     
     // Only apply visual effects after threshold is met
     if (this.hasMetThreshold && !isNaN(newX) && !isNaN(newY) && isFinite(newX) && isFinite(newY)) {
@@ -411,7 +413,14 @@ class DragManager {
    * Update drag element position and transform
    */
   updateDragElementTransform() {
-    if (!this.dragElement || !this.hasMetThreshold) return
+    if (!this.dragElement) return
+    
+    // For board units, don't apply any transform until threshold is met AND we have a valid target position
+    if (this.dragData?.source === 'board' && (!this.hasMetThreshold || (this.targetPos.x === 0 && this.targetPos.y === 0))) {
+      return
+    }
+    
+    if (!this.hasMetThreshold) return
 
     // Check if element is still connected to DOM
     const isConnected = this.dragElement.isConnected
@@ -459,6 +468,8 @@ class DragManager {
     // Use CSS transform for positioning (works with overflow: visible)
     // Only use translate, ignore any original transforms that might cause scaling
     const transform = `translate(${Math.round(this.currentPos.x)}px, ${Math.round(this.currentPos.y)}px)`
+    
+    
     this.dragElement.style.transform = transform
     
     // Ensure element stays visible and on top
