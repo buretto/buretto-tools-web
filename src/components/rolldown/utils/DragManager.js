@@ -29,7 +29,8 @@ class DragManager {
     this.originalNextSibling = null
     this.stateChangeListeners = []
     this.dropZones = [] // Registered drop zones
-    this.dragThreshold = 2 // Minimum pixels to move before visual drag starts
+    this.shopDragThreshold = 8 // Minimum pixels to move before visual drag starts for shop units
+    this.benchBoardDragThreshold = 0 // Minimum pixels to move before visual drag starts for bench/board units
     this.hasMetThreshold = false // Track if threshold has been met
     this.currentHoveredElement = null // Track currently hovered drop zone
     this.isOverShopContainer = false // Track if cursor is over shop container wrapper
@@ -180,8 +181,13 @@ class DragManager {
       Math.pow(e.clientY - this.startPos.y, 2)
     )
     
+    // Determine the appropriate threshold based on drag source
+    const currentThreshold = this.dragData?.source === 'shop' 
+      ? this.shopDragThreshold 
+      : this.benchBoardDragThreshold
+    
     // Only start visual drag effects after threshold is met
-    if (!this.hasMetThreshold && distanceFromStart >= this.dragThreshold) {
+    if (!this.hasMetThreshold && distanceFromStart >= currentThreshold) {
       this.hasMetThreshold = true
       
       
