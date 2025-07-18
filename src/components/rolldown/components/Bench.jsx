@@ -119,8 +119,8 @@ function BenchUnitDisplay({ unit, unitIndex, tftData, tftImages, onSell }) {
         const imgElement = document.createElement('img')
         imgElement.src = loadedImage.src
         imgElement.alt = championData?.name || unit.name || 'Champion'
-        imgElement.style.width = '80%'
-        imgElement.style.height = '80%'
+        imgElement.style.width = '100%'
+        imgElement.style.height = '100%'
         imgElement.style.objectFit = 'cover'
         imgElement.style.objectPosition = '75% center' // Show more of the right side where units are
         imgElement.style.borderRadius = '50%' // Make circular
@@ -164,7 +164,7 @@ function BenchUnitDisplay({ unit, unitIndex, tftData, tftImages, onSell }) {
       className="bench-unit-image" 
       ref={imageRef}
       onMouseDown={handleMouseDown}
-      style={{ cursor: 'grab' }}
+      style={{ cursor: 'grab', padding: '10%' }}
     >
       {/* Show fallback if no image available */}
       {!championData && (
