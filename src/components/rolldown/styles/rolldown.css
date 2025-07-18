@@ -1447,3 +1447,124 @@ body.dragging-from-bench .bench-area {
   color: rgb(243, 244, 246); /* Same as shop unit text */
   line-height: 1.2;
 }
+
+/* Star System Styling */
+
+/* 2-Star Units - Silver overlay with outline */
+.unit-2-star {
+  position: relative;
+  border: 2px solid rgba(192, 192, 192, 0.8);
+  border-radius: 50%;
+  box-sizing: border-box;
+}
+
+.unit-2-star::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(135deg, rgba(192, 192, 192, 0.56), rgba(255, 255, 255, 0.35));
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 1;
+  mix-blend-mode: overlay;
+}
+
+/* 3-Star Units - Gold overlay with outline */
+.unit-3-star {
+  position: relative;
+  border: 2px solid rgba(255, 215, 0, 0.9);
+  border-radius: 50%;
+  box-sizing: border-box;
+}
+
+.unit-3-star::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(135deg, rgba(255, 215, 0, 0.42), rgba(255, 255, 0, 0.28));
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 1;
+  mix-blend-mode: overlay;
+}
+
+/* 4-Star Units - Platinum Green overlay with outline */
+.unit-4-star {
+  position: relative;
+  border: 2px solid rgba(50, 205, 171, 0.9);
+  border-radius: 50%;
+  box-sizing: border-box;
+}
+
+.unit-4-star::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(135deg, rgba(50, 205, 171, 0.4), rgba(33, 255, 207, 0.3));
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 1;
+  mix-blend-mode: overlay;
+}
+
+/* Star Icons */
+.star-icon-container {
+  position: absolute;
+  top: -2px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 1px;
+  z-index: 10;
+  pointer-events: none;
+}
+
+.star-icon {
+  width: 7px;
+  height: 7px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 5px;
+  font-weight: bold;
+  color: white;
+  text-shadow: 0 0 1px rgba(0, 0, 0, 0.8);
+  filter: drop-shadow(0 0 1px rgba(0, 0, 0, 0.8));
+}
+
+/* Diamond shape for star icons */
+.star-icon.diamond {
+  transform: rotate(45deg);
+  border-radius: 1px;
+}
+
+.star-icon.diamond.silver {
+  background: linear-gradient(45deg, #C0C0C0, #E8E8E8);
+  border: 1px solid #A0A0A0;
+}
+
+.star-icon.diamond.gold {
+  background: linear-gradient(45deg, #FFD700, #FFF700);
+  border: 1px solid #DAA520;
+}
+
+.star-icon.diamond.platinum-green {
+  background: linear-gradient(45deg, #32cdae, #2fffce);
+  border: 1px solid #42b399;
+}
+
+/* Ensure star icons show above everything */
+.hex-unit-display .star-icon-container,
+.bench-unit-image .star-icon-container,
+.shop-unit-image .star-icon-container {
+  z-index: 10;
+}

@@ -15,6 +15,7 @@ import { useTFTData } from './hooks/useTFTData'
 import { useTFTImages } from './hooks/useTFTImages'
 import { useUnitPool } from './hooks/useUnitPool'
 import { useShop } from './hooks/useShop'
+import { useStarringSystem } from './hooks/useStarringSystem'
 import { startImagePreloading, setPreloadCallbacks, getPreloadProgress, PRELOAD_PHASES } from './utils/imagePreloader'
 import { getShopOdds, getSetFromVersion } from './data/shopOdds'
 import './styles/rolldown.css'
@@ -75,6 +76,7 @@ function RolldownTool() {
   // Initialize pool and shop management
   const unitPoolHook = useUnitPool(tftData, currentVersion)
   const shopHook = useShop(tftData, currentVersion, unitPoolHook)
+  const starringSystem = useStarringSystem()
   
   // Set up preloading callbacks
   useEffect(() => {
@@ -187,19 +189,25 @@ function RolldownTool() {
           const updatedShop = [...prev.player.shop]
           updatedShop[shopSlotIndex] = null
           
-          // Find first empty bench slot
-          const newBench = [...prev.player.bench]
-          const emptySlotIndex = newBench.findIndex(slot => slot === null)
-          if (emptySlotIndex !== -1) {
-            newBench[emptySlotIndex] = purchasedUnit
-          }
+          // TEMPORARY: For testing, cycle between 1, 2, 3, and 4 star units
+          const tempStars = (Math.floor(Date.now() / 1000) % 4) + 1
+          const unitWithStars = { ...purchasedUnit, stars: tempStars }
+          
+          // Add unit to bench and check for combining
+          const result = starringSystem.addUnitWithCombining(
+            unitWithStars, 
+            prev.player.bench, 
+            prev.player.board, 
+            'bench'
+          )
           
           return {
             ...prev,
             player: {
               ...prev.player,
               gold: prev.player.gold - unit.cost,
-              bench: newBench,
+              bench: result.newBenchUnits,
+              board: result.newBoardUnits,
               shop: updatedShop // Use explicitly updated shop
             },
             analytics: {
@@ -209,7 +217,8 @@ function RolldownTool() {
                 type: 'purchase',
                 timestamp: Date.now(),
                 unit: unit.id,
-                cost: unit.cost
+                cost: unit.cost,
+                combinedUnits: result.combinedUnits
               }]
             }
           }
@@ -220,7 +229,7 @@ function RolldownTool() {
   
   // Handle unit sell
   const handleSell = (unit, location, index) => {
-    const sellValue = Math.floor(unit.cost * 0.6) // TFT sell value is 60% of cost
+    const sellValue = starringSystem.getSellValue(unit)
     
     shopHook.sellUnit(unit)
     

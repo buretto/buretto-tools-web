@@ -1,6 +1,8 @@
 import React, { useEffect, useRef } from 'react'
 import { useDragManager, useDropZone } from '../hooks/useDragManager'
 import dragManager from '../utils/DragManager'
+import StarIcon from './StarIcon'
+import { getStarSizeMultiplier, getStarCssClass } from '../utils/starringSystem'
 
 const HexTile = ({ 
   x, 
@@ -74,13 +76,15 @@ const HexTile = ({
       imageRef.current.innerHTML = ''
       
       const loadedImage = tftImages.getImage(unit.id, 'champion')
+      const stars = unit.stars || 1
+      const sizeMultiplier = getStarSizeMultiplier(stars)
       
       if (loadedImage) {
         const imgElement = document.createElement('img')
         imgElement.src = loadedImage.src
         imgElement.alt = unit.name || 'Champion'
-        imgElement.style.width = `${size * 1.12}px`
-        imgElement.style.height = `${size * 1.12}px`
+        imgElement.style.width = '100%'
+        imgElement.style.height = '100%'
         imgElement.style.objectFit = 'cover'
         imgElement.style.objectPosition = '75% center' // Show more of the right side where units are
         imgElement.style.borderRadius = '50%'
@@ -181,15 +185,18 @@ const HexTile = ({
               position: 'relative'
             }}
           >
+            {/* Star Icons - outside the image container */}
+            <StarIcon stars={unit.stars || 1} />
+            
             <div 
               ref={imageRef}
-              className="hex-unit-display"
+              className={`hex-unit-display ${getStarCssClass(unit.stars || 1)}`}
               data-row={row}
               data-col={col}
               onMouseDown={handleUnitMouseDown}
               style={{
-                width: '56%', // Equivalent to original size * 1.12 / (size * 2) 
-                height: '56%',
+                width: `${56 * getStarSizeMultiplier(unit.stars || 1)}%`,
+                height: `${56 * getStarSizeMultiplier(unit.stars || 1)}%`,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',

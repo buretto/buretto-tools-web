@@ -2,6 +2,8 @@ import React, { useEffect, useRef, useState, useCallback } from 'react'
 import { Coins } from 'lucide-react'
 import { useDragManager, useDropZone } from '../hooks/useDragManager'
 import dragManager from '../utils/DragManager'
+import StarIcon from './StarIcon'
+import { getStarSizeMultiplier, getStarCssClass } from '../utils/starringSystem'
 
 const SHOP_SLOTS = 5
 
@@ -176,6 +178,8 @@ function ShopUnitDisplay({ unit, tftData, tftImages, slotIndex, onPurchase, isDr
       
       // Get the loaded image from tftImages (which applies mappings)
       const loadedImage = tftImages.getImage(unit.id, 'champion')
+      const stars = unit.stars || 1
+      const sizeMultiplier = getStarSizeMultiplier(stars)
       
       if (loadedImage) {
         // Use the properly loaded and mapped image
@@ -198,7 +202,7 @@ function ShopUnitDisplay({ unit, tftData, tftImages, slotIndex, onPurchase, isDr
         imageRef.current.innerHTML = `<div class="text-placeholder">${championData?.name?.charAt(0) || unit.name?.charAt(0) || 'U'}</div>`
       }
     }
-  }, [unit.id, tftImages, championData])
+  }, [unit.id, tftImages, championData, unit.stars])
 
   // Stable drag end handler using useCallback
   const handleDragEnd = useCallback((e, dragData) => {
@@ -282,9 +286,22 @@ function ShopUnitDisplay({ unit, tftData, tftImages, slotIndex, onPurchase, isDr
         e.stopPropagation()
         handleMouseDown(e)
       }}
-      style={{ cursor: 'pointer' }}
+      style={{ cursor: 'pointer', position: 'relative' }}
     >
-      <div className={`unit-avatar`} ref={imageRef} style={{pointerEvents: 'none'}}>
+      {/* Star Icons - outside the image container */}
+      <StarIcon stars={unit.stars || 1} />
+      
+      <div 
+        className={`unit-avatar ${getStarCssClass(unit.stars || 1)}`} 
+        ref={imageRef} 
+        style={{
+          pointerEvents: 'none', 
+          position: 'relative',
+          width: `${100 * getStarSizeMultiplier(unit.stars || 1)}%`,
+          height: `${100 * getStarSizeMultiplier(unit.stars || 1)}%`,
+          margin: 'auto'
+        }}
+      >
         {/* Show fallback if no image URL available */}
         {!championData?.imageUrl && (
           <div className="text-placeholder">

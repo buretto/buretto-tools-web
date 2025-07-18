@@ -1,6 +1,8 @@
 import React, { useEffect, useRef } from 'react'
 import { useDragManager, useDropZone } from '../hooks/useDragManager'
 import dragManager from '../utils/DragManager'
+import StarIcon from './StarIcon'
+import { getStarSizeMultiplier, getStarCssClass } from '../utils/starringSystem'
 
 const BENCH_SLOTS = 9
 
@@ -113,6 +115,8 @@ function BenchUnitDisplay({ unit, unitIndex, tftData, tftImages, onSell }) {
       
       // Get the loaded image from tftImages (which applies mappings)
       const loadedImage = tftImages.getImage(unit.id, 'champion')
+      const stars = unit.stars || 1
+      const sizeMultiplier = getStarSizeMultiplier(stars)
       
       if (loadedImage) {
         // Use the properly loaded and mapped image
@@ -137,7 +141,7 @@ function BenchUnitDisplay({ unit, unitIndex, tftData, tftImages, onSell }) {
         imageRef.current.innerHTML = `<div class="text-placeholder">${championData?.name?.charAt(0) || unit.name?.charAt(0) || 'U'}</div>`
       }
     }
-  }, [unit.id, tftImages, championData])
+  }, [unit.id, tftImages, championData, unit.stars])
 
   // New simplified drag handler
   const handleDragEnd = (e, dragData) => {
@@ -159,19 +163,40 @@ function BenchUnitDisplay({ unit, unitIndex, tftData, tftImages, onSell }) {
     dragHandler(e)
   }
   
+  const stars = unit.stars || 1
+  const sizeMultiplier = getStarSizeMultiplier(stars)
+  
   return (
-    <div 
-      className="bench-unit-image" 
-      ref={imageRef}
-      onMouseDown={handleMouseDown}
-      style={{ cursor: 'grab', padding: '10%' }}
-    >
-      {/* Show fallback if no image available */}
-      {!championData && (
-        <div className="text-placeholder">
-          {unit.name?.charAt(0) || 'U'}
-        </div>
-      )}
+    <div style={{ 
+      position: 'relative', 
+      width: '100%', 
+      height: '100%',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center'
+    }}>
+      {/* Star Icons - outside the image container */}
+      <StarIcon stars={stars} />
+      
+      <div 
+        className={`bench-unit-image ${getStarCssClass(stars)}`}
+        ref={imageRef}
+        onMouseDown={handleMouseDown}
+        style={{ 
+          cursor: 'grab', 
+          position: 'relative',
+          width: `${80 * sizeMultiplier}%`,
+          height: `${80 * sizeMultiplier}%`,
+          borderRadius: '50%'
+        }}
+      >
+        {/* Show fallback if no image available */}
+        {!championData && (
+          <div className="text-placeholder">
+            {unit.name?.charAt(0) || 'U'}
+          </div>
+        )}
+      </div>
     </div>
   )
 }
