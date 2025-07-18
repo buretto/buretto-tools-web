@@ -119,11 +119,11 @@ function BenchUnitDisplay({ unit, unitIndex, tftData, tftImages, onSell }) {
         const imgElement = document.createElement('img')
         imgElement.src = loadedImage.src
         imgElement.alt = championData?.name || unit.name || 'Champion'
-        imgElement.style.width = '100%'
-        imgElement.style.height = '100%'
+        imgElement.style.width = '80%'
+        imgElement.style.height = '80%'
         imgElement.style.objectFit = 'cover'
         imgElement.style.objectPosition = '75% center' // Show more of the right side where units are
-        imgElement.style.borderRadius = '4px' // Match bench-slot border-radius
+        imgElement.style.borderRadius = '50%' // Make circular
         
         imageRef.current.appendChild(imgElement)
       } else if (tftImages.isImageLoading(unit.id, 'champion')) {

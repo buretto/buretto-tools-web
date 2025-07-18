@@ -112,7 +112,7 @@ class DragManager {
       this.handleBoardUnitDOMOrder(element)
     }
     
-    // startPos is now set by useDragManager to the mouse position, don't override it
+    // startPos is now set by useDragManager to the element position, don't override it
     // Only set if it hasn't been set yet
     if (!this.startPos || (this.startPos.x === 0 && this.startPos.y === 0)) {
       this.startPos = { x: rect.left, y: rect.top }
@@ -219,9 +219,9 @@ class DragManager {
     }
     
     // Calculate transform to keep grab point under cursor
-    // Simple approach: just move by the mouse delta
-    const newX = e.clientX - this.startPos.x
-    const newY = e.clientY - this.startPos.y
+    // Move by mouse delta, accounting for grab offset
+    const newX = e.clientX - this.startPos.x - this.grabOffset.x
+    const newY = e.clientY - this.startPos.y - this.grabOffset.y
     
     // Only apply visual effects after threshold is met
     if (this.hasMetThreshold && !isNaN(newX) && !isNaN(newY) && isFinite(newX) && isFinite(newY)) {
@@ -268,7 +268,7 @@ class DragManager {
       this.dragElement.style.boxShadow = ''
       this.dragElement.style.visibility = ''
       this.dragElement.style.display = ''
-      this.dragElement.style.removeProperty('cursor')
+      this.dragElement.style.cursor = this.originalCursor
       // Restore original dimensions
       this.dragElement.style.width = this.originalWidth
       this.dragElement.style.height = this.originalHeight
@@ -291,6 +291,14 @@ class DragManager {
       this.restoreBoardUnitDOMOrder()
       // Force refresh cursor styles for all board units after board operations
       this.refreshBoardUnitCursors()
+    }
+    
+    // Also refresh board unit cursors if drag ended on the board (for swaps)
+    if (this.dragData?.source === 'bench') {
+      // Small delay to ensure DOM updates are complete
+      setTimeout(() => {
+        this.refreshBoardUnitCursors()
+      }, 10)
     }
     
     // No overflow styles to restore since we don't modify them
@@ -587,7 +595,7 @@ class DragManager {
     
     boardUnits.forEach(unitElement => {
       // Force the cursor style to be grab for player units
-      unitElement.style.cursor = 'grab'
+      unitElement.style.setProperty('cursor', 'grab', 'important')
     })
     
     console.log('🔄 Refreshed cursor styles for', boardUnits.length, 'board units')

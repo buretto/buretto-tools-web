@@ -78,8 +78,8 @@ const HexTile = ({
         const imgElement = document.createElement('img')
         imgElement.src = loadedImage.src
         imgElement.alt = unit.name || 'Champion'
-        imgElement.style.width = `${size * 1.6}px`
-        imgElement.style.height = `${size * 1.6}px`
+        imgElement.style.width = `${size * 1.12}px`
+        imgElement.style.height = `${size * 1.12}px`
         imgElement.style.objectFit = 'cover'
         imgElement.style.objectPosition = '75% center' // Show more of the right side where units are
         imgElement.style.borderRadius = '50%'
@@ -133,10 +133,10 @@ const HexTile = ({
         <g>
           {/* Unit image container */}
           <foreignObject
-            x={x - size * 0.8}
-            y={y - size * 0.8}
-            width={size * 1.6}
-            height={size * 1.6}
+            x={x - size * 0.56}
+            y={y - size * 0.56}
+            width={size * 1.12}
+            height={size * 1.12}
           >
             <div 
               ref={imageRef}
