@@ -24,8 +24,7 @@ export const useStarringSystem = () => {
         allUnits.push({
           ...unit,
           location: 'bench',
-          benchIndex: index,
-          originalIndex: allUnits.length
+          benchIndex: index
         })
       } else {
         allUnits.push(null)
@@ -38,8 +37,7 @@ export const useStarringSystem = () => {
         allUnits.push({
           ...unit,
           location: 'board',
-          boardIndex: index,
-          originalIndex: allUnits.length
+          boardIndex: index
         })
       }
     })

@@ -26,10 +26,16 @@ export const combineUnits = (units, onUnitsRemoved = null) => {
     const unitWithIndex = { ...unit, originalIndex: index }
     unitCounts[key].push(unitWithIndex)
     
-    // Track location for removal
-    if (unit.location === 'bench' || unit.benchIndex !== undefined) {
+    // Track location for removal (prioritize location field over benchIndex)
+    if (unit.location === 'bench') {
+      unitsByLocation[key].bench.push(unitWithIndex)
+    } else if (unit.location === 'board') {
+      unitsByLocation[key].board.push(unitWithIndex)
+    } else if (unit.benchIndex !== undefined) {
+      // Fallback: if no location specified but has benchIndex, assume bench
       unitsByLocation[key].bench.push(unitWithIndex)
     } else {
+      // Fallback: if no location and no benchIndex, assume board
       unitsByLocation[key].board.push(unitWithIndex)
     }
   })

@@ -322,15 +322,30 @@ function RolldownTool() {
         newBoard.push(updatedUnit)
       }
       
-      // Update state
+      // Update state and clean up any duplicates
       newState.player.bench = newBench
-      newState.player.board = newBoard
+      newState.player.board = removeBoardDuplicates(newBoard)
       
       return newState
     })
   }
 
   // Handle unit swap between positions
+  // Helper function to remove duplicate units from board
+  const removeBoardDuplicates = (boardUnits) => {
+    const seen = new Set()
+    return boardUnits.filter(unit => {
+      if (!unit) return false
+      const key = `${unit.id}_${unit.row}_${unit.col}`
+      if (seen.has(key)) {
+        console.warn('🚨 Removing duplicate unit:', unit.name, 'at', unit.row, unit.col)
+        return false
+      }
+      seen.add(key)
+      return true
+    })
+  }
+
   const handleUnitSwap = (unit1, location1, index1, row1, col1, unit2, location2, index2, row2, col2) => {
     console.log('🔄 SWAP HANDLER CALLED:', { 
       unit1: unit1?.name, 
@@ -353,7 +368,8 @@ function RolldownTool() {
         const unit1Index = newBoard.findIndex(u => u.row === unit1.row && u.col === unit1.col)
         const unit2Index = newBoard.findIndex(u => u.row === unit2.row && u.col === unit2.col)
         
-        if (unit1Index !== -1 && unit2Index !== -1) {
+        // Prevent self-swaps and validate indices
+        if (unit1Index !== -1 && unit2Index !== -1 && unit1Index !== unit2Index) {
           // Update positions
           newBoard[unit1Index] = { ...unit2, row: row1, col: col1 }
           newBoard[unit2Index] = { ...unit1, row: row2, col: col2 }
@@ -379,8 +395,9 @@ function RolldownTool() {
         }
       }
       
+      // Update state and clean up any duplicates
       newState.player.bench = newBench
-      newState.player.board = newBoard
+      newState.player.board = removeBoardDuplicates(newBoard)
       
       return newState
     })
