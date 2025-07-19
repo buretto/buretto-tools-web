@@ -65,9 +65,20 @@ function TraitsColumn({ boardUnits, tftData }) {
       }
     })
     
-    // Sort by count descending, then by name
+    // Sort by active status first (active traits before inactive), then by count descending, then by name
     return traitArray.sort((a, b) => {
+      // First priority: active traits before inactive traits
+      const aActive = a.activeBreakpoint > 0
+      const bActive = b.activeBreakpoint > 0
+      
+      if (aActive !== bActive) {
+        return bActive - aActive // true (1) comes before false (0)
+      }
+      
+      // Second priority: count descending
       if (b.count !== a.count) return b.count - a.count
+      
+      // Third priority: name alphabetically
       return a.name.localeCompare(b.name)
     })
   }, [boardUnits, tftData])
