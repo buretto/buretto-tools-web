@@ -73,8 +73,12 @@ class DragManager {
     // Don't modify overflow styles - use alternative positioning approach instead
 
     // Lock exact dimensions BEFORE applying any other styles to prevent flexbox compression
-    element.style.width = `${exactWidth}px`
-    element.style.height = `${exactHeight}px`
+    // Skip dimension locking for board units - they're positioned in SVG and don't need compression protection
+    const isBoardUnit = this.dragData?.source === 'board' && element.classList?.contains('hex-unit-display')
+    if (!isBoardUnit) {
+      element.style.width = `${exactWidth}px`
+      element.style.height = `${exactHeight}px`
+    }
     
     // For shop units, also lock the unit-avatar dimensions to prevent flex compression
     if (this.dragData?.source === 'shop') {
