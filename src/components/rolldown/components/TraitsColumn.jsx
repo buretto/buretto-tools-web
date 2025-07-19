@@ -88,7 +88,14 @@ function TraitsColumn({ boardUnits, tftData }) {
   
   const formatBreakpoints = (breakpoints, activeBreakpoint) => {
     if (breakpoints.length === 0) return ''
-    return breakpoints.map(bp => bp === activeBreakpoint ? bp : bp).join(' > ')
+    return breakpoints.map((bp, index) => (
+      <span key={bp}>
+        <span className={bp === activeBreakpoint ? 'text-white' : 'text-gray-600'}>
+          {bp}
+        </span>
+        {index < breakpoints.length - 1 && <span className="text-gray-600"> > </span>}
+      </span>
+    ))
   }
   
   const getHexagonColor = (breakpoints, activeBreakpoint) => {
@@ -113,7 +120,8 @@ function TraitsColumn({ boardUnits, tftData }) {
           className="bg-black bg-opacity-70 flex flex-row justify-start items-center mb-1 p-1 rounded"
           style={{ 
             width: 'max(12rem, 20cqw)',
-            height: 'max(2.5rem, 4cqw)'
+            height: 'max(2.5rem, 4cqw)',
+            gap: trait.activeBreakpoint > 0 ? '2%' : '5%'
           }}
         >
           {/* Trait Icon with Hexagon */}
@@ -129,10 +137,15 @@ function TraitsColumn({ boardUnits, tftData }) {
                 src={trait.imageUrl}
                 alt={trait.name}
                 className="trait-image"
+                style={{
+                  filter: trait.activeBreakpoint > 0 ? 'brightness(0)' : 'brightness(0.6)'
+                }}
               />
             ) : (
               <div 
-                className="trait-image bg-gray-600 rounded flex items-center justify-center text-white text-xs font-bold"
+                className={`trait-image bg-gray-600 rounded flex items-center justify-center text-xs font-bold ${
+                  trait.activeBreakpoint > 0 ? 'text-black' : 'text-gray-600'
+                }`}
               >
                 {trait.name.substring(0, 2).toUpperCase()}
               </div>
@@ -141,25 +154,32 @@ function TraitsColumn({ boardUnits, tftData }) {
           
           {/* Count Badge */}
           {trait.activeBreakpoint > 0 && (
-            <div className="bg-gray-500 bg-opacity-90 border border-white border-opacity-20 text-white text-xs font-bold px-1 py-0.5 rounded ml-1">
+            <div className="bg-gray-500 bg-opacity-90 border border-white border-opacity-20 text-white text-xs font-bold px-1 py-0.5 rounded">
               {trait.count}
             </div>
           )}
           
           {/* Trait Info */}
-          <div className="flex flex-col justify-center ml-2 flex-1 min-w-0">
-            <div className="text-white text-sm font-semibold truncate" style={{ height: '50%' }}>
+          <div className="flex flex-col justify-start flex-1 min-w-0" style={{ height: '90%' }}>
+            <div 
+              className={`font-semibold truncate leading-tight ${
+                trait.activeBreakpoint > 0 ? 'text-white' : 'text-gray-600'
+              }`} 
+              style={{ 
+                height: '45%',
+                fontSize: '0.7rem'
+              }}
+            >
               {trait.name}
             </div>
-            <div className="text-xs" style={{ height: '50%' }}>
-              {trait.breakpoints.map((bp, idx) => (
-                <span
-                  key={bp}
-                  className={bp === trait.activeBreakpoint ? 'text-white' : 'text-gray-400'}
-                >
-                  {bp}{idx < trait.breakpoints.length - 1 ? ' > ' : ''}
-                </span>
-              ))}
+            <div 
+              className="leading-tight"
+              style={{ 
+                height: '45%',
+                fontSize: '0.6rem'
+              }}
+            >
+              {formatBreakpoints(trait.breakpoints, trait.activeBreakpoint)}
             </div>
           </div>
         </div>

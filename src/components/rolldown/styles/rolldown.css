@@ -82,9 +82,9 @@
   opacity: 1;
 }
 
-/* Non-activated trait - white edge effect using layered approach */
+/* Non-activated trait - dark grey edge effect using layered approach */
 .trait-hexagon.inactive::before {
-  background: white; /* White outer layer */
+  background: #4a4a4a; /* Dark grey outer layer */
 }
 
 .trait-hexagon.inactive::after {
@@ -92,7 +92,7 @@
   left: 6%;
   width: 88%;
   height: 88%;
-  background: #2a2a2a; /* Dark inner layer creates white edge effect */
+  background: #2a2a2a; /* Dark inner layer creates grey edge effect */
   opacity: 1;
 }
 
