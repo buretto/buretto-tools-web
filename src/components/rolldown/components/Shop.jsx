@@ -286,7 +286,7 @@ function ShopUnitDisplay({ unit, tftData, tftImages, slotIndex, onPurchase, isDr
         e.stopPropagation()
         handleMouseDown(e)
       }}
-      style={{ cursor: 'pointer', position: 'relative' }}
+      style={{ cursor: 'pointer' }}
     >
       {/* Star Icons - outside the image container */}
       <StarIcon stars={unit.stars || 1} />
@@ -296,10 +296,7 @@ function ShopUnitDisplay({ unit, tftData, tftImages, slotIndex, onPurchase, isDr
         ref={imageRef} 
         style={{
           pointerEvents: 'none', 
-          position: 'relative',
-          width: `${100 * getStarSizeMultiplier(unit.stars || 1)}%`,
-          height: `${100 * getStarSizeMultiplier(unit.stars || 1)}%`,
-          margin: 'auto'
+          position: 'relative'
         }}
       >
         {/* Show fallback if no image URL available */}
@@ -316,7 +313,7 @@ function ShopUnitDisplay({ unit, tftData, tftImages, slotIndex, onPurchase, isDr
         <div className="unit-cost-container">
           <Coins className="unit-cost-icon" />
           <span className="unit-cost">
-            {unit.cost}
+            {unit.cost * (unit.stars || 1) * (unit.stars || 1)}
           </span>
         </div>
       </div>

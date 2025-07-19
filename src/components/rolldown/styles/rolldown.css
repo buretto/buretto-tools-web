@@ -1596,3 +1596,11 @@ body.dragging-from-bench .bench-area {
 .shop-unit-image .star-icon-container {
   z-index: 10;
 }
+
+/* Shop-specific star icon positioning */
+.shop-slot .star-icon-container {
+  left: 5%;
+  top: unset;
+  transform: none;
+}
+
