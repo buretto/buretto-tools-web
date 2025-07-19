@@ -10,6 +10,28 @@
   -webkit-tap-highlight-color: transparent;
 }
 
+/* Shop Unit Highlighting for Star-Up Combinations */
+.unit-display.highlight-combination {
+  /* Future: Strong highlight for star-up combinations */
+  /* Example: border: 2px solid #10b981; animation: pulse-green 1s infinite; */
+}
+
+.unit-display.highlight-owned {
+  /* Future: Subtle highlight for units already owned */
+  /* Example: border: 1px solid rgba(156, 163, 175, 0.5); */
+}
+
+/* Future animation keyframes for highlighting */
+@keyframes pulse-green {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+  50% { box-shadow: 0 0 0 10px rgba(16, 185, 129, 0); }
+}
+
+@keyframes pulse-subtle {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(156, 163, 175, 0.5); }
+  50% { box-shadow: 0 0 0 5px rgba(156, 163, 175, 0); }
+}
+
 /* Drag and Drop Styles */
 .drop-zone {
   transition: all 0.2s ease;

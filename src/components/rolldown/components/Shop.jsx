@@ -4,10 +4,11 @@ import { useDragManager, useDropZone } from '../hooks/useDragManager'
 import dragManager from '../utils/DragManager'
 import StarIcon from './StarIcon'
 import { getStarSizeMultiplier, getStarCssClass, calculateSellValue } from '../utils/starringSystem'
+import { getShopUnitHighlightType } from '../utils/starUpChecker'
 
 const SHOP_SLOTS = 5
 
-function Shop({ units = [], playerGold = 0, tftData, tftImages, onPurchase, onSell }) {
+function Shop({ units = [], playerGold = 0, tftData, tftImages, onPurchase, onSell, benchUnits = [], boardUnits = [] }) {
   // Track ongoing drags to prevent click handlers from interfering
   const isDragActiveRef = useRef(false)
   
@@ -83,6 +84,8 @@ function Shop({ units = [], playerGold = 0, tftData, tftImages, onPurchase, onSe
               slotIndex={i}
               onPurchase={onPurchase}
               isDragActiveRef={isDragActiveRef}
+              benchUnits={benchUnits}
+              boardUnits={boardUnits}
             />
           )}
         </div>
@@ -158,9 +161,12 @@ function Shop({ units = [], playerGold = 0, tftData, tftImages, onPurchase, onSe
 /**
  * Component for displaying a unit in the shop
  */
-function ShopUnitDisplay({ unit, tftData, tftImages, slotIndex, onPurchase, isDragActiveRef }) {
+function ShopUnitDisplay({ unit, tftData, tftImages, slotIndex, onPurchase, isDragActiveRef, benchUnits = [], boardUnits = [] }) {
   const imageRef = useRef(null)
   const championData = tftData?.champions?.[unit.id]
+  
+  // Get highlighting type for future animations
+  const highlightType = getShopUnitHighlightType(unit, benchUnits, boardUnits)
   
   // New drag system
   const { createDragHandler } = useDragManager()
@@ -274,13 +280,14 @@ function ShopUnitDisplay({ unit, tftData, tftImages, slotIndex, onPurchase, isDr
 
   return (
     <div 
-      className="unit-display"
+      className={`unit-display ${highlightType !== 'none' ? `highlight-${highlightType}` : ''}`}
       onMouseDown={(e) => {
         // Stop event from bubbling to parent shop-slot
         e.stopPropagation()
         handleMouseDown(e)
       }}
       style={{ cursor: 'pointer' }}
+      data-highlight-type={highlightType}
     >
       {/* Star Icons - outside the image container */}
       <StarIcon stars={unit.stars || 1} />

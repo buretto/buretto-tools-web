@@ -16,6 +16,7 @@ import { useTFTImages } from './hooks/useTFTImages'
 import { useUnitPool } from './hooks/useUnitPool'
 import { useShop } from './hooks/useShop'
 import { useStarringSystem } from './hooks/useStarringSystem'
+import { canCreateStarUpCombination } from './utils/starUpChecker'
 import { startImagePreloading, setPreloadCallbacks, getPreloadProgress, PRELOAD_PHASES } from './utils/imagePreloader'
 import { getShopOdds, getSetFromVersion } from './data/shopOdds'
 import './styles/rolldown.css'
@@ -173,11 +174,22 @@ function RolldownTool() {
     
     // Check if bench is full (9 slots)
     const benchUnits = gameState.player.bench.filter(unit => unit !== null)
-    if (benchUnits.length >= 9) {
+    const isBenchFull = benchUnits.length >= 9
+    
+    // Check if this unit can create a star-up combination
+    const canStarUp = canCreateStarUpCombination(unit, gameState.player.bench, gameState.player.board)
+    
+    // Only block purchase if bench is full AND no star-up combination is possible
+    if (isBenchFull && !canStarUp) {
       // Show warning and return early
       setBenchFullWarning(true)
       setTimeout(() => setBenchFullWarning(false), 1000)
+      console.log('🚫 Purchase blocked: bench full and no star-up combination possible for', unit.name)
       return
+    }
+    
+    if (canStarUp && isBenchFull) {
+      console.log('✅ Purchase allowed: star-up combination possible for', unit.name, 'despite full bench')
     }
     
     // Calculate the actual cost based on star level
@@ -196,11 +208,14 @@ function RolldownTool() {
           // No need to modify stars - the shop unit already has the correct star level
           
           // Add unit to bench and check for combining
+          // Force add if star-up combination is possible (even when bench is full)
           const result = starringSystem.addUnitWithCombining(
             purchasedUnit, 
             prev.player.bench, 
             prev.player.board, 
-            'bench'
+            'bench',
+            null,
+            canStarUp // forceAdd parameter
           )
           
           return {
@@ -610,6 +625,8 @@ function RolldownTool() {
                   playerGold={gameState.player.gold}
                   tftData={tftData}
                   tftImages={tftImages}
+                  benchUnits={gameState.player.bench}
+                  boardUnits={gameState.player.board}
                   onPurchase={(unit, shopSlotIndex) => {
                     handlePurchase(unit, shopSlotIndex)
                   }}

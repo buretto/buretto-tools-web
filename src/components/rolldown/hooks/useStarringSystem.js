@@ -48,7 +48,8 @@ export const useStarringSystem = () => {
     })
     
     // Separate back to bench and board
-    const newBenchUnits = new Array(benchUnits.length).fill(null)
+    // Always maintain exactly 9 bench slots
+    const newBenchUnits = new Array(9).fill(null)
     const newBoardUnits = []
     
     let benchIndex = 0
@@ -66,6 +67,15 @@ export const useStarringSystem = () => {
             benchIndex
           }
           benchIndex++
+        } else {
+          // If bench is still full after combining, move to board as fallback
+          console.warn('Bench still full after combining, moving unit to board:', unit.name)
+          newBoardUnits.push({
+            ...unit,
+            location: 'board',
+            row: 0, // Place at front row
+            col: newBoardUnits.filter(u => u.row === 0).length // Next available column
+          })
         }
       } else {
         // Board unit
@@ -88,9 +98,10 @@ export const useStarringSystem = () => {
    * @param {Array} boardUnits - Current board units
    * @param {string} targetLocation - 'bench' or 'board'
    * @param {number} targetIndex - Index for placement
+   * @param {boolean} forceAdd - If true, add unit even if bench is full (for star-up combinations)
    * @returns {Object} - { newBenchUnits, newBoardUnits, combinedUnits }
    */
-  const addUnitWithCombining = useCallback((unit, benchUnits, boardUnits, targetLocation = 'bench', targetIndex = null) => {
+  const addUnitWithCombining = useCallback((unit, benchUnits, boardUnits, targetLocation = 'bench', targetIndex = null, forceAdd = false) => {
     // Add the unit to appropriate location
     let newBenchUnits = [...benchUnits]
     let newBoardUnits = [...boardUnits]
@@ -103,6 +114,10 @@ export const useStarringSystem = () => {
         const emptyIndex = newBenchUnits.findIndex(slot => slot === null)
         if (emptyIndex !== -1) {
           newBenchUnits[emptyIndex] = { ...unit, location: 'bench', benchIndex: emptyIndex }
+        } else if (forceAdd) {
+          // Bench is full but we're forcing add (for star-up combinations)
+          // Add to a temporary 10th slot that will be processed by combining
+          newBenchUnits.push({ ...unit, location: 'bench', benchIndex: newBenchUnits.length })
         }
       }
     } else {
