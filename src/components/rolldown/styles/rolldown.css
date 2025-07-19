@@ -32,6 +32,82 @@
   50% { box-shadow: 0 0 0 5px rgba(156, 163, 175, 0); }
 }
 
+/* Trait Hexagon Styles */
+.trait-hexagon {
+  position: relative;
+  display: inline-block;
+  width: 100%;
+  height: 100%;
+}
+
+/* Dark background hexagon (outline + non-activated background) */
+.trait-hexagon::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: #2a2a2a;
+  clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+  z-index: 1;
+}
+
+/* Activated trait hexagon (sits on top of dark background) */
+.trait-hexagon::after {
+  content: '';
+  position: absolute;
+  top: 4%;
+  left: 4%;
+  width: 92%;
+  height: 92%;
+  clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+  z-index: 2;
+  opacity: 0; /* Hidden by default for non-activated traits */
+}
+
+/* Activated trait colors */
+.trait-hexagon.bronze::after {
+  background: linear-gradient(180deg, #cd7f32 0%, #cd7f32 45%, #8b5a2b 55%, #8b5a2b 100%);
+  opacity: 1;
+}
+
+.trait-hexagon.silver::after {
+  background: linear-gradient(180deg, #c0c0c0 0%, #c0c0c0 45%, #8c8c8c 55%, #8c8c8c 100%);
+  opacity: 1;
+}
+
+.trait-hexagon.gold::after {
+  background: linear-gradient(180deg, #ffd700 0%, #ffd700 45%, #ccaa00 55%, #ccaa00 100%);
+  opacity: 1;
+}
+
+/* Non-activated trait - white edge effect using layered approach */
+.trait-hexagon.inactive::before {
+  background: white; /* White outer layer */
+}
+
+.trait-hexagon.inactive::after {
+  top: 6%;
+  left: 6%;
+  width: 88%;
+  height: 88%;
+  background: #2a2a2a; /* Dark inner layer creates white edge effect */
+  opacity: 1;
+}
+
+.trait-hexagon .trait-image {
+  position: relative;
+  z-index: 3;
+  width: 70%;
+  height: 70%;
+  object-fit: contain;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
 /* Drag and Drop Styles */
 .drop-zone {
   transition: all 0.2s ease;

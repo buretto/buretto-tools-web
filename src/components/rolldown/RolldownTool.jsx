@@ -639,7 +639,7 @@ function RolldownTool() {
         
         {/* Traits Column - Positioned absolutely */}
         <div className="traits-column">
-          <TraitsColumn boardUnits={gameState.player.board} />
+          <TraitsColumn boardUnits={gameState.player.board} tftData={tftData} />
         </div>
         
         {/* TFT Version Selector - Positioned absolutely */}
