@@ -102,6 +102,7 @@ function Bench({ units = [], onUnitMove, onUnitSwap, onSell, tftData, tftImages 
  */
 function BenchUnitDisplay({ unit, unitIndex, tftData, tftImages, onSell }) {
   const imageRef = useRef(null)
+  const dragRef = useRef(null)
   
   // New drag system
   const { createDragHandler } = useDragManager()
@@ -167,48 +168,47 @@ function BenchUnitDisplay({ unit, unitIndex, tftData, tftImages, onSell }) {
   const sizeMultiplier = getStarSizeMultiplier(stars)
   
   return (
-    <>
-      {/* Star Icons - positioned relative to bench slot */}
+    <div 
+      className="bench-unit-image"
+      ref={dragRef}
+      onMouseDown={handleMouseDown}
+      style={{ 
+        cursor: 'grab',
+        // Invisible padding outside the visual elements (for drag offset fix)
+        padding: `${10 / sizeMultiplier}%`,
+      }}
+    >
+      {/* Star Icons - positioned relative to this draggable container */}
       <StarIcon stars={stars} />
       
       <div 
-        className="bench-unit-image"
-        onMouseDown={handleMouseDown}
+        className={getStarCssClass(stars)}
+        ref={imageRef}
         style={{ 
-          cursor: 'grab',
-          // Invisible padding outside the visual elements (for drag offset fix)
-          padding: `${10 / sizeMultiplier}%`
+          // Use transform scale to match board unit scaling without affecting layout
+          transform: `scale(${sizeMultiplier})`,
+          width: '80%', // Base size to match board units better
+          height: '80%',
+          position: 'absolute',
+          top: '50%',
+          left: '50%',
+          transformOrigin: 'center',
+          marginTop: '-40%', // Half of height to center
+          marginLeft: '-40%', // Half of width to center
+          borderRadius: '50%',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center'
         }}
       >
-        <div 
-          className={getStarCssClass(stars)}
-          ref={imageRef}
-          style={{ 
-            // Use transform scale to match board unit scaling without affecting layout
-            transform: `scale(${sizeMultiplier})`,
-            width: '80%', // Base size to match board units better
-            height: '80%',
-            position: 'absolute',
-            top: '50%',
-            left: '50%',
-            transformOrigin: 'center',
-            marginTop: '-40%', // Half of height to center
-            marginLeft: '-40%', // Half of width to center
-            borderRadius: '50%',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center'
-          }}
-        >
-          {/* Show fallback if no image available */}
-          {!championData && (
-            <div className="text-placeholder">
-              {unit.name?.charAt(0) || 'U'}
-            </div>
-          )}
-        </div>
+        {/* Show fallback if no image available */}
+        {!championData && (
+          <div className="text-placeholder">
+            {unit.name?.charAt(0) || 'U'}
+          </div>
+        )}
       </div>
-    </>
+    </div>
   )
 }
 

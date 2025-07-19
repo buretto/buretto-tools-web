@@ -20,6 +20,7 @@ const HexTile = ({
   onClick = () => {} 
 }) => {
   const imageRef = useRef(null)
+  const dragRef = useRef(null)
   const polygonRef = useRef(null)
   
   // New drag system
@@ -145,7 +146,11 @@ const HexTile = ({
           style={{ pointerEvents: isOpponent ? 'none' : 'auto' }}
         >
           <div 
+            ref={dragRef}
             className="hex-unit-container"
+            data-row={row}
+            data-col={col}
+            onMouseDown={handleUnitMouseDown}
             onMouseEnter={(e) => {
               if (!isOpponent && polygonRef.current) {
                 // Check if we're in a drag operation
@@ -184,7 +189,7 @@ const HexTile = ({
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              position: 'relative'
+              cursor: !isOpponent ? 'grab' : 'default'
             }}
           >
             {/* Star Icons - outside the image container */}
@@ -193,9 +198,6 @@ const HexTile = ({
             <div 
               ref={imageRef}
               className={`hex-unit-display ${getStarCssClass(unit.stars || 1)}`}
-              data-row={row}
-              data-col={col}
-              onMouseDown={handleUnitMouseDown}
               style={{
                 width: '56%',
                 height: '56%',
@@ -203,7 +205,6 @@ const HexTile = ({
                 alignItems: 'center',
                 justifyContent: 'center',
                 borderRadius: '50%',
-                cursor: !isOpponent ? 'grab' : 'default',
                 position: 'relative'
               }}
             >

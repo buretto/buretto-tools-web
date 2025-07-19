@@ -258,13 +258,13 @@
   cursor: grab;
 }
 
-/* Target the unit display div inside foreignObject more specifically */
-.hex-tile.player .hex-unit-display {
+/* Target the unit container div inside foreignObject more specifically */
+.hex-tile.player .hex-unit-container {
   cursor: grab !important;
 }
 
 /* Ensure grab cursor shows through when not dragging - use class for specificity */
-body:not(.dragging-active) .hex-tile.player .hex-unit-display {
+body:not(.dragging-active) .hex-tile.player .hex-unit-container {
   cursor: grab !important;
 }
 
@@ -628,6 +628,16 @@ body:not(.dragging-active) .hex-tile.player .hex-unit-display {
   cursor: grabbing;
   /* Don't override position - let existing positioning work */
   /* Override aspect ratio constraint that can cause height compression */
+  aspect-ratio: unset !important;
+}
+
+/* Immediate aspect ratio override for bench units when drag starts */
+.bench-slot:has([style*="width"]) {
+  aspect-ratio: unset !important;
+}
+
+/* Additional safety for bench units during any drag state */
+body.dragging-from-bench .bench-slot {
   aspect-ratio: unset !important;
 }
 
@@ -1575,8 +1585,13 @@ body.dragging-from-bench .bench-area {
   border: 1px solid #42b399;
 }
 
-/* Ensure star icons show above everything */
-.hex-unit-display .star-icon-container,
+/* Board unit stars positioning - closer to the unit */
+.hex-unit-container .star-icon-container {
+  top: 10%;
+  z-index: 10;
+}
+
+/* Bench and shop unit stars positioning - above the unit */
 .bench-unit-image .star-icon-container,
 .shop-unit-image .star-icon-container {
   z-index: 10;
