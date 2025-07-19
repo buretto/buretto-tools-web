@@ -1209,7 +1209,7 @@ body.dragging-from-bench .bench-area {
   bottom: 0;
   width: 100%;
   height: 100%;
-  border-radius: 4px; /* Keep slot border-radius for container */
+  border-radius: 50%; /* Circular for units */
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1218,6 +1218,19 @@ body.dragging-from-bench .bench-area {
   background: transparent; /* Remove background since image will be circular */
   color: white;
   overflow: visible; /* Allow circular image to be fully visible */
+}
+
+/* Star-based sizing for bench units - just ensure absolute positioning */
+.bench-unit-image.unit-2-star {
+  position: absolute !important;
+}
+
+.bench-unit-image.unit-3-star {
+  position: absolute !important;
+}
+
+.bench-unit-image.unit-4-star {
+  position: absolute !important;
 }
 
 /* Bench Full Warning */

@@ -123,8 +123,10 @@ function BenchUnitDisplay({ unit, unitIndex, tftData, tftImages, onSell }) {
         const imgElement = document.createElement('img')
         imgElement.src = loadedImage.src
         imgElement.alt = championData?.name || unit.name || 'Champion'
-        imgElement.style.width = '100%'
-        imgElement.style.height = '100%'
+        const baseSize = 80 // Base size from commit 236b516 (80% to leave room for star growth)
+        const finalSize = baseSize * sizeMultiplier
+        imgElement.style.width = `${finalSize}%`
+        imgElement.style.height = `${finalSize}%`
         imgElement.style.objectFit = 'cover'
         imgElement.style.objectPosition = '75% center' // Show more of the right side where units are
         imgElement.style.borderRadius = '50%' // Make circular
@@ -167,28 +169,15 @@ function BenchUnitDisplay({ unit, unitIndex, tftData, tftImages, onSell }) {
   const sizeMultiplier = getStarSizeMultiplier(stars)
   
   return (
-    <div style={{ 
-      position: 'relative', 
-      width: '100%', 
-      height: '100%',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center'
-    }}>
-      {/* Star Icons - outside the image container */}
+    <>
+      {/* Star Icons - positioned relative to bench slot */}
       <StarIcon stars={stars} />
       
       <div 
         className={`bench-unit-image ${getStarCssClass(stars)}`}
         ref={imageRef}
         onMouseDown={handleMouseDown}
-        style={{ 
-          cursor: 'grab', 
-          position: 'relative',
-          width: `${80 * sizeMultiplier}%`,
-          height: `${80 * sizeMultiplier}%`,
-          borderRadius: '50%'
-        }}
+        style={{ cursor: 'grab' }}
       >
         {/* Show fallback if no image available */}
         {!championData && (
@@ -197,7 +186,7 @@ function BenchUnitDisplay({ unit, unitIndex, tftData, tftImages, onSell }) {
           </div>
         )}
       </div>
-    </div>
+    </>
   )
 }
 

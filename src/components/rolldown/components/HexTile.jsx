@@ -79,6 +79,7 @@ const HexTile = ({
       const stars = unit.stars || 1
       const sizeMultiplier = getStarSizeMultiplier(stars)
       
+      
       if (loadedImage) {
         const imgElement = document.createElement('img')
         imgElement.src = loadedImage.src
@@ -93,7 +94,7 @@ const HexTile = ({
         imageRef.current.appendChild(imgElement)
       }
     }
-  }, [unit, tftImages, size])
+  }, [unit, tftImages, size, unit?.stars])
 
 
   // New simplified drag handler
@@ -136,10 +137,11 @@ const HexTile = ({
       
       {unit && (
         <foreignObject
-          x={x - size}
-          y={y - size}
-          width={size * 2}
-          height={size * 2}
+          key={`${unit.id}-${unit.stars || 1}`}
+          x={x - size * getStarSizeMultiplier(unit.stars || 1)}
+          y={y - size * getStarSizeMultiplier(unit.stars || 1)}
+          width={size * 2 * getStarSizeMultiplier(unit.stars || 1)}
+          height={size * 2 * getStarSizeMultiplier(unit.stars || 1)}
           style={{ pointerEvents: isOpponent ? 'none' : 'auto' }}
         >
           <div 
@@ -195,8 +197,8 @@ const HexTile = ({
               data-col={col}
               onMouseDown={handleUnitMouseDown}
               style={{
-                width: `${56 * getStarSizeMultiplier(unit.stars || 1)}%`,
-                height: `${56 * getStarSizeMultiplier(unit.stars || 1)}%`,
+                width: '56%',
+                height: '56%',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
