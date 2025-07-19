@@ -99,19 +99,14 @@ export const combineUnits = (units, onUnitsRemoved = null) => {
           newUnits[unit.originalIndex] = null
         })
         
-        // Add the upgraded unit to the first available position
-        let placed = false
-        for (let i = 0; i < newUnits.length; i++) {
-          if (newUnits[i] === null) {
-            newUnits[i] = upgradedUnit
-            placed = true
-            break
-          }
-        }
-        
-        // If we couldn't place it, add to end (shouldn't happen in normal cases)
-        if (!placed) {
-          newUnits.push(upgradedUnit)
+        // Place the upgraded unit in the first removed unit's position (maintain original location)
+        const placementIndex = unitsToRemove[0].originalIndex
+        newUnits[placementIndex] = {
+          ...upgradedUnit,
+          location: unitsToRemove[0].location,
+          benchIndex: unitsToRemove[0].benchIndex,
+          row: unitsToRemove[0].row,
+          col: unitsToRemove[0].col
         }
         
         combinedUnits.push({
@@ -137,7 +132,7 @@ export const combineUnits = (units, onUnitsRemoved = null) => {
   })
   
   return {
-    newUnits: newUnits.filter(unit => unit !== null),
+    newUnits: newUnits, // Preserve array structure with null slots
     combinedUnits
   }
 }

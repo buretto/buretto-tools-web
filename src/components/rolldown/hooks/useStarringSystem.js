@@ -18,7 +18,7 @@ export const useStarringSystem = () => {
     // Prepare all units with location information
     const allUnits = []
     
-    // Add bench units
+    // Add bench units with exact position mapping
     benchUnits.forEach((unit, index) => {
       if (unit) {
         allUnits.push({
@@ -27,7 +27,7 @@ export const useStarringSystem = () => {
           benchIndex: index
         })
       } else {
-        allUnits.push(null)
+        allUnits.push(null) // Preserve null slots to maintain array indices
       }
     })
     
@@ -47,40 +47,45 @@ export const useStarringSystem = () => {
       console.log('Units combined:', removedUnits.length, 'units became', newUnit.stars, 'star', newUnit.name)
     })
     
-    // Separate back to bench and board
+    // Separate back to bench and board while preserving original positions
     // Always maintain exactly 9 bench slots
     const newBenchUnits = new Array(9).fill(null)
     const newBoardUnits = []
     
-    let benchIndex = 0
-    let boardIndex = 0
-    
-    result.newUnits.forEach(unit => {
+    // Separate the combined units back to their original locations
+    result.newUnits.forEach((unit, index) => {
+      if (!unit) return // Skip null slots
+      
       if (unit.location === 'bench') {
-        // Find next available bench slot
-        while (benchIndex < newBenchUnits.length && newBenchUnits[benchIndex] !== null) {
-          benchIndex++
-        }
-        if (benchIndex < newBenchUnits.length) {
-          newBenchUnits[benchIndex] = {
+        // Use the unit's benchIndex to maintain position
+        const targetIndex = unit.benchIndex !== undefined ? unit.benchIndex : index
+        if (targetIndex < 9) {
+          newBenchUnits[targetIndex] = {
             ...unit,
-            benchIndex
+            benchIndex: targetIndex
           }
-          benchIndex++
         } else {
-          // If bench is still full after combining, move to board as fallback
-          console.warn('Bench still full after combining, moving unit to board:', unit.name)
-          newBoardUnits.push({
-            ...unit,
-            location: 'board',
-            row: 0, // Place at front row
-            col: newBoardUnits.filter(u => u.row === 0).length // Next available column
-          })
+          // If benchIndex is invalid (>=9), find first empty slot as fallback
+          const emptyIndex = newBenchUnits.findIndex(slot => slot === null)
+          if (emptyIndex !== -1) {
+            newBenchUnits[emptyIndex] = {
+              ...unit,
+              benchIndex: emptyIndex
+            }
+          } else {
+            // If bench is completely full, move to board as fallback
+            console.warn('Bench still full after combining, moving unit to board:', unit.name)
+            newBoardUnits.push({
+              ...unit,
+              location: 'board',
+              row: 0, // Place at front row
+              col: newBoardUnits.filter(u => u.row === 0).length // Next available column
+            })
+          }
         }
       } else {
-        // Board unit
+        // Board unit - preserve position
         newBoardUnits.push(unit)
-        boardIndex++
       }
     })
     
