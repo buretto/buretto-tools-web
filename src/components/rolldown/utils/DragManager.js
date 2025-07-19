@@ -297,7 +297,11 @@ class DragManager {
 
     // Restore original element styles
     if (this.dragElement) {
-      this.dragElement.style.transform = this.originalTransform
+      // For board units, always clear transform to prevent "non-fresh" positioning issues
+      // For other units, restore original transform
+      const isBoardUnit = this.dragData?.source === 'board' && this.dragElement.classList?.contains('hex-unit-display')
+      this.dragElement.style.transform = isBoardUnit ? '' : this.originalTransform
+      
       this.dragElement.style.zIndex = this.originalZIndex
       this.dragElement.style.position = this.originalPosition
       this.dragElement.style.pointerEvents = ''

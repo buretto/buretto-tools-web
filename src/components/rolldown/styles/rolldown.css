@@ -258,13 +258,13 @@
   cursor: grab;
 }
 
-/* Target the unit container div inside foreignObject more specifically */
-.hex-tile.player .hex-unit-container {
+/* Target the unit display div inside foreignObject more specifically */
+.hex-tile.player .hex-unit-display {
   cursor: grab !important;
 }
 
 /* Ensure grab cursor shows through when not dragging - use class for specificity */
-body:not(.dragging-active) .hex-tile.player .hex-unit-container {
+body:not(.dragging-active) .hex-tile.player .hex-unit-display {
   cursor: grab !important;
 }
 
@@ -1586,7 +1586,7 @@ body.dragging-from-bench .bench-area {
 }
 
 /* Board unit stars positioning - closer to the unit */
-.hex-unit-container .star-icon-container {
+.hex-unit-display .star-icon-container {
   top: 10%;
   z-index: 10;
 }

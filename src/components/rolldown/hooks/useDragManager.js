@@ -28,9 +28,16 @@ export const useDragManager = () => {
     e.stopPropagation()
     
     // Calculate grab offset (where mouse grabbed the element)
+    // First, temporarily clear any existing transforms to get clean positioning
+    const originalTransform = element.style.transform
+    element.style.transform = ''
+    
     const rect = element.getBoundingClientRect()
     let grabX = e.clientX - rect.left
     let grabY = e.clientY - rect.top
+    
+    // Restore original transform after measurement
+    element.style.transform = originalTransform
     
     // For hex unit displays, adjust grab offset to center since the draggable element
     // is smaller than the clickable area and centered within it

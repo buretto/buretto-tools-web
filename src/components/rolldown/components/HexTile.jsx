@@ -146,11 +146,7 @@ const HexTile = ({
           style={{ pointerEvents: isOpponent ? 'none' : 'auto' }}
         >
           <div 
-            ref={dragRef}
             className="hex-unit-container"
-            data-row={row}
-            data-col={col}
-            onMouseDown={handleUnitMouseDown}
             onMouseEnter={(e) => {
               if (!isOpponent && polygonRef.current) {
                 // Check if we're in a drag operation
@@ -192,12 +188,12 @@ const HexTile = ({
               cursor: !isOpponent ? 'grab' : 'default'
             }}
           >
-            {/* Star Icons - outside the image container */}
-            <StarIcon stars={unit.stars || 1} />
-            
             <div 
-              ref={imageRef}
+              ref={dragRef}
               className={`hex-unit-display ${getStarCssClass(unit.stars || 1)}`}
+              data-row={row}
+              data-col={col}
+              onMouseDown={handleUnitMouseDown}
               style={{
                 width: '56%',
                 height: '56%',
@@ -205,13 +201,34 @@ const HexTile = ({
                 alignItems: 'center',
                 justifyContent: 'center',
                 borderRadius: '50%',
-                position: 'relative'
+                cursor: !isOpponent ? 'grab' : 'default',
+                position: 'relative',
+                overflow: 'visible'
               }}
             >
-              {/* Fallback text */}
-              <span style={{ color: 'white', fontSize: '14px', fontWeight: 'bold', pointerEvents: 'none' }}>
-                {unit.name?.charAt(0) || 'U'}
-              </span>
+              {/* Star Icons - positioned outside the circular boundary */}
+              <div style={{ position: 'absolute', top: '10%', left: '50%', transform: 'translateX(-50%)', zIndex: 10, pointerEvents: 'none' }}>
+                <StarIcon stars={unit.stars || 1} />
+              </div>
+              
+              {/* Image container - separate from drag target for image loading */}
+              <div 
+                ref={imageRef}
+                style={{
+                  width: '100%',
+                  height: '100%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  borderRadius: '50%',
+                  position: 'relative'
+                }}
+              >
+                {/* Fallback text */}
+                <span style={{ color: 'white', fontSize: '14px', fontWeight: 'bold', pointerEvents: 'none' }}>
+                  {unit.name?.charAt(0) || 'U'}
+                </span>
+              </div>
             </div>
           </div>
         </foreignObject>
