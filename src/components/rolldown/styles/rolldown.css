@@ -1552,8 +1552,8 @@ body.dragging-from-bench .bench-area {
 }
 
 .star-icon {
-  width: 7px;
-  height: 7px;
+  width: 5px;
+  height: 5px;
   display: flex;
   align-items: center;
   justify-content: center;

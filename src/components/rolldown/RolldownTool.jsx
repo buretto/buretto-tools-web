@@ -180,7 +180,10 @@ function RolldownTool() {
       return
     }
     
-    if (gameState.player.gold >= unit.cost) {
+    // Calculate the actual cost based on star level
+    const actualCost = unit.cost * (unit.stars || 1) * (unit.stars || 1)
+    
+    if (gameState.player.gold >= actualCost) {
       const purchasedUnit = shopHook.purchaseUnit(shopSlotIndex, 'bench')
       
       if (purchasedUnit) {
@@ -189,13 +192,12 @@ function RolldownTool() {
           const updatedShop = [...prev.player.shop]
           updatedShop[shopSlotIndex] = null
           
-          // TEMPORARY: For testing, cycle between 1, 2, 3, and 4 star units
-          const tempStars = (Math.floor(Date.now() / 1000) % 4) + 1
-          const unitWithStars = { ...purchasedUnit, stars: tempStars }
+          // Use the unit as-is from shop (with its star level already set)
+          // No need to modify stars - the shop unit already has the correct star level
           
           // Add unit to bench and check for combining
           const result = starringSystem.addUnitWithCombining(
-            unitWithStars, 
+            purchasedUnit, 
             prev.player.bench, 
             prev.player.board, 
             'bench'
@@ -205,19 +207,19 @@ function RolldownTool() {
             ...prev,
             player: {
               ...prev.player,
-              gold: prev.player.gold - unit.cost,
+              gold: prev.player.gold - actualCost,
               bench: result.newBenchUnits,
               board: result.newBoardUnits,
               shop: updatedShop // Use explicitly updated shop
             },
             analytics: {
               ...prev.analytics,
-              goldSpent: prev.analytics.goldSpent + unit.cost,
+              goldSpent: prev.analytics.goldSpent + actualCost,
               actions: [...prev.analytics.actions, {
                 type: 'purchase',
                 timestamp: Date.now(),
                 unit: unit.id,
-                cost: unit.cost,
+                cost: actualCost,
                 combinedUnits: result.combinedUnits
               }]
             }
