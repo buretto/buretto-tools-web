@@ -62,10 +62,31 @@ export const combineUnits = (units, onUnitsRemoved = null) => {
       const unitsAtLevel = starLevels[starLevel] || []
       
       while (unitsAtLevel.length >= 3 && starLevel < 4) {
-        // Take 3 units to combine
+        // Sort units by priority: board first, then by position (top-most, left-most)
+        unitsAtLevel.sort((a, b) => {
+          // Board units have priority over bench units
+          if (a.location === 'board' && b.location !== 'board') return -1
+          if (b.location === 'board' && a.location !== 'board') return 1
+          
+          // If both are board units, sort by row (top-most first), then col (left-most first)
+          if (a.location === 'board' && b.location === 'board') {
+            if (a.row !== b.row) return a.row - b.row // Lower row number = higher priority (top-most)
+            return a.col - b.col // Lower col number = higher priority (left-most)
+          }
+          
+          // If both are bench units, sort by bench index (left-most first)
+          if (a.location === 'bench' && b.location === 'bench') {
+            return (a.benchIndex || 0) - (b.benchIndex || 0)
+          }
+          
+          // Default: maintain original order
+          return 0
+        })
+        
+        // Take 3 units to combine (now prioritized by position)
         const unitsToRemove = unitsAtLevel.splice(0, 3)
         
-        // Create the upgraded unit (use first unit as base)
+        // Create the upgraded unit (use the highest priority unit as base)
         const baseUnit = unitsToRemove[0]
         const upgradedUnit = {
           ...baseUnit,
