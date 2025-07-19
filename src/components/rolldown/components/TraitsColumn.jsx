@@ -113,15 +113,16 @@ function TraitsColumn({ boardUnits, tftData }) {
   }
   
   return (
-    <div className="traits-column">
+    <div className="traits-column flex flex-col items-start">
       {currentTraits.map((trait, index) => (
         <div
           key={`${trait.name}-${index}`}
-          className="bg-black bg-opacity-70 flex flex-row justify-start items-center mb-1 p-1 rounded"
+          className="bg-black bg-opacity-70 flex flex-row justify-start items-center mb-1 rounded w-fit"
           style={{ 
-            width: 'max(12rem, 20cqw)',
+            minWidth: 'max(5rem, 10cqw)',
             height: 'max(2.5rem, 4cqw)',
-            gap: trait.activeBreakpoint > 0 ? '2%' : '5%'
+            gap: trait.activeBreakpoint > 0 ? 'max(0.4rem, 0.66cqw)' : 'max(0.66rem, 1cqw)',      
+            padding: 'max(0.25rem, 0.5cqw) max(1rem, 1.66cqw) max(0.25rem, 0.5cqw) 0'
           }}
         >
           {/* Trait Icon with Hexagon */}
@@ -129,7 +130,9 @@ function TraitsColumn({ boardUnits, tftData }) {
             className={`trait-hexagon ${getHexagonColor(trait.breakpoints, trait.activeBreakpoint)}`}
             style={{
               width: 'max(2.8rem, 4.5cqw)',
-              height: 'max(2.8rem, 4.5cqw)'
+              height: 'max(2.8rem, 4.5cqw)',
+              marginLeft: 'max(-1.4rem, -2.25cqw)',
+              flexShrink: 0
             }}
           >
             {trait.imageUrl ? (
@@ -154,15 +157,15 @@ function TraitsColumn({ boardUnits, tftData }) {
           
           {/* Count Badge */}
           {trait.activeBreakpoint > 0 && (
-            <div className="bg-gray-500 bg-opacity-90 border border-white border-opacity-20 text-white text-xs font-bold px-1 py-0.5 rounded">
+            <div className="bg-gray-500 bg-opacity-90 border border-white border-opacity-20 text-white text-xs font-bold px-1 py-0.5 rounded" style={{ flexShrink: 0 }}>
               {trait.count}
             </div>
           )}
           
           {/* Trait Info */}
-          <div className="flex flex-col justify-start flex-1 min-w-0" style={{ height: '90%' }}>
+          <div className="flex flex-col justify-start" style={{ height: '90%', flexShrink: 0 }}>
             <div 
-              className={`font-semibold truncate leading-tight ${
+              className={`font-semibold leading-tight whitespace-nowrap ${
                 trait.activeBreakpoint > 0 ? 'text-white' : 'text-gray-600'
               }`} 
               style={{ 
@@ -173,10 +176,11 @@ function TraitsColumn({ boardUnits, tftData }) {
               {trait.name}
             </div>
             <div 
-              className="leading-tight"
+              className="leading-tight whitespace-nowrap"
               style={{ 
                 height: '45%',
-                fontSize: '0.6rem'
+                fontSize: '0.6rem',
+                flexShrink: 0
               }}
             >
               {formatBreakpoints(trait.breakpoints, trait.activeBreakpoint)}
