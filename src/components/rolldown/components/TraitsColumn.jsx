@@ -120,18 +120,18 @@ function TraitsColumn({ boardUnits, tftData }) {
           className="bg-black bg-opacity-70 flex flex-row justify-start items-center mb-1 rounded w-fit"
           style={{ 
             minWidth: 'max(5rem, 10cqw)',
-            height: 'max(2.5rem, 4cqw)',
+            height: 'max(1.85rem, 2.9cqw)',
             gap: trait.activeBreakpoint > 0 ? 'max(0.4rem, 0.66cqw)' : 'max(0.66rem, 1cqw)',      
-            padding: 'max(0.25rem, 0.5cqw) max(1rem, 1.66cqw) max(0.25rem, 0.5cqw) 0'
+            padding: 'max(0.0rem, 0.0cqw) max(1rem, 1.66cqw) max(0.1rem, 0.2cqw) 0'
           }}
         >
           {/* Trait Icon with Hexagon */}
           <div 
             className={`trait-hexagon ${getHexagonColor(trait.breakpoints, trait.activeBreakpoint)}`}
             style={{
-              width: 'max(2.8rem, 4.5cqw)',
-              height: 'max(2.8rem, 4.5cqw)',
-              marginLeft: 'max(-1.4rem, -2.25cqw)',
+              width: 'max(1.75rem, 2.8125cqw)',
+              height: 'max(1.75rem, 2.8125cqw)',
+              marginLeft: 'max(-0.875rem, -1.40625cqw)',
               flexShrink: 0
             }}
           >
