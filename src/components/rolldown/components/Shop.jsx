@@ -3,7 +3,7 @@ import { Coins } from 'lucide-react'
 import { useDragManager, useDropZone } from '../hooks/useDragManager'
 import dragManager from '../utils/DragManager'
 import StarIcon from './StarIcon'
-import { getStarSizeMultiplier, getStarCssClass } from '../utils/starringSystem'
+import { getStarSizeMultiplier, getStarCssClass, calculateSellValue } from '../utils/starringSystem'
 
 const SHOP_SLOTS = 5
 
@@ -104,15 +104,9 @@ function Shop({ units = [], playerGold = 0, tftData, tftImages, onPurchase, onSe
       const dragData = dragManager.currentDragData
       const shouldShow = isActive && dragData?.source !== 'shop'
       
-      console.log('🛒 Sell overlay update:', {
-        isActive,
-        dragData,
-        shouldShow,
-        sellOverlayExists: !!sellOverlayRef.current
-      })
       
       if (shouldShow) {
-        const sellValue = dragData?.unit ? Math.floor(dragData.unit.cost * 0.6) : 0
+        const sellValue = dragData?.unit ? calculateSellValue(dragData.unit) : 0
         sellOverlayRef.current.style.display = 'flex'
         const sellText = sellOverlayRef.current.querySelector('.sell-text')
         if (sellText) {

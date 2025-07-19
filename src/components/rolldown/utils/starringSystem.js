@@ -126,22 +126,16 @@ export const calculateSellValue = (unit) => {
   const cost = unit.cost || 1
   const stars = unit.stars || 1
   
-  // Base values for different star levels
-  const baseValues = {
-    1: cost, // 1-star sells for cost
-    2: cost * 3, // 2-star sells for 3x cost
-    3: cost * 9  // 3-star sells for 9x cost (3 2-stars combined)
+  // Calculate the purchase cost (what the unit was bought for)
+  const purchaseCost = cost * stars * stars
+  
+  // ALL 1-star units sell for their full purchase cost (no penalty)
+  if (stars === 1) {
+    return purchaseCost // Full value for all 1-star units
   }
   
-  let sellValue = baseValues[stars] || cost
-  
-  // Apply penalty: 1-Star and 1-cost champions sell back for their full gold value
-  // All others have a 1 gold sell back penalty
-  if (!(stars === 1 && cost === 1)) {
-    sellValue = Math.max(1, sellValue - 1)
-  }
-  
-  return sellValue
+  // Multi-star units have a 1 gold sell back penalty
+  return Math.max(1, purchaseCost - 1)
 }
 
 /**

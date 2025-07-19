@@ -73,13 +73,13 @@ export const useShop = (tftData, version, unitPoolHook) => {
   }, [tftData, setId, version, unitPoolHook])
   
   // Create a shop unit object
-  const createShopUnit = useCallback((unitId, championData, stars = 1) => {
+  const createShopUnit = useCallback((unitId, championData) => {
     return {
       id: unitId,
       name: championData.name,
       cost: championData.cost,
       traits: championData.traits || [],
-      stars: stars, // Shop units start at specified star level (default 1)
+      stars: 1, // Shop units always start at 1 star
       shopId: `shop_${Date.now()}_${Math.random()}` // Unique ID for shop tracking
     }
   }, [])
@@ -101,13 +101,6 @@ export const useShop = (tftData, version, unitPoolHook) => {
     for (let i = 0; i < SHOP_SIZE; i++) {
       const unit = generateShopSlot(playerLevel)
       if (unit) {
-        // TEST: Add some starred units for testing star system
-        if (i === 1) {
-          unit.stars = 2 // Second slot gets 2-star
-        } else if (i === 2) {
-          unit.stars = 3 // Third slot gets 3-star
-        }
-        
         // Reserve unit from pool temporarily (for shop display)
         unitPoolHook.takeUnitsFromPool(unit.id, 1)
         reservedUnits.push(unit.id)

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { Star, Coins } from 'lucide-react'
 import GameBoard from './components/GameBoard'
 import Shop from './components/Shop'
@@ -235,7 +235,18 @@ function RolldownTool() {
     
     shopHook.sellUnit(unit)
     
+    // Use a closure variable to prevent React Strict Mode double execution
+    let sellProcessed = false
+    
     setGameState(prev => {
+      // If this closure's sell has already been processed, return unchanged state
+      if (sellProcessed) {
+        return prev
+      }
+      
+      // Mark this sell as processed
+      sellProcessed = true
+      
       const newState = { ...prev }
       newState.player.gold += sellValue
       
