@@ -172,21 +172,33 @@ function BenchUnitDisplay({ unit, unitIndex, tftData, tftImages, onSell }) {
       <StarIcon stars={stars} />
       
       <div 
-        className={`bench-unit-image ${getStarCssClass(stars)}`}
-        ref={imageRef}
+        className="bench-unit-image"
         onMouseDown={handleMouseDown}
         style={{ 
           cursor: 'grab',
-          // Use padding approach for star sizing (less padding = bigger effective image size)
+          // Invisible padding outside the visual elements (for drag offset fix)
           padding: `${10 / sizeMultiplier}%`
         }}
       >
-        {/* Show fallback if no image available */}
-        {!championData && (
-          <div className="text-placeholder">
-            {unit.name?.charAt(0) || 'U'}
-          </div>
-        )}
+        <div 
+          className={getStarCssClass(stars)}
+          ref={imageRef}
+          style={{ 
+            width: '100%',
+            height: '100%',
+            borderRadius: '50%',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center'
+          }}
+        >
+          {/* Show fallback if no image available */}
+          {!championData && (
+            <div className="text-placeholder">
+              {unit.name?.charAt(0) || 'U'}
+            </div>
+          )}
+        </div>
       </div>
     </>
   )
