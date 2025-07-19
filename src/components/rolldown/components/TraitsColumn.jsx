@@ -97,8 +97,20 @@ function TraitsColumn({ boardUnits, tftData }) {
     setCurrentPage((prev) => (prev - 1 + totalPages) % totalPages)
   }
   
-  const formatBreakpoints = (breakpoints, activeBreakpoint) => {
+  const formatBreakpoints = (breakpoints, activeBreakpoint, currentCount) => {
     if (breakpoints.length === 0) return ''
+    
+    // If trait is not active, show "current/first" format (e.g., "1/2")
+    if (!activeBreakpoint || activeBreakpoint === 0) {
+      const firstBreakpoint = breakpoints[0] || 0
+      return (
+        <span className="text-gray-600">
+          {currentCount}/{firstBreakpoint}
+        </span>
+      )
+    }
+    
+    // If trait is active, show full breakpoint sequence
     return breakpoints.map((bp, index) => (
       <span key={bp}>
         <span className={bp === activeBreakpoint ? 'text-white' : 'text-gray-600'}>
@@ -194,7 +206,7 @@ function TraitsColumn({ boardUnits, tftData }) {
                 flexShrink: 0
               }}
             >
-              {formatBreakpoints(trait.breakpoints, trait.activeBreakpoint)}
+              {formatBreakpoints(trait.breakpoints, trait.activeBreakpoint, trait.count)}
             </div>
           </div>
         </div>
