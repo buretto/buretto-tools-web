@@ -184,8 +184,16 @@ function BenchUnitDisplay({ unit, unitIndex, tftData, tftImages, onSell }) {
           className={getStarCssClass(stars)}
           ref={imageRef}
           style={{ 
-            width: '100%',
-            height: '100%',
+            // Use transform scale to match board unit scaling without affecting layout
+            transform: `scale(${sizeMultiplier})`,
+            width: '80%', // Base size to match board units better
+            height: '80%',
+            position: 'absolute',
+            top: '50%',
+            left: '50%',
+            transformOrigin: 'center',
+            marginTop: '-40%', // Half of height to center
+            marginLeft: '-40%', // Half of width to center
             borderRadius: '50%',
             display: 'flex',
             alignItems: 'center',
