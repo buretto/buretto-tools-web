@@ -123,10 +123,8 @@ function BenchUnitDisplay({ unit, unitIndex, tftData, tftImages, onSell }) {
         const imgElement = document.createElement('img')
         imgElement.src = loadedImage.src
         imgElement.alt = championData?.name || unit.name || 'Champion'
-        const baseSize = 80 // Base size from commit 236b516 (80% to leave room for star growth)
-        const finalSize = baseSize * sizeMultiplier
-        imgElement.style.width = `${finalSize}%`
-        imgElement.style.height = `${finalSize}%`
+        imgElement.style.width = '100%'
+        imgElement.style.height = '100%'
         imgElement.style.objectFit = 'cover'
         imgElement.style.objectPosition = '75% center' // Show more of the right side where units are
         imgElement.style.borderRadius = '50%' // Make circular
@@ -177,7 +175,11 @@ function BenchUnitDisplay({ unit, unitIndex, tftData, tftImages, onSell }) {
         className={`bench-unit-image ${getStarCssClass(stars)}`}
         ref={imageRef}
         onMouseDown={handleMouseDown}
-        style={{ cursor: 'grab' }}
+        style={{ 
+          cursor: 'grab',
+          // Use padding approach for star sizing (less padding = bigger effective image size)
+          padding: `${10 / sizeMultiplier}%`
+        }}
       >
         {/* Show fallback if no image available */}
         {!championData && (
