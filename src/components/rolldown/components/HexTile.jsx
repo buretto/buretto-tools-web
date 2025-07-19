@@ -207,7 +207,7 @@ const HexTile = ({
               }}
             >
               {/* Star Icons - positioned outside the circular boundary */}
-              <div style={{ position: 'absolute', top: '10%', left: '50%', transform: 'translateX(-50%)', zIndex: 10, pointerEvents: 'none' }}>
+              <div style={{ position: 'absolute', top: '-4px', left: '50%', transform: 'translateX(-50%)', zIndex: 10, pointerEvents: 'none' }}>
                 <StarIcon stars={unit.stars || 1} />
               </div>
               
