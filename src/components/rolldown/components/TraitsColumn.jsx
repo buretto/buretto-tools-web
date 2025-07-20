@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react'
-import { ChevronDown, ChevronUp } from 'lucide-react'
+import { ChevronUp } from 'lucide-react'
 import { generateDirectImageUrl } from '../utils/imageLoader'
 
 function TraitsColumn({ boardUnits, tftData }) {
@@ -91,10 +91,6 @@ function TraitsColumn({ boardUnits, tftData }) {
   
   const goToNextPage = () => {
     setCurrentPage((prev) => (prev + 1) % totalPages)
-  }
-  
-  const goToPrevPage = () => {
-    setCurrentPage((prev) => (prev - 1 + totalPages) % totalPages)
   }
   
   const formatBreakpoints = (breakpoints, activeBreakpoint, currentCount) => {
@@ -212,31 +208,26 @@ function TraitsColumn({ boardUnits, tftData }) {
         </div>
       ))}
       
-      {/* Pagination Controls */}
+      {/* Pagination Control */}
       {totalPages > 1 && (
-        <div className="flex flex-col gap-1">
-          <button
-            onClick={goToPrevPage}
-            className="bg-black bg-opacity-70 hover:bg-opacity-90 text-white p-2 rounded flex items-center justify-center transition-all"
-            style={{ 
-              width: 'max(12rem, 20cqw)',
-              height: 'max(2rem, 3cqw)'
-            }}
-          >
-            <ChevronUp size={16} className="mr-1" />
-            Previous
-          </button>
-          <button
-            onClick={goToNextPage}
-            className="bg-black bg-opacity-70 hover:bg-opacity-90 text-white p-2 rounded flex items-center justify-center transition-all"
-            style={{ 
-              width: 'max(12rem, 20cqw)',
-              height: 'max(2rem, 3cqw)'
-            }}
-          >
-            <ChevronDown size={16} className="mr-1" />
-            Next
-          </button>
+        <div 
+          className="pagination-pentagon"
+          onClick={goToNextPage}
+          style={{
+            width: 'max(1.75rem, 2.8125cqw)',
+            height: 'max(1.75rem, 2.8125cqw)',
+            marginLeft: 'max(-0.875rem, -1.40625cqw)',
+            marginTop: 'max(0.1rem, 0.2cqw)',
+            flexShrink: 0
+          }}
+        >
+          <div className="pentagon-text">
+            {currentPage === totalPages - 1 ? (
+              <ChevronUp size={10} />
+            ) : (
+              `${traits.length - endIndex}+`
+            )}
+          </div>
         </div>
       )}
     </div>

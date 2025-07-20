@@ -10,6 +10,23 @@
   -webkit-tap-highlight-color: transparent;
 }
 
+/* Traits Column - Allow pointer events to pass through to underlying elements (consolidated below) */
+
+/* Re-enable pointer events for trait items and pagination */
+.traits-column > * {
+  pointer-events: auto;
+}
+
+/* Prevent dragging of images */
+.trait-image {
+  -webkit-user-drag: none;
+  -khtml-user-drag: none;
+  -moz-user-drag: none;
+  -o-user-drag: none;
+  user-drag: none;
+  pointer-events: none;
+}
+
 /* Shop Unit Highlighting for Star-Up Combinations */
 .unit-display.highlight-combination {
   /* Future: Strong highlight for star-up combinations */
@@ -106,6 +123,62 @@
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
+}
+
+/* Pagination Pentagon Styles */
+.pagination-pentagon {
+  position: relative;
+  display: inline-block;
+  width: 100%;
+  height: 100%;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+/* Green outline pentagon using SVG approach */
+.pagination-pentagon::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cpath d='M0 0 L100 0 L100 30 L75 100 L25 100 L0 30 Z' fill='%23086efac' stroke='%23086efac' stroke-width='2'/%3E%3Cpath d='M3 3 L97 3 L97 29 L73.5 95 L26.5 95 L3 29 Z' fill='%232a2a2a'/%3E%3C/svg%3E");
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+  z-index: 1;
+}
+
+/* Navy blue pentagon */
+.pagination-pentagon::after {
+  content: '';
+  position: absolute;
+  top: 6%;
+  left: 6%;
+  width: 88%;
+  height: 88%;
+  background: linear-gradient(180deg, #1e3a8a 0%, #1e3a8a 45%, #1e40af 55%, #1e40af 100%);
+  clip-path: polygon(0% 0%, 100% 0%, 100% 30%, 75% 100%, 25% 100%, 0% 30%);
+  z-index: 2;
+}
+
+.pagination-pentagon:hover::after {
+  background: linear-gradient(180deg, #2563eb 0%, #2563eb 45%, #1d4ed8 55%, #1d4ed8 100%);
+}
+
+.pagination-pentagon .pentagon-text {
+  position: relative;
+  z-index: 3;
+  color: white;
+  font-weight: bold;
+  font-size: 0.6rem;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  line-height: 1;
 }
 
 /* Drag and Drop Styles */
@@ -315,7 +388,7 @@
 .traits-column {
   position: absolute;
   left: 1rem;
-  top: 50%;
+  top: 47.5%;
   transform: translateY(-40%);
   height: 66.67vh; /* 2/3 of viewport height */
   display: flex;
@@ -323,6 +396,18 @@
   justify-content: flex-start; /* Items appear from top */
   align-items: center; /* Center horizontally */
   z-index: 10;
+  pointer-events: none !important;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-user-drag: none;
+  -khtml-user-drag: none;
+  -moz-user-drag: none;
+  -o-user-drag: none;
+  user-drag: none;
 }
 
 /* SVG Hexagonal Game Board */
