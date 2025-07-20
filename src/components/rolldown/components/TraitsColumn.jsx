@@ -13,15 +13,21 @@ function TraitsColumn({ boardUnits, tftData }) {
     
     const traitCounts = {}
     
-    // Count traits from all board units
+    // Count traits from unique champions on board (duplicates count as one)
+    const uniqueChampions = new Set()
     boardUnits.forEach(unit => {
       if (unit && unit.id && tftData.champions[unit.id]) {
-        const champion = tftData.champions[unit.id]
-        if (champion.traits) {
-          champion.traits.forEach(traitName => {
-            traitCounts[traitName] = (traitCounts[traitName] || 0) + 1
-          })
-        }
+        uniqueChampions.add(unit.id)
+      }
+    })
+    
+    // Add traits for each unique champion
+    uniqueChampions.forEach(championId => {
+      const champion = tftData.champions[championId]
+      if (champion.traits) {
+        champion.traits.forEach(traitName => {
+          traitCounts[traitName] = (traitCounts[traitName] || 0) + 1
+        })
       }
     })
     
