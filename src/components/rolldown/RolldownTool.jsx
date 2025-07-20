@@ -333,22 +333,26 @@ function RolldownTool() {
           }
         }
       } else if (toLocation === 'board') {
-        // Check if board is already at player level cap
-        const currentBoardSize = newBoard.length
-        const playerLevel = newState.player.level
-        
-        if (currentBoardSize >= playerLevel) {
-          console.log(`🚫 Cannot place unit: Board full (${currentBoardSize}/${playerLevel} units)`)
-          // Return unit to original location
-          if (fromLocation === 'bench') {
+        // Only check level cap for bench-to-board moves, not board-to-board moves
+        if (fromLocation === 'bench') {
+          // Check if board is already at player level cap
+          const currentBoardSize = newBoard.length
+          const playerLevel = newState.player.level
+          
+          if (currentBoardSize >= playerLevel) {
+            console.log(`🚫 Cannot place unit: Board full (${currentBoardSize}/${playerLevel} units)`)
+            // Return unit to bench
             newBench[fromIndex] = unit
-          } else if (fromLocation === 'board') {
-            newBoard.push(unit) // Return to board
+          } else {
+            const updatedUnit = { ...unit, row: toRow, col: toCol }
+            newBoard.push(updatedUnit)
+            console.log(`✅ Unit placed on board (${currentBoardSize + 1}/${playerLevel} units)`)
           }
         } else {
+          // Board-to-board move - no level cap check needed
           const updatedUnit = { ...unit, row: toRow, col: toCol }
           newBoard.push(updatedUnit)
-          console.log(`✅ Unit placed on board (${currentBoardSize + 1}/${playerLevel} units)`)
+          console.log(`🔄 Unit repositioned on board`)
         }
       }
       
