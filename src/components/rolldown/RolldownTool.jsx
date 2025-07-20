@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { Star, Coins } from 'lucide-react'
 import GameBoard from './components/GameBoard'
 import Shop from './components/Shop'
@@ -293,14 +293,6 @@ function RolldownTool() {
 
   // Handle unit move from bench to board or board to bench
   const handleUnitMove = (unit, fromLocation, fromIndex, toLocation, toIndex, toRow, toCol) => {
-    console.log('🚀 MOVE HANDLER CALLED:', { 
-      unit: unit?.name, 
-      fromLocation, 
-      toLocation, 
-      toRow, 
-      toCol 
-    })
-    
     setGameState(prev => {
       const newState = { ...prev }
       
@@ -308,51 +300,57 @@ function RolldownTool() {
       const newBench = [...newState.player.bench]
       const newBoard = [...newState.player.board]
       
-      // Remove unit from source location
-      if (fromLocation === 'bench') {
-        newBench[fromIndex] = null
-      } else if (fromLocation === 'board') {
+      // Handle moves based on source and destination
+      if (fromLocation === 'bench' && toLocation === 'board') {
+        // Bench to board: Check capacity FIRST, then move
+        const currentBoardSize = newBoard.length
+        const playerLevel = newState.player.level
+        
+        if (currentBoardSize >= playerLevel) {
+          // Board is full - leave unit in bench (no changes)
+        } else {
+          // Board has space - remove from bench and add to board
+          newBench[fromIndex] = null
+          const updatedUnit = { ...unit, row: toRow, col: toCol }
+          newBoard.push(updatedUnit)
+        }
+      } else if (fromLocation === 'board' && toLocation === 'bench') {
+        // Board to bench: Remove from board, add to bench
         const boardIndex = newBoard.findIndex(u => 
           u.row === unit.row && u.col === unit.col
         )
         if (boardIndex !== -1) {
           newBoard.splice(boardIndex, 1)
         }
-      }
-      
-      // Add unit to target location
-      if (toLocation === 'bench') {
-        // Insert at specific bench position if toIndex is provided
+        
         if (toIndex !== null && toIndex !== undefined) {
           newBench[toIndex] = unit
         } else {
-          // Find first empty slot
           const emptySlot = newBench.findIndex(slot => slot === null)
           if (emptySlot !== -1) {
             newBench[emptySlot] = unit
           }
         }
-      } else if (toLocation === 'board') {
-        // Only check level cap for bench-to-board moves, not board-to-board moves
-        if (fromLocation === 'bench') {
-          // Check if board is already at player level cap
-          const currentBoardSize = newBoard.length
-          const playerLevel = newState.player.level
-          
-          if (currentBoardSize >= playerLevel) {
-            console.log(`🚫 Cannot place unit: Board full (${currentBoardSize}/${playerLevel} units)`)
-            // Return unit to bench
-            newBench[fromIndex] = unit
-          } else {
-            const updatedUnit = { ...unit, row: toRow, col: toCol }
-            newBoard.push(updatedUnit)
-            console.log(`✅ Unit placed on board (${currentBoardSize + 1}/${playerLevel} units)`)
-          }
+      } else if (fromLocation === 'board' && toLocation === 'board') {
+        // Board to board: Remove from old position, add to new position
+        const boardIndex = newBoard.findIndex(u => 
+          u.row === unit.row && u.col === unit.col
+        )
+        if (boardIndex !== -1) {
+          newBoard.splice(boardIndex, 1)
+        }
+        const updatedUnit = { ...unit, row: toRow, col: toCol }
+        newBoard.push(updatedUnit)
+      } else if (fromLocation === 'bench' && toLocation === 'bench') {
+        // Bench to bench: Remove from old position, add to new position
+        newBench[fromIndex] = null
+        if (toIndex !== null && toIndex !== undefined) {
+          newBench[toIndex] = unit
         } else {
-          // Board-to-board move - no level cap check needed
-          const updatedUnit = { ...unit, row: toRow, col: toCol }
-          newBoard.push(updatedUnit)
-          console.log(`🔄 Unit repositioned on board`)
+          const emptySlot = newBench.findIndex(slot => slot === null)
+          if (emptySlot !== -1) {
+            newBench[emptySlot] = unit
+          }
         }
       }
       
@@ -372,7 +370,6 @@ function RolldownTool() {
       if (!unit) return false
       const key = `${unit.id}_${unit.row}_${unit.col}`
       if (seen.has(key)) {
-        console.warn('🚨 Removing duplicate unit:', unit.name, 'at', unit.row, unit.col)
         return false
       }
       seen.add(key)
