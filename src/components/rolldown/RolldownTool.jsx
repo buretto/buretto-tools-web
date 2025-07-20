@@ -333,8 +333,23 @@ function RolldownTool() {
           }
         }
       } else if (toLocation === 'board') {
-        const updatedUnit = { ...unit, row: toRow, col: toCol }
-        newBoard.push(updatedUnit)
+        // Check if board is already at player level cap
+        const currentBoardSize = newBoard.length
+        const playerLevel = newState.player.level
+        
+        if (currentBoardSize >= playerLevel) {
+          console.log(`🚫 Cannot place unit: Board full (${currentBoardSize}/${playerLevel} units)`)
+          // Return unit to original location
+          if (fromLocation === 'bench') {
+            newBench[fromIndex] = unit
+          } else if (fromLocation === 'board') {
+            newBoard.push(unit) // Return to board
+          }
+        } else {
+          const updatedUnit = { ...unit, row: toRow, col: toCol }
+          newBoard.push(updatedUnit)
+          console.log(`✅ Unit placed on board (${currentBoardSize + 1}/${playerLevel} units)`)
+        }
       }
       
       // Update state and clean up any duplicates
