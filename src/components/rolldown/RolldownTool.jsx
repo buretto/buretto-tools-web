@@ -652,6 +652,15 @@ function RolldownTool() {
           </div>
         </div>
         
+        {/* Board Capacity Indicator - Positioned absolutely over opponent board */}
+        <div 
+          className={`board-capacity-indicator ${
+            gameState.player.board.length >= gameState.player.level ? 'full' : 'not-full'
+          }`}
+        >
+          {gameState.player.board.length}/{gameState.player.level}
+        </div>
+
         {/* Traits Column - Positioned absolutely */}
         <div className="traits-column">
           <TraitsColumn boardUnits={gameState.player.board} tftData={tftData} />
