@@ -6,7 +6,7 @@
 import { useCallback } from 'react'
 import { combineUnits, calculateSellValue } from '../utils/starringSystem'
 
-export const useStarringSystem = () => {
+export const useStarringSystem = (audioManager = null) => {
   
   /**
    * Process units for potential combining
@@ -45,6 +45,13 @@ export const useStarringSystem = () => {
     // Combine units
     const result = combineUnits(allUnits, (removedUnits, newUnit) => {
       console.log('Units combined:', removedUnits.length, 'units became', newUnit.stars, 'star', newUnit.name)
+      
+      // Play star-up sound based on new star level
+      if (audioManager && newUnit.stars === 2) {
+        audioManager.play2Star()
+      } else if (audioManager && newUnit.stars === 3) {
+        audioManager.play3Star()
+      }
     })
     
     // Separate back to bench and board while preserving original positions

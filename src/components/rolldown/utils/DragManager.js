@@ -34,11 +34,20 @@ class DragManager {
     this.hasMetThreshold = false // Track if threshold has been met
     this.currentHoveredElement = null // Track currently hovered drop zone
     this.isOverShopContainer = false // Track if cursor is over shop container wrapper
+    this.audioManager = null // Audio manager for sound effects
+    this.lastHoveredElement = null // Track last hovered element for hover sound timing
 
     // Bind methods to preserve context
     this.handleMouseMove = this.handleMouseMove.bind(this)
     this.handleMouseUp = this.handleMouseUp.bind(this)
     this.preventScroll = this.preventScroll.bind(this)
+  }
+
+  /**
+   * Set the audio manager for sound effects
+   */
+  setAudioManager(audioManager) {
+    this.audioManager = audioManager
   }
 
   /**
@@ -195,6 +204,10 @@ class DragManager {
     if (!this.hasMetThreshold && distanceFromStart >= currentThreshold) {
       this.hasMetThreshold = true
       
+      // Play pickup sound when drag threshold is met
+      if (this.audioManager) {
+        this.audioManager.playUnitPickup()
+      }
       
       // Apply positioning styles when threshold is met
       if (this.dragElement) {
@@ -386,6 +399,10 @@ class DragManager {
     for (const dropZone of this.dropZones) {
       if (dropZone.checkDrop && dropZone.checkDrop(enhancedEvent)) {
         dropHandled = true
+        // Play drop sound when drop is successful
+        if (this.audioManager && this.hasMetThreshold) {
+          this.audioManager.playUnitDrop()
+        }
         break
       }
     }
@@ -592,6 +609,7 @@ class DragManager {
     this.lastMousePos = { x: 0, y: 0 }
     this.hasMetThreshold = false
     this.currentHoveredElement = null
+    this.lastHoveredElement = null
     this.isOverShopContainer = false
     this.originalScrollTop = 0
     this.originalScrollLeft = 0
@@ -792,8 +810,16 @@ class DragManager {
     // Apply hover state to the target element
     if (targetElement && targetElement.classList.contains('drop-zone')) {
       targetElement.classList.add('hovered')
+      
+      // Play hover sound when entering a new drop zone (but not the same one)
+      if (this.audioManager && this.lastHoveredElement !== targetElement) {
+        this.audioManager.playDragHover()
+      }
+      
+      this.lastHoveredElement = targetElement
       this.currentHoveredElement = targetElement
     } else {
+      this.lastHoveredElement = null
       this.currentHoveredElement = null
     }
   }

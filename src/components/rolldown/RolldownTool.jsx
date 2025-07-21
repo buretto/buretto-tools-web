@@ -19,6 +19,7 @@ import { useStarringSystem } from './hooks/useStarringSystem'
 import { canCreateStarUpCombination } from './utils/starUpChecker'
 import { startImagePreloading, setPreloadCallbacks, getPreloadProgress, PRELOAD_PHASES } from './utils/imagePreloader'
 import { getShopOdds, getSetFromVersion } from './data/shopOdds'
+import audioManager from './utils/audioManager'
 import './styles/rolldown.css'
 
 const getLevelUpCost = (level) => {
@@ -77,7 +78,20 @@ function RolldownTool() {
   // Initialize pool and shop management
   const unitPoolHook = useUnitPool(tftData, currentVersion)
   const shopHook = useShop(tftData, currentVersion, unitPoolHook)
-  const starringSystem = useStarringSystem()
+  const starringSystem = useStarringSystem(audioManager)
+  
+  // Initialize audio manager
+  useEffect(() => {
+    audioManager.initialize()
+  }, [])
+  
+  // Set up drag manager audio after audio manager is ready
+  useEffect(() => {
+    import('./utils/DragManager').then(module => {
+      const dragManager = module.default
+      dragManager.setAudioManager(audioManager)
+    })
+  }, [])
   
   // Set up preloading callbacks
   useEffect(() => {
@@ -148,6 +162,9 @@ function RolldownTool() {
     if (gameState.player.gold >= rerollCost) {
       const newShop = shopHook.rerollShop(gameState.player.level)
       
+      // Play reroll sound
+      audioManager.playBuyRoll()
+      
       setGameState(prev => ({
         ...prev,
         player: {
@@ -162,6 +179,48 @@ function RolldownTool() {
             type: 'reroll',
             timestamp: Date.now(),
             cost: rerollCost
+          }]
+        }
+      }))
+    }
+  }
+  
+  // Handle buy XP
+  const handleBuyXP = () => {
+    const xpCost = 4
+    
+    if (gameState.player.gold >= xpCost && gameState.player.level < 10) {
+      const currentExp = gameState.player.exp
+      const levelUpCost = getLevelUpCost(gameState.player.level)
+      const newExp = currentExp + 4
+      
+      let newLevel = gameState.player.level
+      let finalExp = newExp
+      
+      // Check if we level up
+      if (newExp >= levelUpCost) {
+        newLevel = gameState.player.level + 1
+        finalExp = newExp - levelUpCost
+      }
+      
+      // Play XP sound
+      audioManager.playBuyXP()
+      
+      setGameState(prev => ({
+        ...prev,
+        player: {
+          ...prev.player,
+          gold: prev.player.gold - xpCost,
+          exp: finalExp,
+          level: newLevel
+        },
+        analytics: {
+          ...prev.analytics,
+          goldSpent: prev.analytics.goldSpent + xpCost,
+          actions: [...prev.analytics.actions, {
+            type: 'buy-xp',
+            timestamp: Date.now(),
+            cost: xpCost
           }]
         }
       }))
@@ -199,6 +258,8 @@ function RolldownTool() {
       const purchasedUnit = shopHook.purchaseUnit(shopSlotIndex, 'bench')
       
       if (purchasedUnit) {
+        // Play purchase sound
+        audioManager.playBuyUnit()
         setGameState(prev => {
           // Create updated shop with purchased slot cleared
           const updatedShop = [...prev.player.shop]
@@ -249,6 +310,9 @@ function RolldownTool() {
     const sellValue = starringSystem.getSellValue(unit)
     
     shopHook.sellUnit(unit)
+    
+    // Play sell sound
+    audioManager.playSellUnit()
     
     // Use a closure variable to prevent React Strict Mode double execution
     let sellProcessed = false
@@ -617,7 +681,15 @@ function RolldownTool() {
               {/* Player buttons - 25% of shop area width */}
               <div className="player-buttons-section unified-slot">
                 <div className="button-section flex flex-col responsive-button-gap" style={{ height: '100%', position: 'relative', zIndex: 1 }}>
-                  <button className="w-full bg-blue-600 hover:bg-blue-700 rounded transition-colors responsive-button-text responsive-button-padding flex-1">
+                  <button 
+                    className={`w-full rounded transition-colors responsive-button-text responsive-button-padding flex-1 ${
+                      gameState.player.gold >= 4 && gameState.player.level < 10
+                        ? 'bg-blue-600 hover:bg-blue-700'
+                        : 'bg-gray-600 cursor-not-allowed'
+                    }`}
+                    onClick={handleBuyXP}
+                    disabled={gameState.player.gold < 4 || gameState.player.level >= 10}
+                  >
                     Buy XP (4g)
                   </button>
                   <button 
