@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react'
-import { Star, Coins } from 'lucide-react'
+import { Star, Coins, BarChart3, Settings } from 'lucide-react'
 import GameBoard from './components/GameBoard'
 import Shop from './components/Shop'
 import Bench from './components/Bench'
@@ -7,6 +7,8 @@ import OpponentBench from './components/OpponentBench'
 import PlayerInfo from './components/PlayerInfo'
 import Timer from './components/Timer'
 import Analytics from './components/Analytics'
+import AnalyticsPanel from './components/AnalyticsPanel'
+import SettingsPanel from './components/SettingsPanel'
 import TraitsColumn from './components/TraitsColumn'
 import TFTVersionSelector from './components/TFTVersionSelector'
 import ImageMappingModal from './components/ImageMappingModal'
@@ -16,6 +18,8 @@ import { useTFTImages } from './hooks/useTFTImages'
 import { useUnitPool } from './hooks/useUnitPool'
 import { useShop } from './hooks/useShop'
 import { useStarringSystem } from './hooks/useStarringSystem'
+import { useKeyboardHotkeys } from './hooks/useKeyboardHotkeys'
+import { useHoveredUnit } from './hooks/useHoveredUnit'
 import { canCreateStarUpCombination } from './utils/starUpChecker'
 import { startImagePreloading, setPreloadCallbacks, getPreloadProgress, PRELOAD_PHASES } from './utils/imagePreloader'
 import { getShopOdds, getSetFromVersion } from './data/shopOdds'
@@ -61,6 +65,9 @@ function RolldownTool() {
   const [preloadPhase, setPreloadPhase] = useState(null)
   const [mappingModalOpen, setMappingModalOpen] = useState(false)
   const [mappingModalVersion, setMappingModalVersion] = useState(null)
+  const [analyticsOpen, setAnalyticsOpen] = useState(false)
+  const [settingsOpen, setSettingsOpen] = useState(false)
+  const [hotkeys, setHotkeys] = useState({ d: 'buy-roll', f: 'buy-xp', e: 'sell-unit', w: 'place-unit' })
   
   const { 
     data: tftData, 
@@ -79,6 +86,9 @@ function RolldownTool() {
   const unitPoolHook = useUnitPool(tftData, currentVersion)
   const shopHook = useShop(tftData, currentVersion, unitPoolHook)
   const starringSystem = useStarringSystem(audioManager)
+  
+  // Initialize hovered unit tracking
+  const { hoveredUnit, onUnitHover, clearHoveredUnit } = useHoveredUnit()
   
   // Initialize audio manager
   useEffect(() => {
@@ -509,6 +519,62 @@ function RolldownTool() {
     setMappingModalOpen(false)
     setMappingModalVersion(null)
   }
+
+  // Handle unit placement/removal with w key
+  const handlePlaceUnit = useCallback((unit) => {
+    if (!unit || !unit.location) return
+    
+    if (unit.location === 'bench') {
+      // Move from bench to board - find first available spot
+      const currentBoardSize = gameState.player.board.length
+      if (currentBoardSize >= gameState.player.level) {
+        return // Board is full
+      }
+      
+      // Find first available position starting from bottom-left
+      let targetRow = 3 // Start from bottom row
+      let targetCol = 0 // Start from left
+      let found = false
+      
+      for (let row = 3; row >= 0 && !found; row--) {
+        for (let col = 0; col < 7 && !found; col++) {
+          const occupied = gameState.player.board.find(u => u.row === row && u.col === col)
+          if (!occupied) {
+            targetRow = row
+            targetCol = col
+            found = true
+          }
+        }
+      }
+      
+      if (found) {
+        handleUnitMove(unit, 'bench', unit.index, 'board', null, targetRow, targetCol)
+      }
+    } else if (unit.location === 'board') {
+      // Move from board to bench
+      handleUnitMove(unit, 'board', null, 'bench', null, null, null)
+    }
+  }, [gameState.player.board, gameState.player.level])
+
+  // Handle instant sell with e key
+  const handleInstantSell = useCallback((unit) => {
+    if (!unit || !unit.location) return
+    
+    const location = unit.location
+    const index = unit.location === 'bench' ? unit.index : null
+    handleSell(unit, location, index)
+  }, [])
+
+  // Initialize keyboard hotkeys
+  useKeyboardHotkeys({
+    onBuyRoll: handleReroll,
+    onBuyXP: handleBuyXP,
+    onSellUnit: handleInstantSell,
+    onPlaceUnit: handlePlaceUnit,
+    hotkeyConfig: hotkeys,
+    hoveredUnit,
+    enabled: !analyticsOpen && !settingsOpen && !mappingModalOpen
+  })
   
   return (
       <div className="game-root w-full h-full">
@@ -563,7 +629,23 @@ function RolldownTool() {
               totalImages={preloadProgress.overall.total}
             />
             
-            <Analytics analytics={gameState.analytics} />
+            {/* Button Container for Analytics and Settings */}
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setAnalyticsOpen(true)}
+                className="flex items-center justify-center w-8 h-8 bg-gray-700 hover:bg-gray-600 rounded transition-colors"
+                title="Analytics"
+              >
+                <BarChart3 size={16} className="text-green-400" />
+              </button>
+              <button
+                onClick={() => setSettingsOpen(true)}
+                className="flex items-center justify-center w-8 h-8 bg-gray-700 hover:bg-gray-600 rounded transition-colors"
+                title="Settings"
+              >
+                <Settings size={16} className="text-gray-400" />
+              </button>
+            </div>
           </div>
         </div>
         
@@ -585,6 +667,7 @@ function RolldownTool() {
             onUnitMove={handleUnitMove}
             onUnitSwap={handleUnitSwap}
             onSell={handleSell}
+            onUnitHover={onUnitHover}
           />
         </div>
         
@@ -597,6 +680,7 @@ function RolldownTool() {
             onUnitMove={handleUnitMove}
             onUnitSwap={handleUnitSwap}
             onSell={handleSell}
+            onUnitHover={onUnitHover}
           />
         </div>
         
@@ -754,6 +838,22 @@ function RolldownTool() {
           isOpen={mappingModalOpen}
           onClose={handleCloseMappings}
           version={mappingModalVersion}
+        />
+
+        {/* Analytics Panel */}
+        <AnalyticsPanel
+          isOpen={analyticsOpen}
+          onClose={() => setAnalyticsOpen(false)}
+          analytics={gameState.analytics}
+        />
+
+        {/* Settings Panel */}
+        <SettingsPanel
+          isOpen={settingsOpen}
+          onClose={() => setSettingsOpen(false)}
+          hotkeys={hotkeys}
+          onUpdateHotkeys={setHotkeys}
+          defaultHotkeys={{ d: 'buy-roll', f: 'buy-xp', e: 'sell-unit', w: 'place-unit' }}
         />
         </div>
       </div>

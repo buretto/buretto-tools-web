@@ -6,7 +6,7 @@ import { getStarSizeMultiplier, getStarCssClass } from '../utils/starringSystem'
 
 const BENCH_SLOTS = 9
 
-function Bench({ units = [], onUnitMove, onUnitSwap, onSell, tftData, tftImages }) {
+function Bench({ units = [], onUnitMove, onUnitSwap, onSell, tftData, tftImages, onUnitHover }) {
   // Create drop zones for each bench slot using new system
   const createBenchDropHandler = (benchIndex) => {
     return (e, dragData) => {
@@ -79,6 +79,7 @@ function Bench({ units = [], onUnitMove, onUnitSwap, onSell, tftData, tftImages 
               tftData={tftData} 
               tftImages={tftImages}
               onSell={onSell}
+              onUnitHover={onUnitHover}
             />
           )}
         </BenchSlot>
@@ -100,7 +101,7 @@ function Bench({ units = [], onUnitMove, onUnitSwap, onSell, tftData, tftImages 
 /**
  * Component for displaying a unit in the bench
  */
-function BenchUnitDisplay({ unit, unitIndex, tftData, tftImages, onSell }) {
+function BenchUnitDisplay({ unit, unitIndex, tftData, tftImages, onSell, onUnitHover }) {
   const imageRef = useRef(null)
   const dragRef = useRef(null)
   
@@ -172,6 +173,8 @@ function BenchUnitDisplay({ unit, unitIndex, tftData, tftImages, onSell }) {
       className="bench-unit-image"
       ref={dragRef}
       onMouseDown={handleMouseDown}
+      onMouseEnter={() => onUnitHover?.(unit, 'bench', unitIndex)}
+      onMouseLeave={() => onUnitHover?.(null)}
       style={{ 
         cursor: 'grab',
         // Invisible padding outside the visual elements (for drag offset fix)

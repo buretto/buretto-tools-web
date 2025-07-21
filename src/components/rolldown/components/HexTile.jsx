@@ -17,6 +17,7 @@ const HexTile = ({
   onUnitMove,
   onUnitSwap,
   onSell,
+  onUnitHover,
   onClick = () => {} 
 }) => {
   const imageRef = useRef(null)
@@ -148,34 +149,42 @@ const HexTile = ({
           <div 
             className="hex-unit-container"
             onMouseEnter={(e) => {
-              if (!isOpponent && polygonRef.current) {
-                // Check if we're in a drag operation
-                const isDragging = document.body.classList.contains('dragging-active')
+              if (!isOpponent) {
+                onUnitHover?.(unit, 'board', null, row, col)
                 
-                if (isDragging) {
-                  // Apply drag hover effect manually
-                  if (polygonRef.current.classList.contains('drop-zone')) {
-                    polygonRef.current.classList.add('hovered')
+                if (polygonRef.current) {
+                  // Check if we're in a drag operation
+                  const isDragging = document.body.classList.contains('dragging-active')
+                  
+                  if (isDragging) {
+                    // Apply drag hover effect manually
+                    if (polygonRef.current.classList.contains('drop-zone')) {
+                      polygonRef.current.classList.add('hovered')
+                    }
+                  } else {
+                    // Apply regular hover effect manually
+                    polygonRef.current.style.stroke = '#60A5FA'
+                    polygonRef.current.style.strokeWidth = '3'
                   }
-                } else {
-                  // Apply regular hover effect manually
-                  polygonRef.current.style.stroke = '#60A5FA'
-                  polygonRef.current.style.strokeWidth = '3'
                 }
               }
             }}
             onMouseLeave={(e) => {
-              if (!isOpponent && polygonRef.current) {
-                // Check if we're in a drag operation
-                const isDragging = document.body.classList.contains('dragging-active')
+              if (!isOpponent) {
+                onUnitHover?.(null)
                 
-                if (isDragging) {
-                  // Remove drag hover effect
-                  polygonRef.current.classList.remove('hovered')
-                } else {
-                  // Remove regular hover effect
-                  polygonRef.current.style.stroke = strokeColor
-                  polygonRef.current.style.strokeWidth = '2'
+                if (polygonRef.current) {
+                  // Check if we're in a drag operation
+                  const isDragging = document.body.classList.contains('dragging-active')
+                  
+                  if (isDragging) {
+                    // Remove drag hover effect
+                    polygonRef.current.classList.remove('hovered')
+                  } else {
+                    // Remove regular hover effect
+                    polygonRef.current.style.stroke = strokeColor
+                    polygonRef.current.style.strokeWidth = '2'
+                  }
                 }
               }
             }}

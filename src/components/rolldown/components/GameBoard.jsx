@@ -4,7 +4,7 @@ import HexTile from './HexTile'
 const BOARD_ROWS = 4
 const BOARD_COLS = 7
 
-function GameBoard({ units, opponentUnits = [], tftData, tftImages, onUnitMove, onUnitSwap, onSell }) {
+function GameBoard({ units, opponentUnits = [], tftData, tftImages, onUnitMove, onUnitSwap, onSell, onUnitHover }) {
   // Base hex size calculation without multiplier for consistent viewBox
   const availableHeight = window.innerHeight * 0.612 // 61.2% for game-board-area
   const availableWidth = window.innerWidth * 0.5 // 50% for game-board width
@@ -56,6 +56,7 @@ function GameBoard({ units, opponentUnits = [], tftData, tftImages, onUnitMove, 
             onUnitMove={!isOpponent ? onUnitMove : undefined}
             onUnitSwap={!isOpponent ? onUnitSwap : undefined}
             onSell={!isOpponent ? onSell : undefined}
+            onUnitHover={!isOpponent ? onUnitHover : undefined}
             onClick={() => !isOpponent && onUnitMove && onUnitMove(row, col)}
           />
         )
