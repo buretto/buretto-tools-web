@@ -5,6 +5,53 @@ function SettingsPanel({ isOpen, onClose, hotkeys, onUpdateHotkeys, defaultHotke
   const [editingHotkeys, setEditingHotkeys] = useState(hotkeys)
   const [recordingKey, setRecordingKey] = useState(null)
 
+  // Add event listener when recording - must be before early return
+  React.useEffect(() => {
+    const handleGlobalKeyDown = (e) => {
+      if (recordingKey) {
+        e.preventDefault()
+        e.stopPropagation()
+        
+        const key = e.key.toLowerCase()
+        
+        // Skip modifier keys and special keys
+        if (['shift', 'ctrl', 'alt', 'meta', 'escape', 'tab', 'enter'].includes(key)) {
+          return
+        }
+        
+        // Create new hotkey mapping
+        const newHotkeys = { ...editingHotkeys }
+        
+        // Remove any existing mapping for this key
+        Object.keys(newHotkeys).forEach(k => {
+          if (k === key) {
+            delete newHotkeys[k]
+          }
+        })
+        
+        // Remove old mapping for this action
+        Object.keys(newHotkeys).forEach(k => {
+          if (newHotkeys[k] === recordingKey) {
+            delete newHotkeys[k]
+          }
+        })
+        
+        // Add new mapping
+        newHotkeys[key] = recordingKey
+        
+        setEditingHotkeys(newHotkeys)
+        setRecordingKey(null)
+      }
+    }
+    
+    if (recordingKey) {
+      document.addEventListener('keydown', handleGlobalKeyDown, true)
+      return () => {
+        document.removeEventListener('keydown', handleGlobalKeyDown, true)
+      }
+    }
+  }, [recordingKey, editingHotkeys])
+
   if (!isOpen) return null
 
   const actionLabels = {
@@ -18,24 +65,6 @@ function SettingsPanel({ isOpen, onClose, hotkeys, onUpdateHotkeys, defaultHotke
     setRecordingKey(action)
   }
 
-  const handleKeyDown = (e) => {
-    if (recordingKey) {
-      e.preventDefault()
-      const key = e.key.toLowerCase()
-      
-      // Don't allow duplicate keys
-      const existingAction = Object.keys(editingHotkeys).find(k => editingHotkeys[k] === action && k !== key)
-      if (existingAction) {
-        return // Key already in use
-      }
-
-      setEditingHotkeys(prev => ({
-        ...prev,
-        [key]: recordingKey
-      }))
-      setRecordingKey(null)
-    }
-  }
 
   const handleSave = () => {
     onUpdateHotkeys(editingHotkeys)
@@ -50,12 +79,13 @@ function SettingsPanel({ isOpen, onClose, hotkeys, onUpdateHotkeys, defaultHotke
     return Object.keys(editingHotkeys).find(key => editingHotkeys[key] === action) || 'None'
   }
 
+
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div 
         className="bg-gray-800 border border-gray-600 rounded-lg p-6 max-w-md w-full mx-4"
-        onKeyDown={handleKeyDown}
-        tabIndex={-1}
+        tabIndex={0}
+        autoFocus
       >
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-xl font-bold text-white">Keyboard Settings</h2>

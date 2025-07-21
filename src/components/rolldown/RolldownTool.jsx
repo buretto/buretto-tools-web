@@ -68,6 +68,8 @@ function RolldownTool() {
   const [analyticsOpen, setAnalyticsOpen] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [hotkeys, setHotkeys] = useState({ d: 'buy-roll', f: 'buy-xp', e: 'sell-unit', w: 'place-unit' })
+  const [lastRerollTime, setLastRerollTime] = useState(0)
+  const [rerollCooldown, setRerollCooldown] = useState(false)
   
   const { 
     data: tftData, 
@@ -165,11 +167,21 @@ function RolldownTool() {
     }
   }, [unitPoolHook.unitPool.size, gameState.player.shop.length, tftData, currentVersion])
   
-  // Handle shop reroll
+  // Handle shop reroll with rate limiting
   const handleReroll = () => {
     const rerollCost = shopHook.getRerollCost()
+    const now = Date.now()
+    const timeSinceLastReroll = now - lastRerollTime
+    const minRerollInterval = 250 // 250ms = 4 rerolls per second max
     
-    if (gameState.player.gold >= rerollCost) {
+    if (gameState.player.gold >= rerollCost && timeSinceLastReroll >= minRerollInterval) {
+      setLastRerollTime(now)
+      setRerollCooldown(true)
+      
+      // Reset cooldown after the interval
+      setTimeout(() => {
+        setRerollCooldown(false)
+      }, minRerollInterval)
       const newShop = shopHook.rerollShop(gameState.player.level)
       
       // Play reroll sound
@@ -778,12 +790,12 @@ function RolldownTool() {
                   </button>
                   <button 
                     className={`w-full rounded transition-colors responsive-button-text responsive-button-padding flex-1 ${
-                      shopHook.canAffordReroll(gameState.player.gold) 
+                      shopHook.canAffordReroll(gameState.player.gold) && !rerollCooldown
                         ? 'bg-green-600 hover:bg-green-700' 
                         : 'bg-gray-600 cursor-not-allowed'
                     }`}
                     onClick={handleReroll}
-                    disabled={!shopHook.canAffordReroll(gameState.player.gold)}
+                    disabled={!shopHook.canAffordReroll(gameState.player.gold) || rerollCooldown}
                   >
                     Refresh ({shopHook.getRerollCost()}g)
                   </button>
