@@ -204,8 +204,8 @@ class DragManager {
     if (!this.hasMetThreshold && distanceFromStart >= currentThreshold) {
       this.hasMetThreshold = true
       
-      // Play pickup sound when drag threshold is met
-      if (this.audioManager) {
+      // Play pickup sound when drag threshold is met (but not for shop units)
+      if (this.audioManager && this.dragData?.source !== 'shop') {
         this.audioManager.playUnitPickup()
       }
       
