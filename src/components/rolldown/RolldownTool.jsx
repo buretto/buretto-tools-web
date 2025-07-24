@@ -826,6 +826,9 @@ function RolldownTool() {
                     }`}
                     onClick={handleBuyXP}
                     disabled={gameState.player.gold < 4 || gameState.player.level >= 10}
+                    style={{
+                      opacity: (gameState.player.gold >= 4 && gameState.player.level < 10) ? 1 : 0.6
+                    }}
                   >
                     Buy XP (4g)
                   </button>
@@ -837,6 +840,9 @@ function RolldownTool() {
                     }`}
                     onClick={handleReroll}
                     disabled={!shopHook.canAffordReroll(gameState.player.gold) || rerollCooldown}
+                    style={{
+                      opacity: (shopHook.canAffordReroll(gameState.player.gold) && !rerollCooldown) ? 1 : 0.6
+                    }}
                   >
                     Refresh ({shopHook.getRerollCost()}g)
                   </button>

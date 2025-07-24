@@ -56,14 +56,18 @@ function Shop({ units = [], playerGold = 0, tftData, tftImages, onPurchase, onSe
             // Prevent event propagation
             e.stopPropagation()
             
-            // Only allow click purchase if no drag occurred
+            // Only allow click purchase if no drag occurred and unit is affordable
             console.log('🛒 Shop slot click:', {
               unit: unit?.name,
               isDragActive: isDragActiveRef.current
             })
             if (unit && onPurchase && !isDragActiveRef.current) {
-              console.log('🛒 Purchasing via click')
-              onPurchase(unit, i)
+              const unitCost = unit.cost * (unit.stars || 1) * (unit.stars || 1)
+              const canAfford = playerGold >= unitCost
+              if (canAfford) {
+                console.log('🛒 Purchasing via click')
+                onPurchase(unit, i)
+              }
             }
             
             // Reset drag tracking after any click (longer delay to ensure drag completes first)
@@ -86,6 +90,7 @@ function Shop({ units = [], playerGold = 0, tftData, tftImages, onPurchase, onSe
               isDragActiveRef={isDragActiveRef}
               benchUnits={benchUnits}
               boardUnits={boardUnits}
+              playerGold={playerGold}
             />
           )}
         </div>
@@ -161,12 +166,16 @@ function Shop({ units = [], playerGold = 0, tftData, tftImages, onPurchase, onSe
 /**
  * Component for displaying a unit in the shop
  */
-function ShopUnitDisplay({ unit, tftData, tftImages, slotIndex, onPurchase, isDragActiveRef, benchUnits = [], boardUnits = [] }) {
+function ShopUnitDisplay({ unit, tftData, tftImages, slotIndex, onPurchase, isDragActiveRef, benchUnits = [], boardUnits = [], playerGold = 0 }) {
   const imageRef = useRef(null)
   const championData = tftData?.champions?.[unit.id]
   
   // Get highlighting type for future animations
   const highlightType = getShopUnitHighlightType(unit, benchUnits, boardUnits)
+  
+  // Calculate unit cost and check affordability
+  const unitCost = unit.cost * (unit.stars || 1) * (unit.stars || 1)
+  const canAfford = playerGold >= unitCost
   
   // New drag system
   const { createDragHandler } = useDragManager()
@@ -261,15 +270,26 @@ function ShopUnitDisplay({ unit, tftData, tftImages, slotIndex, onPurchase, isDr
       willPurchase: isOutsideShopArea
     })
     
-    // Purchase if cursor is outside both shop children bounds
+    // Purchase if cursor is outside both shop children bounds and unit is affordable
     if (isOutsideShopArea && onPurchase) {
-      console.log('🛒 Purchasing via drag outside shop area')
-      onPurchase(unit, slotIndex)
+      const unitCost = unit.cost * (unit.stars || 1) * (unit.stars || 1)
+      const canAfford = playerGold >= unitCost
+      if (canAfford) {
+        console.log('🛒 Purchasing via drag outside shop area')
+        onPurchase(unit, slotIndex)
+      }
     }
-  }, [unit, slotIndex, onPurchase, isDragActiveRef])
+  }, [unit, slotIndex, onPurchase, isDragActiveRef, playerGold])
 
   // Stable mouse down handler using useCallback
   const handleMouseDown = useCallback((e) => {
+    // Prevent dragging if unit is unaffordable
+    if (!canAfford) {
+      e.preventDefault()
+      e.stopPropagation()
+      return
+    }
+    
     // Reset drag tracking at start
     if (isDragActiveRef) {
       isDragActiveRef.current = false
@@ -283,17 +303,20 @@ function ShopUnitDisplay({ unit, tftData, tftImages, slotIndex, onPurchase, isDr
       handleDragEnd // end callback
     )
     dragHandler(e)
-  }, [unit, slotIndex, createDragHandler, handleDragEnd, isDragActiveRef])
+  }, [unit, slotIndex, createDragHandler, handleDragEnd, isDragActiveRef, canAfford])
 
   return (
     <div 
-      className={`unit-display ${highlightType !== 'none' ? `highlight-${highlightType}` : ''}`}
+      className={`unit-display ${highlightType !== 'none' ? `highlight-${highlightType}` : ''} ${!canAfford ? 'unaffordable' : ''}`}
       onMouseDown={(e) => {
         // Stop event from bubbling to parent shop-slot
         e.stopPropagation()
         handleMouseDown(e)
       }}
-      style={{ cursor: 'pointer' }}
+      style={{ 
+        cursor: canAfford ? 'pointer' : 'not-allowed',
+        opacity: canAfford ? 1 : 0.6
+      }}
       data-highlight-type={highlightType}
     >
       {/* Star Icons - outside the image container */}

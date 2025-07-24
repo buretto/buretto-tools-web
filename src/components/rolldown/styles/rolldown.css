@@ -17,6 +17,22 @@
   pointer-events: auto;
 }
 
+/* Unaffordable items styling */
+.unit-display.unaffordable {
+  opacity: 0.6 !important;
+  cursor: not-allowed !important;
+}
+
+/* Hide empty slot inset for unaffordable units (same as drag behavior) */
+.shop-slot:has(.unit-display.unaffordable) .empty-slot {
+  opacity: 0 !important;
+}
+
+/* Ensure unaffordable units don't respond to drag events */
+.unit-display.unaffordable * {
+  pointer-events: none;
+}
+
 /* Prevent dragging of images */
 .trait-image {
   -webkit-user-drag: none;
