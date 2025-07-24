@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { loadTFTImage, loadTFTImages, clearImageCache, getCacheStats } from '../utils/imageLoader'
 
 /**
@@ -204,7 +204,7 @@ export const useTFTImages = (tftData) => {
     }
   }, [tftData?.version])
 
-  return {
+  return useMemo(() => ({
     loadImage,
     loadImageBatch,
     getImage,
@@ -218,5 +218,19 @@ export const useTFTImages = (tftData) => {
     loadedImagesCount: loadedImages.size,
     loadingImagesCount: loadingImages.size,
     errorImagesCount: imageErrors.size
-  }
+  }), [
+    loadImage,
+    loadImageBatch,
+    getImage,
+    isImageLoading,
+    hasImageError,
+    preloadAllChampions,
+    preloadAllTraits,
+    clearAllCaches,
+    clearVersionImages,
+    cacheStats,
+    loadedImages.size,
+    loadingImages.size,
+    imageErrors.size
+  ])
 }

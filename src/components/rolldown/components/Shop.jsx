@@ -172,37 +172,44 @@ function ShopUnitDisplay({ unit, tftData, tftImages, slotIndex, onPurchase, isDr
   const { createDragHandler } = useDragManager()
   
   useEffect(() => {
-    if (tftImages && unit.id && imageRef.current) {
-      // Clear previous content
-      imageRef.current.innerHTML = ''
-      
-      // Get the loaded image from tftImages (which applies mappings)
-      const loadedImage = tftImages.getImage(unit.id, 'champion')
-      const stars = unit.stars || 1
-      const sizeMultiplier = getStarSizeMultiplier(stars)
-      
-      if (loadedImage) {
-        // Use the properly loaded and mapped image
-        const imgElement = document.createElement('img')
-        imgElement.src = loadedImage.src
-        imgElement.alt = championData?.name || unit.name || 'Champion'
-        imgElement.style.width = '100%'
-        imgElement.style.height = '100%'
-        imgElement.style.objectFit = 'cover'
-        
-        imageRef.current.appendChild(imgElement)
-      } else if (tftImages.isImageLoading(unit.id, 'champion')) {
-        // Show loading indicator
-        imageRef.current.innerHTML = `<div class="loading-placeholder">...</div>`
-      } else if (tftImages.hasImageError(unit.id, 'champion')) {
-        // Show error indicator
-        imageRef.current.innerHTML = `<div class="error-placeholder">!</div>`
-      } else {
-        // Fallback to text placeholder
-        imageRef.current.innerHTML = `<div class="text-placeholder">${championData?.name?.charAt(0) || unit.name?.charAt(0) || 'U'}</div>`
-      }
+    if (!tftImages || !unit.id || !imageRef.current) return
+    
+    const loadedImage = tftImages.getImage(unit.id, 'champion')
+    
+    // Check what's currently in the DOM
+    const existingImg = imageRef.current.querySelector('img')
+    const currentSrc = existingImg?.src
+    const expectedSrc = loadedImage?.src
+    
+    // Only update if the expected image is different from what's currently displayed
+    if (currentSrc === expectedSrc && expectedSrc) {
+      return
     }
-  }, [unit.id, tftImages, championData, unit.stars])
+    
+    // Clear and set new content
+    imageRef.current.innerHTML = ''
+    
+    if (loadedImage) {
+      // Use the properly loaded and mapped image
+      const imgElement = document.createElement('img')
+      imgElement.src = loadedImage.src
+      imgElement.alt = championData?.name || unit.name || 'Champion'
+      imgElement.style.width = '100%'
+      imgElement.style.height = '100%'
+      imgElement.style.objectFit = 'cover'
+      
+      imageRef.current.appendChild(imgElement)
+    } else if (tftImages.isImageLoading(unit.id, 'champion')) {
+      // Show loading indicator
+      imageRef.current.innerHTML = `<div class="loading-placeholder">...</div>`
+    } else if (tftImages.hasImageError(unit.id, 'champion')) {
+      // Show error indicator
+      imageRef.current.innerHTML = `<div class="error-placeholder">!</div>`
+    } else {
+      // Fallback to text placeholder
+      imageRef.current.innerHTML = `<div class="text-placeholder">${championData?.name?.charAt(0) || unit.name?.charAt(0) || 'U'}</div>`
+    }
+  }, [unit.id, unit.stars, tftImages?.loadedImagesCount])
 
   // Stable drag end handler using useCallback
   const handleDragEnd = useCallback((e, dragData) => {

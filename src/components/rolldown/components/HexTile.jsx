@@ -74,29 +74,37 @@ const HexTile = ({
 
   // Load unit image
   useEffect(() => {
-    if (unit && tftImages && unit.id && imageRef.current) {
-      imageRef.current.innerHTML = ''
-      
-      const loadedImage = tftImages.getImage(unit.id, 'champion')
-      const stars = unit.stars || 1
-      const sizeMultiplier = getStarSizeMultiplier(stars)
-      
-      
-      if (loadedImage) {
-        const imgElement = document.createElement('img')
-        imgElement.src = loadedImage.src
-        imgElement.alt = unit.name || 'Champion'
-        imgElement.style.width = '100%'
-        imgElement.style.height = '100%'
-        imgElement.style.objectFit = 'cover'
-        imgElement.style.objectPosition = '75% center' // Show more of the right side where units are
-        imgElement.style.borderRadius = '50%'
-        imgElement.style.pointerEvents = 'none'
-        
-        imageRef.current.appendChild(imgElement)
-      }
+    if (!unit || !tftImages || !unit.id || !imageRef.current) return
+    
+    const loadedImage = tftImages.getImage(unit.id, 'champion')
+    
+    // Check what's currently in the DOM
+    const existingImg = imageRef.current.querySelector('img')
+    const currentSrc = existingImg?.src
+    const expectedSrc = loadedImage?.src
+    
+    // Only update if the expected image is different from what's currently displayed
+    if (currentSrc === expectedSrc && expectedSrc) {
+      return
     }
-  }, [unit, tftImages, size, unit?.stars])
+    
+    // Clear and set new content
+    imageRef.current.innerHTML = ''
+    
+    if (loadedImage) {
+      const imgElement = document.createElement('img')
+      imgElement.src = loadedImage.src
+      imgElement.alt = unit.name || 'Champion'
+      imgElement.style.width = '100%'
+      imgElement.style.height = '100%'
+      imgElement.style.objectFit = 'cover'
+      imgElement.style.objectPosition = '75% center' // Show more of the right side where units are
+      imgElement.style.borderRadius = '50%'
+      imgElement.style.pointerEvents = 'none'
+      
+      imageRef.current.appendChild(imgElement)
+    }
+  }, [unit?.id, unit?.stars, tftImages?.loadedImagesCount])
 
 
   // New simplified drag handler

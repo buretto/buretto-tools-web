@@ -6,6 +6,18 @@ import { getStarSizeMultiplier, getStarCssClass } from '../utils/starringSystem'
 
 const BENCH_SLOTS = 9
 
+// Move BenchSlot outside render to prevent recreation
+function BenchSlot({ children, dropZoneRef }) {
+  return (
+    <div
+      ref={dropZoneRef}
+      className="bench-slot"
+    >
+      {children}
+    </div>
+  )
+}
+
 function Bench({ units = [], onUnitMove, onUnitSwap, onSell, tftData, tftImages, onUnitHover }) {
   // Create drop zones for each bench slot using new system
   const createBenchDropHandler = (benchIndex) => {
@@ -52,28 +64,16 @@ function Bench({ units = [], onUnitMove, onUnitSwap, onSell, tftData, tftImages,
       const unit = units[i]
       
       // Create drop zone for this bench slot
-      const BenchSlot = ({ children }) => {
-        const { dropZoneRef } = useDropZone(
-          createBenchDropHandler(i),
-          (dragData) => dragData && dragData.source !== 'shop'
-        )
-        
-        return (
-          <div
-            ref={dropZoneRef}
-            key={`bench-${i}`}
-            className="bench-slot"
-            data-slot={i}
-          >
-            {children}
-          </div>
-        )
-      }
+      const { dropZoneRef } = useDropZone(
+        createBenchDropHandler(i),
+        (dragData) => dragData && dragData.source !== 'shop'
+      )
       
       slots.push(
-        <BenchSlot key={`bench-${i}`}>
+        <BenchSlot key={`bench-${i}`} dropZoneRef={dropZoneRef}>
           {unit && (
             <BenchUnitDisplay 
+              key={`${unit.id}-${i}-${unit.stars || 1}`}
               unit={unit}
               unitIndex={i}
               tftData={tftData} 
@@ -104,6 +104,8 @@ function Bench({ units = [], onUnitMove, onUnitSwap, onSell, tftData, tftImages,
 function BenchUnitDisplay({ unit, unitIndex, tftData, tftImages, onSell, onUnitHover }) {
   const imageRef = useRef(null)
   const dragRef = useRef(null)
+  const currentImageSrcRef = useRef(null)
+  
   
   // New drag system
   const { createDragHandler } = useDragManager()
@@ -111,39 +113,46 @@ function BenchUnitDisplay({ unit, unitIndex, tftData, tftImages, onSell, onUnitH
   const championData = tftData?.champions?.[unit.id]
   
   useEffect(() => {
-    if (tftImages && unit.id && imageRef.current) {
-      // Clear previous content
-      imageRef.current.innerHTML = ''
-      
-      // Get the loaded image from tftImages (which applies mappings)
-      const loadedImage = tftImages.getImage(unit.id, 'champion')
-      const stars = unit.stars || 1
-      const sizeMultiplier = getStarSizeMultiplier(stars)
-      
-      if (loadedImage) {
-        // Use the properly loaded and mapped image
-        const imgElement = document.createElement('img')
-        imgElement.src = loadedImage.src
-        imgElement.alt = championData?.name || unit.name || 'Champion'
-        imgElement.style.width = '100%'
-        imgElement.style.height = '100%'
-        imgElement.style.objectFit = 'cover'
-        imgElement.style.objectPosition = '75% center' // Show more of the right side where units are
-        imgElement.style.borderRadius = '50%' // Make circular
-        
-        imageRef.current.appendChild(imgElement)
-      } else if (tftImages.isImageLoading(unit.id, 'champion')) {
-        // Show loading indicator
-        imageRef.current.innerHTML = `<div class="loading-placeholder">...</div>`
-      } else if (tftImages.hasImageError(unit.id, 'champion')) {
-        // Show error indicator
-        imageRef.current.innerHTML = `<div class="error-placeholder">!</div>`
-      } else {
-        // Fallback to text placeholder
-        imageRef.current.innerHTML = `<div class="text-placeholder">${championData?.name?.charAt(0) || unit.name?.charAt(0) || 'U'}</div>`
-      }
+    if (!tftImages || !unit.id || !imageRef.current) return
+    
+    const loadedImage = tftImages.getImage(unit.id, 'champion')
+    
+    // Check what's currently in the DOM
+    const existingImg = imageRef.current.querySelector('img')
+    const currentSrc = existingImg?.src
+    const expectedSrc = loadedImage?.src
+    
+    // Only update if the expected image is different from what's currently displayed
+    if (currentSrc === expectedSrc && expectedSrc) {
+      return
     }
-  }, [unit.id, tftImages, championData, unit.stars])
+    
+    // Clear and set new content
+    imageRef.current.innerHTML = ''
+    
+    if (loadedImage) {
+      // Use the properly loaded and mapped image
+      const imgElement = document.createElement('img')
+      imgElement.src = loadedImage.src
+      imgElement.alt = championData?.name || unit.name || 'Champion'
+      imgElement.style.width = '100%'
+      imgElement.style.height = '100%'
+      imgElement.style.objectFit = 'cover'
+      imgElement.style.objectPosition = '75% center' // Show more of the right side where units are
+      imgElement.style.borderRadius = '50%' // Make circular
+      
+      imageRef.current.appendChild(imgElement)
+    } else if (tftImages.isImageLoading(unit.id, 'champion')) {
+      // Show loading indicator
+      imageRef.current.innerHTML = `<div class="loading-placeholder">...</div>`
+    } else if (tftImages.hasImageError(unit.id, 'champion')) {
+      // Show error indicator
+      imageRef.current.innerHTML = `<div class="error-placeholder">!</div>`
+    } else {
+      // Fallback to text placeholder
+      imageRef.current.innerHTML = `<div class="text-placeholder">${championData?.name?.charAt(0) || unit.name?.charAt(0) || 'U'}</div>`
+    }
+  }, [unit.id, unit.stars, tftImages?.loadedImagesCount])
 
   // New simplified drag handler
   const handleDragEnd = (e, dragData) => {
