@@ -3,7 +3,7 @@ import { Star } from 'lucide-react'
 
 function PlayerInfo({ player }) {
   const getLevelUpCost = (level) => {
-    const costs = [0, 2, 2, 6, 10, 20, 36, 56, 80]
+    const costs = [0, 0, 2, 6, 10, 20, 36, 48, 76, 84]
     return costs[level] || 0
   }
   
