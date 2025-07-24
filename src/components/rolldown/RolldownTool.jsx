@@ -572,10 +572,31 @@ function RolldownTool() {
   const handleInstantSell = useCallback((unit) => {
     if (!unit || !unit.location) return
     
+    // Validate that the unit still exists in the current game state
+    let unitExists = false
+    if (unit.location === 'bench') {
+      unitExists = gameState.player.bench[unit.index] && 
+                   gameState.player.bench[unit.index].id === unit.id
+    } else if (unit.location === 'board') {
+      unitExists = gameState.player.board.some(boardUnit => 
+        boardUnit && boardUnit.id === unit.id && 
+        boardUnit.row === unit.row && boardUnit.col === unit.col
+      )
+    }
+    
+    // If unit no longer exists, clear hovered unit and return
+    if (!unitExists) {
+      clearHoveredUnit()
+      return
+    }
+    
     const location = unit.location
     const index = unit.location === 'bench' ? unit.index : null
     handleSell(unit, location, index)
-  }, [])
+    
+    // Clear hovered unit after selling to prevent repeated sells
+    clearHoveredUnit()
+  }, [gameState.player.bench, gameState.player.board, clearHoveredUnit])
 
   // Initialize keyboard hotkeys
   useKeyboardHotkeys({
