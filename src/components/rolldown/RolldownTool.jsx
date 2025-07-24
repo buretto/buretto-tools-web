@@ -441,7 +441,7 @@ function RolldownTool() {
       }
       
       // Update state and clean up any duplicates
-      newState.player.bench = newBench
+      newState.player.bench = removeBenchDuplicates(newBench)
       newState.player.board = removeBoardDuplicates(newBoard)
       
       return newState
@@ -460,6 +460,20 @@ function RolldownTool() {
       }
       seen.add(key)
       return true
+    })
+  }
+
+  // Helper function to remove duplicate units from bench
+  const removeBenchDuplicates = (benchUnits) => {
+    const seen = new Set()
+    return benchUnits.map((unit, index) => {
+      if (!unit) return null
+      const key = unit.id
+      if (seen.has(key)) {
+        return null // Remove duplicate
+      }
+      seen.add(key)
+      return unit
     })
   }
 
@@ -513,7 +527,7 @@ function RolldownTool() {
       }
       
       // Update state and clean up any duplicates
-      newState.player.bench = newBench
+      newState.player.bench = removeBenchDuplicates(newBench)
       newState.player.board = removeBoardDuplicates(newBoard)
       
       return newState
