@@ -125,14 +125,14 @@
   background-image: linear-gradient(
     -75deg,
     transparent 0%,
-    transparent 20%,
+    transparent 10%,
     rgba(255, 255, 255, 0.1) 40%,
     rgba(255, 255, 255, 0.3) 50%,
-    rgba(255, 255, 255, 0.1) 60%,
-    transparent 80%,
+    rgba(255, 255, 255, 0.1) 70%,
+    transparent 90%,
     transparent 100%
   );
-  background-size: 60% 150%;
+  background-size: 80% 150%;
   background-position: -40%;
   background-repeat: no-repeat;
   animation: sheen-sweep-unified 5s ease-out infinite;
@@ -140,10 +140,10 @@
 
 @keyframes sheen-sweep-unified {
   0% {
-    background-position: -160%;
+    background-position: -300%;
   }
   100% {
-    background-position: 400%;
+    background-position: 1500%;
   }
 }
 
