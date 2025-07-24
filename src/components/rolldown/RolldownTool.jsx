@@ -167,6 +167,9 @@ function RolldownTool() {
     }
   }, [unitPoolHook.unitPool.size, gameState.player.shop.length, tftData, currentVersion])
   
+  // Track shop rerolls to force component re-mounting (restarts animations)
+  const [shopKey, setShopKey] = useState(0)
+
   // Handle shop reroll with rate limiting
   const handleReroll = () => {
     const rerollCost = shopHook.getRerollCost()
@@ -183,6 +186,9 @@ function RolldownTool() {
         setRerollCooldown(false)
       }, minRerollInterval)
       const newShop = shopHook.rerollShop(gameState.player.level)
+      
+      // Force Shop component to re-mount (restarts all animations from beginning)
+      setShopKey(prev => prev + 1)
       
       // Play reroll sound
       audioManager.playBuyRoll()
@@ -840,6 +846,7 @@ function RolldownTool() {
               {/* Shop - 75% of shop area width */}
               <div className="shop-wrapper">
                 <Shop 
+                  key={shopKey}
                   units={gameState.player.shop}
                   playerGold={gameState.player.gold}
                   tftData={tftData}
