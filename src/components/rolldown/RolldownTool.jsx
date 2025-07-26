@@ -415,12 +415,27 @@ function RolldownTool() {
           newBoard.splice(boardIndex, 1)
         }
         
-        if (toIndex !== null && toIndex !== undefined) {
-          newBench[toIndex] = unit
-        } else {
-          const emptySlot = newBench.findIndex(slot => slot === null)
-          if (emptySlot !== -1) {
-            newBench[emptySlot] = unit
+        // Clean the unit's position data when moving to bench
+        const benchUnit = { ...unit }
+        delete benchUnit.row
+        delete benchUnit.col
+        
+        // Simple duplication check - if this exact unit already exists on bench, skip
+        const alreadyOnBench = newBench.some(benchSlot => 
+          benchSlot && 
+          benchSlot.id === unit.id && 
+          benchSlot.row === unit.row &&
+          benchSlot.col === unit.col
+        )
+        
+        if (!alreadyOnBench) {
+          if (toIndex !== null && toIndex !== undefined) {
+            newBench[toIndex] = benchUnit
+          } else {
+            const emptySlot = newBench.findIndex(slot => slot === null)
+            if (emptySlot !== -1) {
+              newBench[emptySlot] = benchUnit
+            }
           }
         }
       } else if (fromLocation === 'board' && toLocation === 'board') {
@@ -469,16 +484,26 @@ function RolldownTool() {
     })
   }
 
-  // Helper function to remove duplicate units from bench
+  // Helper function to remove duplicate units - only remove units that still have position data
   const removeBenchDuplicates = (benchUnits) => {
     const seen = new Set()
+    
     return benchUnits.map((unit, index) => {
       if (!unit) return null
-      const key = unit.id
-      if (seen.has(key)) {
-        return null // Remove duplicate
+      
+      // Only consider it a duplicate if it has position data (came from board)
+      // AND we've already seen the same unit with the same position data
+      if (unit.row !== undefined && unit.col !== undefined) {
+        const positionKey = `${unit.id}_${unit.stars}_${unit.row}_${unit.col}`
+        
+        if (seen.has(positionKey)) {
+          return null // Remove duplicate that came from same board position
+        }
+        
+        seen.add(positionKey)
       }
-      seen.add(key)
+      
+      // Always keep units without position data (legitimate purchases)
       return unit
     })
   }
@@ -533,6 +558,7 @@ function RolldownTool() {
       }
       
       // Update state and clean up any duplicates
+      // For swaps, no move context needed since we're not creating duplicates
       newState.player.bench = removeBenchDuplicates(newBench)
       newState.player.board = removeBoardDuplicates(newBoard)
       
@@ -556,37 +582,98 @@ function RolldownTool() {
   const handlePlaceUnit = useCallback((unit) => {
     if (!unit || !unit.location) return
     
-    if (unit.location === 'bench') {
-      // Move from bench to board - find first available spot
-      const currentBoardSize = gameState.player.board.length
-      if (currentBoardSize >= gameState.player.level) {
-        return // Board is full
-      }
-      
-      // Find first available position starting from bottom-left
-      let targetRow = 3 // Start from bottom row
-      let targetCol = 0 // Start from left
-      let found = false
-      
-      for (let row = 3; row >= 0 && !found; row--) {
-        for (let col = 0; col < 7 && !found; col++) {
-          const occupied = gameState.player.board.find(u => u.row === row && u.col === col)
-          if (!occupied) {
-            targetRow = row
-            targetCol = col
-            found = true
-          }
+    // Get fresh state to avoid stale closure issues
+    setGameState(prev => {
+      // Validate unit still exists in current state
+      let currentUnit = null
+      if (unit.location === 'bench') {
+        currentUnit = prev.player.bench[unit.index]
+        if (!currentUnit || currentUnit.id !== unit.id) {
+          return prev // Unit no longer exists or has changed
+        }
+      } else if (unit.location === 'board') {
+        currentUnit = prev.player.board.find(u => 
+          u.row === unit.row && u.col === unit.col && u.id === unit.id
+        )
+        if (!currentUnit) {
+          return prev // Unit no longer exists
         }
       }
       
-      if (found) {
-        handleUnitMove(unit, 'bench', unit.index, 'board', null, targetRow, targetCol)
+      if (unit.location === 'bench') {
+        // Move from bench to board - find first available spot
+        const currentBoardSize = prev.player.board.length
+        if (currentBoardSize >= prev.player.level) {
+          return prev // Board is full
+        }
+        
+        // Find first available position starting from bottom-left
+        let targetRow = 3
+        let targetCol = 0
+        let found = false
+        
+        for (let row = 3; row >= 0 && !found; row--) {
+          for (let col = 0; col < 7 && !found; col++) {
+            const occupied = prev.player.board.find(u => u.row === row && u.col === col)
+            if (!occupied) {
+              targetRow = row
+              targetCol = col
+              found = true
+            }
+          }
+        }
+        
+        if (found) {
+          // Perform the move directly in state update
+          const newState = { ...prev }
+          const newBench = [...newState.player.bench]
+          const newBoard = [...newState.player.board]
+          
+          // Remove from bench
+          newBench[unit.index] = null
+          
+          // Add to board
+          const boardUnit = { ...currentUnit, row: targetRow, col: targetCol }
+          newBoard.push(boardUnit)
+          
+          newState.player.bench = newBench
+          newState.player.board = newBoard
+          
+          return newState
+        }
+      } else if (unit.location === 'board') {
+        // Move from board to bench
+        const newState = { ...prev }
+        const newBench = [...newState.player.bench]
+        const newBoard = [...newState.player.board]
+        
+        // Remove from board
+        const boardIndex = newBoard.findIndex(u => 
+          u.row === unit.row && u.col === unit.col
+        )
+        if (boardIndex !== -1) {
+          newBoard.splice(boardIndex, 1)
+        }
+        
+        // Add to bench (clean position data)
+        const benchUnit = { ...currentUnit }
+        delete benchUnit.row
+        delete benchUnit.col
+        
+        const emptySlot = newBench.findIndex(slot => slot === null)
+        if (emptySlot !== -1) {
+          newBench[emptySlot] = benchUnit
+        }
+        
+        newState.player.bench = removeBenchDuplicates(newBench)
+        newState.player.board = removeBoardDuplicates(newBoard)
+        
+        return newState
       }
-    } else if (unit.location === 'board') {
-      // Move from board to bench
-      handleUnitMove(unit, 'board', null, 'bench', null, null, null)
-    }
-  }, [gameState.player.board, gameState.player.level])
+      
+      return prev
+    })
+  }, [])
 
   // Handle instant sell with e key
   const handleInstantSell = useCallback((unit) => {
