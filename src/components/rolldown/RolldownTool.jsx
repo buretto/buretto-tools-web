@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react'
-import { Star, Coins, BarChart3, Settings } from 'lucide-react'
+import { Star, Coins, BarChart3, Settings, Users } from 'lucide-react'
 import GameBoard from './components/GameBoard'
 import Shop from './components/Shop'
 import Bench from './components/Bench'
@@ -13,6 +13,7 @@ import TraitsColumn from './components/TraitsColumn'
 import TFTVersionSelector from './components/TFTVersionSelector'
 import ImageMappingModal from './components/ImageMappingModal'
 import ImageLoadWarning from './components/ImageLoadWarning'
+import TeamPlannerModal from './components/TeamPlannerModal'
 import { useTFTData } from './hooks/useTFTData'
 import { useTFTImages } from './hooks/useTFTImages'
 import { useUnitPool } from './hooks/useUnitPool'
@@ -70,6 +71,7 @@ function RolldownTool() {
   const [hotkeys, setHotkeys] = useState({ d: 'buy-roll', f: 'buy-xp', e: 'sell-unit', w: 'place-unit' })
   const [lastRerollTime, setLastRerollTime] = useState(0)
   const [rerollCooldown, setRerollCooldown] = useState(false)
+  const [teamPlannerOpen, setTeamPlannerOpen] = useState(false)
   
   const { 
     data: tftData, 
@@ -713,7 +715,7 @@ function RolldownTool() {
     onPlaceUnit: handlePlaceUnit,
     hotkeyConfig: hotkeys,
     hoveredUnit,
-    enabled: !analyticsOpen && !settingsOpen && !mappingModalOpen
+    enabled: !analyticsOpen && !settingsOpen && !mappingModalOpen && !teamPlannerOpen
   })
   
   return (
@@ -769,8 +771,15 @@ function RolldownTool() {
               totalImages={preloadProgress.overall.total}
             />
             
-            {/* Button Container for Analytics and Settings */}
+            {/* Button Container for Team Planner, Analytics and Settings */}
             <div className="flex items-center gap-2">
+              <button
+                onClick={() => setTeamPlannerOpen(true)}
+                className="flex items-center justify-center w-8 h-8 bg-gray-700 hover:bg-gray-600 rounded transition-colors"
+                title="Team Planner"
+              >
+                <Users size={16} className="text-blue-400" />
+              </button>
               <button
                 onClick={() => setAnalyticsOpen(true)}
                 className="flex items-center justify-center w-8 h-8 bg-gray-700 hover:bg-gray-600 rounded transition-colors"
@@ -1001,6 +1010,14 @@ function RolldownTool() {
           hotkeys={hotkeys}
           onUpdateHotkeys={setHotkeys}
           defaultHotkeys={{ d: 'buy-roll', f: 'buy-xp', e: 'sell-unit', w: 'place-unit' }}
+        />
+
+        {/* Team Planner Modal */}
+        <TeamPlannerModal
+          isOpen={teamPlannerOpen}
+          onClose={() => setTeamPlannerOpen(false)}
+          tftData={tftData}
+          tftImages={tftImages}
         />
         </div>
       </div>

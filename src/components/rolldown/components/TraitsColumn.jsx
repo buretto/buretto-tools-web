@@ -138,92 +138,96 @@ function TraitsColumn({ boardUnits, tftData }) {
   }
   
   return (
-    <div className="traits-column flex flex-col items-start">
-      {currentTraits.map((trait, index) => (
-        <div
-          key={`${trait.name}-${index}`}
-          className="bg-black bg-opacity-70 flex flex-row justify-start items-center mb-1 rounded w-fit"
-          style={{ 
-            minWidth: 'max(5rem, 10cqw)',
-            height: 'max(1.85rem, 2.9cqw)',
-            gap: trait.activeBreakpoint > 0 ? 'max(0.4rem, 0.66cqw)' : 'max(0.66rem, 1cqw)',      
-            padding: 'max(0.0rem, 0.0cqw) max(1rem, 1.66cqw) max(0.1rem, 0.2cqw) 0'
-          }}
-        >
-          {/* Trait Icon with Hexagon */}
-          <div 
-            className={`trait-hexagon ${getHexagonColor(trait.breakpoints, trait.activeBreakpoint)}`}
-            style={{
-              width: 'max(1.75rem, 2.8125cqw)',
-              height: 'max(1.75rem, 2.8125cqw)',
-              marginLeft: 'max(-0.875rem, -1.40625cqw)',
-              flexShrink: 0
+    <div className="traits-column flex flex-col items-start" style={{ position: 'relative' }}>
+      <div className="traits-list">
+        {currentTraits.map((trait, index) => (
+          <div
+            key={`${trait.name}-${index}`}
+            className="bg-black bg-opacity-70 flex flex-row justify-start items-center mb-1 rounded w-fit"
+            style={{ 
+              minWidth: 'max(5rem, 10cqw)',
+              height: 'max(1.85rem, 2.9cqw)',
+              gap: trait.activeBreakpoint > 0 ? 'max(0.4rem, 0.66cqw)' : 'max(0.66rem, 1cqw)',      
+              padding: 'max(0.0rem, 0.0cqw) max(1rem, 1.66cqw) max(0.1rem, 0.2cqw) 0'
             }}
           >
-            {trait.imageUrl ? (
-              <img 
-                src={trait.imageUrl}
-                alt={trait.name}
-                className="trait-image"
-                style={{
-                  filter: trait.activeBreakpoint > 0 ? 'brightness(0)' : 'brightness(0.6)'
-                }}
-              />
-            ) : (
-              <div 
-                className={`trait-image bg-gray-600 rounded flex items-center justify-center text-xs font-bold ${
-                  trait.activeBreakpoint > 0 ? 'text-black' : 'text-gray-600'
-                }`}
-              >
-                {trait.name.substring(0, 2).toUpperCase()}
-              </div>
-            )}
-          </div>
-          
-          {/* Count Badge */}
-          {trait.activeBreakpoint > 0 && (
-            <div className="bg-gray-500 bg-opacity-90 border border-white border-opacity-20 text-white text-xs font-bold px-1 py-0.5 rounded" style={{ flexShrink: 0 }}>
-              {trait.count}
-            </div>
-          )}
-          
-          {/* Trait Info */}
-          <div className="flex flex-col justify-start" style={{ height: '90%', flexShrink: 0 }}>
+            {/* Trait Icon with Hexagon */}
             <div 
-              className={`font-semibold leading-tight whitespace-nowrap ${
-                trait.activeBreakpoint > 0 ? 'text-white' : 'text-gray-600'
-              }`} 
-              style={{ 
-                height: '45%',
-                fontSize: '0.7rem'
-              }}
-            >
-              {trait.name}
-            </div>
-            <div 
-              className="leading-tight whitespace-nowrap"
-              style={{ 
-                height: '45%',
-                fontSize: '0.6rem',
+              className={`trait-hexagon ${getHexagonColor(trait.breakpoints, trait.activeBreakpoint)}`}
+              style={{
+                width: 'max(1.75rem, 2.8125cqw)',
+                height: 'max(1.75rem, 2.8125cqw)',
+                marginLeft: 'max(-0.875rem, -1.40625cqw)',
                 flexShrink: 0
               }}
             >
-              {formatBreakpoints(trait.breakpoints, trait.activeBreakpoint, trait.count)}
+              {trait.imageUrl ? (
+                <img 
+                  src={trait.imageUrl}
+                  alt={trait.name}
+                  className="trait-image"
+                  style={{
+                    filter: trait.activeBreakpoint > 0 ? 'brightness(0)' : 'brightness(0.6)'
+                  }}
+                />
+              ) : (
+                <div 
+                  className={`trait-image bg-gray-600 rounded flex items-center justify-center text-xs font-bold ${
+                    trait.activeBreakpoint > 0 ? 'text-black' : 'text-gray-600'
+                  }`}
+                >
+                  {trait.name.substring(0, 2).toUpperCase()}
+                </div>
+              )}
+            </div>
+            
+            {/* Count Badge */}
+            {trait.activeBreakpoint > 0 && (
+              <div className="bg-gray-500 bg-opacity-90 border border-white border-opacity-20 text-white text-xs font-bold px-1 py-0.5 rounded" style={{ flexShrink: 0 }}>
+                {trait.count}
+              </div>
+            )}
+            
+            {/* Trait Info */}
+            <div className="flex flex-col justify-start" style={{ height: '90%', flexShrink: 0 }}>
+              <div 
+                className={`font-semibold leading-tight whitespace-nowrap ${
+                  trait.activeBreakpoint > 0 ? 'text-white' : 'text-gray-600'
+                }`} 
+                style={{ 
+                  height: '45%',
+                  fontSize: '0.7rem'
+                }}
+              >
+                {trait.name}
+              </div>
+              <div 
+                className="leading-tight whitespace-nowrap"
+                style={{ 
+                  height: '45%',
+                  fontSize: '0.6rem',
+                  flexShrink: 0
+                }}
+              >
+                {formatBreakpoints(trait.breakpoints, trait.activeBreakpoint, trait.count)}
+              </div>
             </div>
           </div>
-        </div>
-      ))}
+        ))}
+      </div>
       
-      {/* Pagination Control */}
+      {/* Fixed Position Pagination Control */}
       {totalPages > 1 && (
         <div 
-          className="pagination-pentagon"
+          className="pagination-pentagon-fixed"
           onClick={goToNextPage}
           style={{
+            position: 'absolute',
+            top: `calc(10 * (max(1.85rem, 2.9cqw) + max(0.25rem, 0.4cqw)))`, // 10 trait items * (height + margin)
+            left: '0',
             width: 'max(1.75rem, 2.8125cqw)',
             height: 'max(1.75rem, 2.8125cqw)',
             marginLeft: 'max(-0.875rem, -1.40625cqw)',
-            marginTop: 'max(0.1rem, 0.2cqw)',
             flexShrink: 0
           }}
         >
