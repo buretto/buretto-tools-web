@@ -2,6 +2,8 @@
  * Network utilities with timeout and offline mode support
  */
 
+import { deduplicateRequest } from './requestDeduplicator'
+
 const NETWORK_TIMEOUT = 10000 // 10 seconds
 const OFFLINE_MODE_KEY = 'tft_offline_mode'
 const FAILED_REQUESTS_KEY = 'tft_failed_requests'
@@ -177,15 +179,19 @@ export const fetchWithFallback = async (url, fallbackFn, dataType = 'data', isMa
   }
   
   try {
-    console.log(`🌐 Fetching ${dataType} from:`, url)
-    const response = await fetchWithTimeout(url)
-    
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}: ${response.statusText}`)
-    }
-    
-    const data = await response.json()
-    console.log(`✅ Successfully fetched ${dataType}`)
+    // Use request deduplication to prevent multiple identical requests
+    const data = await deduplicateRequest(url, async () => {
+      console.log(`🌐 Fetching ${dataType} from:`, url)
+      const response = await fetchWithTimeout(url)
+      
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`)
+      }
+      
+      const jsonData = await response.json()
+      console.log(`✅ Successfully fetched ${dataType}`)
+      return jsonData
+    })
     
     // Reset consecutive failures on success
     if (isMajorFailure) {

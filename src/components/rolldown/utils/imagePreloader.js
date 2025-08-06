@@ -125,9 +125,14 @@ class ImagePreloader {
       return { champions: [], traits: [] }
     }
 
-    // Get all TFT14 champions and traits
-    const championIds = Object.keys(tftData.champions).filter(id => id.startsWith('TFT14_'))
-    const traitIds = Object.keys(tftData.traits).filter(id => id.startsWith('TFT14_'))
+    // Get all champions and traits for the current set
+    const setNumber = tftData.setId ? tftData.setId.replace('set', '') : '14'
+    const setPrefix = `TFT${setNumber}_`
+    
+    console.log(`Preloading images for ${tftData.setName || `Set ${setNumber}`} with prefix: ${setPrefix}`)
+    
+    const championIds = Object.keys(tftData.champions).filter(id => id.startsWith(setPrefix))
+    const traitIds = Object.keys(tftData.traits).filter(id => id.startsWith(setPrefix))
     
     const totalImages = championIds.length + traitIds.length
     this.updateProgress('background', 0, totalImages)

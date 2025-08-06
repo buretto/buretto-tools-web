@@ -14,6 +14,7 @@ import TFTVersionSelector from './components/TFTVersionSelector'
 import ImageMappingModal from './components/ImageMappingModal'
 import ImageLoadWarning from './components/ImageLoadWarning'
 import TeamPlannerModal from './components/TeamPlannerModal'
+import UnifiedProgressIndicator from './components/UnifiedProgressIndicator'
 import { useTFTData } from './hooks/useTFTData'
 import { useTFTImages } from './hooks/useTFTImages'
 import { useUnitPool } from './hooks/useUnitPool'
@@ -79,7 +80,8 @@ function RolldownTool() {
     error: tftError, 
     currentVersion, 
     cachedVersions, 
-    loadVersion 
+    loadVersion,
+    progress: dataProgress
   } = useTFTData()
   
   
@@ -739,30 +741,18 @@ function RolldownTool() {
               onPhaseChange={(newPhase) => setGameState(prev => ({ ...prev, phase: newPhase }))}
             />
             
-            {/* Image Preloading Progress */}
-            {preloadPhase !== PRELOAD_PHASES.COMPLETE && preloadProgress.overall.total > 0 && (
-              <div className="flex items-center gap-2 px-3 py-1 bg-gray-700 rounded-lg">
-                <div className="flex flex-col items-end">
-                  <span className="text-xs text-gray-300">
-                    {preloadPhase === PRELOAD_PHASES.CRITICAL ? 'Loading shop...' : 
-                     preloadPhase === PRELOAD_PHASES.BACKGROUND ? 'Loading images...' : 'Preparing...'}
-                  </span>
-                  <div className="flex items-center gap-1">
-                    <div className="w-16 h-1 bg-gray-600 rounded-full overflow-hidden">
-                      <div 
-                        className={`h-full transition-all duration-300 ${
-                          preloadPhase === PRELOAD_PHASES.CRITICAL ? 'bg-yellow-500' : 'bg-blue-500'
-                        }`}
-                        style={{ width: `${preloadProgress.overall.percentage}%` }}
-                      />
-                    </div>
-                    <span className="text-xs text-gray-400 min-w-[2rem]">
-                      {preloadProgress.overall.percentage}%
-                    </span>
-                  </div>
-                </div>
-              </div>
-            )}
+            {/* Unified Progress Indicator */}
+            <UnifiedProgressIndicator 
+              progress={dataProgress.isActive ? dataProgress : 
+                (preloadPhase !== PRELOAD_PHASES.COMPLETE && preloadProgress.overall.total > 0) ? {
+                  isActive: true,
+                  stage: preloadPhase === PRELOAD_PHASES.CRITICAL ? 'loading_images' : 'downloading_images',
+                  progress: preloadProgress.overall.percentage,
+                  current: preloadProgress.overall.loaded,
+                  total: preloadProgress.overall.total
+                } : null}
+              showInHeader={true}
+            />
 
             {/* Image Load Warning */}
             <ImageLoadWarning 
@@ -1020,6 +1010,15 @@ function RolldownTool() {
           tftImages={tftImages}
         />
         </div>
+        
+        {/* Full Screen Progress Overlay for Major Operations */}
+        <UnifiedProgressIndicator 
+          progress={dataProgress.isActive && 
+            (dataProgress.stage === 'downloading' || dataProgress.stage === 'parsing' || 
+             dataProgress.stage === 'processing' || dataProgress.stage === 'detecting_set') ? 
+            dataProgress : null}
+          showInHeader={false}
+        />
       </div>
   )
 }

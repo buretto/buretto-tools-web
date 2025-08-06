@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react'
-import { ChevronDown, Plus, Loader2, AlertCircle, Settings } from 'lucide-react'
+import { ChevronDown, Plus, Loader2, AlertCircle, Settings, Download } from 'lucide-react'
+import { getLatestVersion } from '../utils/versionDetector'
 
 // Mapping of League versions to TFT versions for display
 const getVersionDisplayInfo = (version) => {
@@ -30,6 +31,8 @@ const TFTVersionSelector = ({
   const [isDropdownOpen, setIsDropdownOpen] = useState(false)
   const [customVersion, setCustomVersion] = useState('')
   const [showCustomInput, setShowCustomInput] = useState(false)
+  const [latestVersion, setLatestVersion] = useState(null)
+  const [fetchingLatest, setFetchingLatest] = useState(false)
   const dropdownRef = useRef(null)
   const inputRef = useRef(null)
 
@@ -46,6 +49,39 @@ const TFTVersionSelector = ({
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
+
+  // Fetch latest version on component mount (but only once globally)
+  useEffect(() => {
+    // Check if we already have a cached latest version to avoid duplicate fetches
+    const cachedLatest = sessionStorage.getItem('tft_latest_version')
+    if (cachedLatest) {
+      setLatestVersion(cachedLatest)
+      return
+    }
+    
+    const fetchLatest = async () => {
+      try {
+        setFetchingLatest(true)
+        const latest = await getLatestVersion()
+        setLatestVersion(latest)
+        // Cache in session storage to prevent duplicate fetches
+        sessionStorage.setItem('tft_latest_version', latest)
+      } catch (error) {
+        console.warn('Failed to fetch latest version:', error)
+      } finally {
+        setFetchingLatest(false)
+      }
+    }
+    
+    fetchLatest()
+  }, [])
+
+  // Auto-fill custom input with latest version if not cached
+  useEffect(() => {
+    if (showCustomInput && latestVersion && !cachedVersions.includes(latestVersion)) {
+      setCustomVersion(latestVersion)
+    }
+  }, [showCustomInput, latestVersion, cachedVersions])
 
   // Focus custom input when shown
   useEffect(() => {
@@ -116,8 +152,13 @@ const TFTVersionSelector = ({
                     className={`version-option ${version === currentVersion ? 'active' : ''}`}
                     onClick={() => handleVersionSelect(version)}
                   >
-                    {getVersionDisplayInfo(version).dropdownText}
-                    {version === currentVersion && <span className="current-indicator">●</span>}
+                    <div className="version-option-content">
+                      <span>{getVersionDisplayInfo(version).dropdownText}</span>
+                      <div className="version-indicators">
+                        {version === latestVersion && <span className="latest-badge">latest</span>}
+                        {version === currentVersion && <span className="current-indicator">●</span>}
+                      </div>
+                    </div>
                   </button>
                   <button
                     onClick={(e) => {
@@ -145,7 +186,7 @@ const TFTVersionSelector = ({
                   type="text"
                   value={customVersion}
                   onChange={(e) => setCustomVersion(e.target.value)}
-                  placeholder="e.g., 14.24.1"
+                  placeholder={latestVersion ? `e.g., ${latestVersion}` : "e.g., 15.15.1"}
                   className="version-input"
                 />
                 <button
@@ -159,12 +200,33 @@ const TFTVersionSelector = ({
             </form>
           ) : (
             <div className="version-section">
+              {/* Quick Get Latest button */}
+              {latestVersion && !cachedVersions.includes(latestVersion) && (
+                <button
+                  onClick={() => handleVersionSelect(latestVersion)}
+                  className="version-option get-latest"
+                  disabled={loading || fetchingLatest}
+                >
+                  <Download className="get-latest-icon" />
+                  Get Latest ({latestVersion})
+                  {fetchingLatest && <Loader2 className="w-3 h-3 ml-1 animate-spin" />}
+                </button>
+              )}
+              
+              {/* Latest version info */}
+              {latestVersion && (
+                <div className="latest-info">
+                  Latest available: {latestVersion}
+                  {cachedVersions.includes(latestVersion) && <span className="cached-indicator">✓ cached</span>}
+                </div>
+              )}
+              
               <button
                 onClick={handleAddCustomVersion}
                 className="version-option add-new"
               >
                 <Plus className="add-icon" />
-                Add New Version
+                Add Custom Version
               </button>
             </div>
           )}

@@ -1,23 +1,23 @@
 {
   "metadata": {
-    "generatedAt": "2025-07-14T22:16:12.856Z",
+    "generatedAt": "2025-08-06T17:43:00.286Z",
     "extractedSets": [
-      14
+      15
     ],
     "totalFiles": 2,
-    "outputDirectory": "tft-data"
+    "outputDirectory": "src\\components\\rolldown\\cdragon_sample_data\\tft-data"
   },
   "files": [
     {
-      "filename": "setData-14.json",
-      "filePath": "tft-data\\setData-14.json",
-      "size": "0.17 MB",
-      "description": "Set 14 data (Set14)"
+      "filename": "setData-15.json",
+      "filePath": "src\\components\\rolldown\\cdragon_sample_data\\tft-data\\setData-15.json",
+      "size": "0.23 MB",
+      "description": "Set 15 data (Set15)"
     },
     {
       "filename": "items.json",
-      "filePath": "tft-data\\items.json",
-      "size": "1.14 MB",
+      "filePath": "src\\components\\rolldown\\cdragon_sample_data\\tft-data\\items.json",
+      "size": "1.26 MB",
       "description": "All items data"
     }
   ]

@@ -2,6 +2,18 @@
 
 import { getMappingInfo } from './imageMappings.js'
 
+/**
+ * Gets the set number from a version string
+ */
+const getSetNumberFromVersion = (version) => {
+  // For now, simple mapping - can be enhanced later
+  if (version.startsWith('15.13') || version.startsWith('15.12') || version.startsWith('15.11')) {
+    return 14
+  }
+  // For newer versions, assume Set 15 (this can be expanded)
+  return 15
+}
+
 const IMAGE_CACHE = new Map()
 const SPRITE_CACHE = new Map()
 const LOADING_PROMISES = new Map()
@@ -18,15 +30,16 @@ const CACHE_EXPIRY_TIME = Infinity // Cache indefinitely for patch-specific imag
  */
 export const generateImageUrls = (version, championId, type = 'champion') => {
   const baseUrl = `https://ddragon.leagueoflegends.com/cdn/${version}/img/tft-${type}`
+  const setNumber = getSetNumberFromVersion(version)
   
   // Generate expected filename based on ID and type
   let filename
   if (type === 'champion') {
-    filename = `${championId}.TFT_Set14.png`
+    filename = `${championId}.TFT_Set${setNumber}.png`
   } else if (type === 'trait') {
-    // Trait naming pattern: Trait_Icon_14_TraitName.TFT_Set14.png
-    const traitName = championId.replace('TFT14_', '').replace('TFT_', '')
-    filename = `Trait_Icon_14_${traitName}.TFT_Set14.png`
+    // Trait naming pattern: Trait_Icon_15_TraitName.TFT_Set15.png
+    const traitName = championId.replace(`TFT${setNumber}_`, '').replace('TFT_', '')
+    filename = `Trait_Icon_${setNumber}_${traitName}.TFT_Set${setNumber}.png`
   }
   
   return {
@@ -52,9 +65,10 @@ export const generateDirectImageUrl = (version, entityId, type = 'champion') => 
   
   // Fallback to Data Dragon CDN
   const baseUrl = `https://ddragon.leagueoflegends.com/cdn/${version}/img/tft-${type}`
+  const setNumber = getSetNumberFromVersion(version)
   
   if (type === 'champion') {
-    return `${baseUrl}/${mappedId}.TFT_Set14.png`
+    return `${baseUrl}/${mappedId}.TFT_Set${setNumber}.png`
   } else if (type === 'trait') {
     // Extract set number and trait name from mapped ID
     if (mappedId.startsWith('TFT')) {
@@ -72,8 +86,8 @@ export const generateDirectImageUrl = (version, entityId, type = 'champion') => 
     }
     
     // Fallback to original logic for non-standard names
-    const traitName = mappedId.replace('TFT14_', '').replace('TFT_', '')
-    return `${baseUrl}/Trait_Icon_14_${traitName}.TFT_Set14.png`
+    const traitName = mappedId.replace(`TFT${setNumber}_`, '').replace('TFT_', '')
+    return `${baseUrl}/Trait_Icon_${setNumber}_${traitName}.TFT_Set${setNumber}.png`
   }
   
   return null
@@ -84,7 +98,7 @@ export const generateDirectImageUrl = (version, entityId, type = 'champion') => 
  */
 const generateLocalImageUrl = (mappedId, type, mappingInfo) => {
   if (type === 'champion') {
-    // Champion images use the mapped ID directly
+    // Champion images use the mapped ID directly - only works for Set 14 (bundled images)
     return `/images/tft-${type}/${mappedId}.TFT_Set14.png`
   } else if (type === 'trait') {
     // Trait images follow the Trait_Icon pattern

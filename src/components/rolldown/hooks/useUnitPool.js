@@ -23,11 +23,17 @@ export const useUnitPool = (tftData, version = '15.13.1') => {
     
     const newPool = new Map()
     
-    // Filter for only Set 14 champions (TFT14_ prefix)
+    // Get the current set number for filtering
+    const currentSetNumber = tftData.setId ? tftData.setId.replace('set', '') : '14'
+    const setPrefix = `TFT${currentSetNumber}_`
+    
+    console.log(`Filtering champions for ${tftData.setName || `Set ${currentSetNumber}`} with prefix: ${setPrefix}`)
+    
+    // Filter for only champions that belong to the current set
     Object.values(tftData.champions).forEach(champion => {
       // Only include champions that belong to the current set
-      if (!champion.id.startsWith('TFT14_')) {
-        return // Skip non-Set14 champions
+      if (!champion.id.startsWith(setPrefix)) {
+        return // Skip champions from other sets
       }
       
       const cost = champion.cost
@@ -43,7 +49,7 @@ export const useUnitPool = (tftData, version = '15.13.1') => {
       })
     })
     
-    console.log('Initialized pool with', newPool.size, 'Set 14 champions')
+    console.log(`Initialized pool with ${newPool.size} ${tftData.setName || `Set ${currentSetNumber}`} champions`)
     console.log('Sample champions:', Array.from(newPool.keys()).slice(0, 5))
     setUnitPool(newPool)
     return true

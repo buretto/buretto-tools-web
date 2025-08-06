@@ -54,9 +54,10 @@ export const shouldUseBundledData = (version) => {
 /**
  * Gets the appropriate version to use based on user preferences and network status
  * @param {string} requestedVersion - Version requested by user (optional)
+ * @param {Function} onProgress - Progress callback
  * @returns {Promise<{version: string, networkFailed: boolean}>} Version to use and network status
  */
-export const getVersionToUse = async (requestedVersion = null) => {
+export const getVersionToUse = async (requestedVersion = null, onProgress = null) => {
   // If user specifically requested a version, use it
   if (requestedVersion) {
     return { version: requestedVersion, networkFailed: false }
@@ -70,6 +71,10 @@ export const getVersionToUse = async (requestedVersion = null) => {
   
   // Try to get latest version, fallback to Set 14
   try {
+    if (onProgress) {
+      onProgress({ stage: 'fetching_version', progress: 10, isActive: true })
+    }
+    
     const latestVersion = await getLatestVersion()
     
     // If we got the fallback version, we know network failed
@@ -77,9 +82,15 @@ export const getVersionToUse = async (requestedVersion = null) => {
       console.log('Network failed, enabling offline mode and using bundled Set 14 data')
       // Enable offline mode since network is clearly not working
       enableOfflineMode()
+      if (onProgress) {
+        onProgress({ stage: 'complete', progress: 100, isActive: true })
+      }
       return { version: '15.13.1', networkFailed: true }
     }
     
+    if (onProgress) {
+      onProgress({ stage: 'complete', progress: 100, isActive: true })
+    }
     return { version: latestVersion, networkFailed: false }
   } catch (error) {
     console.warn('Failed to determine version:', error)

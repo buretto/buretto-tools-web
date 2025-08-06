@@ -14,11 +14,15 @@ import {
 import { getStaticFallbackData, shouldUseStaticFallback } from '../data/staticFallback'
 import staticTeamplannerData from '../data/tftchampions-teamplanner-15.13.json'
 import { fetchWithFallback } from '../utils/networkUtils'
-import { getVersionToUse, shouldUseBundledData, getSetInfoFromVersion } from '../utils/versionDetector'
+import { getVersionToUse, shouldUseBundledData } from '../utils/versionDetector'
 import { getBundledShopOdds } from '../data/bundledShopOdds'
+import { getSetInfoFromVersion as detectSetInfo } from '../utils/setDetector'
+import { extractSetData, getCachedSetData, isSetDataCached, downloadSetImages } from '../utils/runtimeExtractor'
 
 const BASE_URL = 'https://ddragon.leagueoflegends.com/cdn'
 const CACHE_PREFIX = 'tft_data_'
+const SHOP_ODDS_CACHE_PREFIX = 'tft_shop_odds_'
+const TEAMPLANNER_CACHE_PREFIX = 'tft_teamplanner_'
 const CACHE_EXPIRY = 24 * 60 * 60 * 1000 // 24 hours in milliseconds
 
 // Helper function to get cached data
@@ -28,11 +32,27 @@ const getCachedData = (version) => {
     if (cached) {
       const parsed = JSON.parse(cached)
       if (Date.now() - parsed.timestamp < CACHE_EXPIRY) {
-        return parsed.data
+        // Validate that the cached data is actually valid
+        if (parsed.data && parsed.data.champions && Object.keys(parsed.data.champions).length > 0) {
+          return parsed.data
+        } else {
+          console.warn(`🗑️ Removing invalid cached data for ${version} (no champions data)`)
+          localStorage.removeItem(`${CACHE_PREFIX}${version}`)
+          return null
+        }
+      } else {
+        console.log(`🗑️ Cached data for ${version} has expired`)
+        localStorage.removeItem(`${CACHE_PREFIX}${version}`)
       }
     }
   } catch (error) {
     console.error('Error reading cached data:', error)
+    // Remove corrupted cache entry
+    try {
+      localStorage.removeItem(`${CACHE_PREFIX}${version}`)
+    } catch (removeError) {
+      console.error('Error removing corrupted cache:', removeError)
+    }
   }
   return null
 }
@@ -74,6 +94,260 @@ const getCachedVersions = () => {
   }
 }
 
+// Helper functions for caching shop odds
+const getCachedShopOdds = (version) => {
+  try {
+    const cached = localStorage.getItem(`${SHOP_ODDS_CACHE_PREFIX}${version}`)
+    if (cached) {
+      const parsed = JSON.parse(cached)
+      // Shop odds never change for a given patch - cache indefinitely
+      return parsed.data
+    }
+  } catch (error) {
+    console.error('Error reading cached shop odds:', error)
+  }
+  return null
+}
+
+const setCachedShopOdds = (version, data) => {
+  try {
+    const cacheEntry = { data, timestamp: Date.now() }
+    localStorage.setItem(`${SHOP_ODDS_CACHE_PREFIX}${version}`, JSON.stringify(cacheEntry))
+    console.log(`💾 Cached shop odds for ${version}`)
+  } catch (error) {
+    console.error('Error caching shop odds:', error)
+  }
+}
+
+// Helper functions for caching team planner data
+const getCachedTeamplanner = (version) => {
+  try {
+    const cached = localStorage.getItem(`${TEAMPLANNER_CACHE_PREFIX}${version}`)
+    if (cached) {
+      const parsed = JSON.parse(cached)
+      // Team planner data never changes for a given patch - cache indefinitely
+      return parsed.data
+    }
+  } catch (error) {
+    console.error('Error reading cached team planner:', error)
+  }
+  return null
+}
+
+const setCachedTeamplanner = (version, data) => {
+  try {
+    const cacheEntry = { data, timestamp: Date.now() }
+    localStorage.setItem(`${TEAMPLANNER_CACHE_PREFIX}${version}`, JSON.stringify(cacheEntry))
+    console.log(`💾 Cached team planner for ${version}`)
+  } catch (error) {
+    console.error('Error caching team planner:', error)
+  }
+}
+
+// Helper function to convert extracted set data to our app format
+const convertExtractedDataToAppFormat = (extractedData, version, setInfo) => {
+  try {
+    // The extracted data should be in the CDragon format from the runtime extractor
+    // It should have been processed by the processSetData function
+    
+    if (!extractedData) {
+      console.warn('No extracted data provided')
+      return null
+    }
+    
+    console.log('🔍 Converting extracted data structure:', Object.keys(extractedData))
+    console.log('🔍 Extracted data format:', {
+      hasChampions: !!extractedData.champions,
+      championsType: Array.isArray(extractedData.champions) ? 'array' : typeof extractedData.champions,
+      hasTraits: !!extractedData.traits,
+      traitsType: Array.isArray(extractedData.traits) ? 'array' : typeof extractedData.traits,
+      hasMetadata: !!extractedData.metadata,
+      topLevelKeys: Object.keys(extractedData)
+    })
+    
+    // Parse champions from the extracted set data (raw CDragon format)
+    const champions = {}
+    const championsList = extractedData.champions || []
+    const setNumber = setInfo.setNumber
+    const realUnitPrefix = `TFT${setNumber}_`
+    
+    console.log(`🔍 Filtering for real ${setInfo.setName} units with prefix: ${realUnitPrefix}`)
+    
+    if (Array.isArray(championsList)) {
+      console.log('🔍 First few champions structure:', championsList.slice(0, 3).map(c => ({
+        keys: Object.keys(c || {}),
+        apiName: c?.apiName,
+        name: c?.name,
+        characterName: c?.characterName
+      })))
+      
+      let realUnits = 0
+      let skippedUnits = 0
+      
+      championsList.forEach((champion, index) => {
+        if (champion && champion.apiName) {
+          const championId = champion.apiName
+          
+          // Filter out non-real units: only include units with the set number in their ID
+          if (!championId.startsWith(realUnitPrefix)) {
+            skippedUnits++
+            console.log(`🚫 Skipping non-real unit: ${championId} (${champion.name || champion.characterName})`)
+            return
+          }
+          
+          // Additional filter: units must have non-empty traits (empty traits = NPC units)
+          if (!champion.traits || !Array.isArray(champion.traits) || champion.traits.length === 0) {
+            skippedUnits++
+            console.log(`🚫 Skipping NPC unit (no traits): ${championId} (${champion.name || champion.characterName})`)
+            return
+          }
+          
+          realUnits++
+          champions[championId] = {
+            id: championId,
+            name: champion.name || champion.characterName || championId,
+            cost: champion.cost || 1,
+            traits: champion.traits || [],
+            stats: champion.stats || {},
+            imageUrl: generateDirectImageUrl(version, championId, 'champion')
+          }
+        } else if (champion) {
+          console.warn(`🔍 Champion ${index} missing apiName:`, Object.keys(champion), champion.name || champion.characterName || 'unnamed')
+        }
+      })
+      
+      console.log(`✅ Filtered champions: ${realUnits} real units, ${skippedUnits} non-real units skipped`)
+    } else if (typeof championsList === 'object' && championsList !== null) {
+      // Handle object format (CDragon sometimes uses objects instead of arrays)
+      let realUnits = 0
+      let skippedUnits = 0
+      
+      Object.values(championsList).forEach(champion => {
+        if (champion && champion.apiName) {
+          const championId = champion.apiName
+          
+          // Filter out non-real units: only include units with the set number in their ID
+          if (!championId.startsWith(realUnitPrefix)) {
+            skippedUnits++
+            console.log(`🚫 Skipping non-real unit: ${championId} (${champion.name || champion.characterName})`)
+            return
+          }
+          
+          // Additional filter: units must have non-empty traits (empty traits = NPC units)
+          if (!champion.traits || !Array.isArray(champion.traits) || champion.traits.length === 0) {
+            skippedUnits++
+            console.log(`🚫 Skipping NPC unit (no traits): ${championId} (${champion.name || champion.characterName})`)
+            return
+          }
+          
+          realUnits++
+          champions[championId] = {
+            id: championId,
+            name: champion.name || champion.characterName || championId,
+            cost: champion.cost || 1,
+            traits: champion.traits || [],
+            stats: champion.stats || {},
+            imageUrl: generateDirectImageUrl(version, championId, 'champion')
+          }
+        }
+      })
+      
+      console.log(`✅ Filtered champions (object format): ${realUnits} real units, ${skippedUnits} non-real units skipped`)
+    }
+    
+    // Parse traits from the extracted set data (raw CDragon format)
+    const traits = {}
+    const traitsList = extractedData.traits || []
+    
+    console.log(`🔍 Filtering traits for real ${setInfo.setName} traits with prefix: ${realUnitPrefix}`)
+    console.log(`🔍 First few traits:`, traitsList.slice(0, 5).map(t => ({
+      name: t?.name,
+      id: t?.id,
+      apiName: t?.apiName,
+      effectKeys: t ? Object.keys(t) : []
+    })))
+    
+    if (Array.isArray(traitsList)) {
+      let realTraits = 0
+      let skippedTraits = 0
+      
+      traitsList.forEach((trait, index) => {
+        if (trait && (trait.name || trait.id || trait.apiName)) {
+          // Traits use apiName like champions, not name/id
+          const traitId = trait.apiName || trait.name || trait.id
+          
+          // Filter out non-real traits: only include traits with the set number in their ID
+          if (!traitId.startsWith(realUnitPrefix)) {
+            skippedTraits++
+            // Log first few skipped traits to see the pattern
+            if (skippedTraits <= 5) {
+              console.log(`🚫 Skipping non-real trait: ${traitId}`)
+            }
+            return
+          }
+          
+          realTraits++
+          traits[traitId] = {
+            id: traitId,
+            name: trait.display_name || trait.name || traitId,
+            description: trait.description || trait.desc || '',
+            imageUrl: generateDirectImageUrl(version, traitId, 'trait')
+          }
+          
+          if (realTraits <= 5) {
+            console.log(`✅ Adding real trait: ${traitId} (${trait.display_name || trait.name || 'unnamed'})`)
+          }
+        }
+      })
+      
+      console.log(`✅ Filtered traits: ${realTraits} real traits, ${skippedTraits} non-real traits skipped`)
+    } else if (typeof traitsList === 'object' && traitsList !== null) {
+      // Handle object format (CDragon sometimes uses objects instead of arrays)
+      let realTraits = 0
+      let skippedTraits = 0
+      
+      Object.values(traitsList).forEach(trait => {
+        if (trait && (trait.name || trait.id || trait.apiName)) {
+          // Traits use apiName like champions, not name/id
+          const traitId = trait.apiName || trait.name || trait.id
+          
+          // Filter out non-real traits: only include traits with the set number in their ID
+          if (!traitId.startsWith(realUnitPrefix)) {
+            skippedTraits++
+            return
+          }
+          
+          realTraits++
+          traits[traitId] = {
+            id: traitId,
+            name: trait.display_name || trait.name || traitId,
+            description: trait.description || trait.desc || '',
+            imageUrl: generateDirectImageUrl(version, traitId, 'trait')
+          }
+        }
+      })
+      
+      console.log(`✅ Filtered traits (object format): ${realTraits} real traits, ${skippedTraits} non-real traits skipped`)
+    }
+    
+    console.log(`🔄 Converted extracted data: ${Object.keys(champions).length} champions, ${Object.keys(traits).length} traits`)
+    
+    return {
+      champions,
+      traits,
+      augments: {}, // TODO: Parse augments if needed
+      championTraitRelationships: {}, // TODO: Create relationships
+      version,
+      setId: `set${setInfo.setNumber}`,
+      setName: setInfo.setName,
+      cached: true // Mark as cached since it came from localStorage
+    }
+  } catch (error) {
+    console.error('Failed to convert extracted data:', error)
+    return null
+  }
+}
+
 // Helper function to fetch teamplanner data from Community Dragon
 const fetchTeamplannerData = async (version) => {
   // Use specific version for Set 14 (15.13), latest for newer versions
@@ -92,7 +366,9 @@ const fetchTeamplannerData = async (version) => {
 }
 
 // Helper function to fetch data from dual sources with smart network handling
-const fetchTFTData = async (version, networkFailed = false) => {
+const fetchTFTData = async (version, networkFailed = false, onProgress = null) => {
+  console.log('🚀 FETCHDATA START: version=' + version + ', networkFailed=' + networkFailed)
+  
   try {
     // Check if we should use static fallback
     if (shouldUseStaticFallback(version)) {
@@ -100,16 +376,29 @@ const fetchTFTData = async (version, networkFailed = false) => {
       return getStaticFallbackData()
     }
     
-    // Determine set name from version
-    const setId = getSetFromVersion(version)
-    const setName = `Set${setId.replace('set', '')}`
+    // Detect the actual set from the version
+    if (onProgress) {
+      onProgress({ stage: 'detecting_set', progress: 30, isActive: true })
+    }
     
-    // Check if this is Set 14 - use local setData-14.json
-    if (setName === 'Set14') {
+    const setInfo = await detectSetInfo(version)
+    const setId = `set${setInfo.setNumber}`
+    const setName = setInfo.setName
+    
+    console.log(`🚀 POST-DETECTION: setInfo.setNumber = ${setInfo.setNumber}`)
+    console.log(`🔍 setId = ${setId}, setName = ${setName}`)
+    
+    console.log(`🔍 ABOUT TO CHECK Set 14 condition: setInfo.setNumber === 14 -> ${setInfo.setNumber === 14}`)
+    
+    // Check if this is Set 14 - use bundled local setData-14.json
+    if (setInfo.setNumber === 14) {
+      console.log('✅ ENTERING Set 14 branch')
       console.log('Detected Set 14, using local setData-14.json...')
       
       // If network failed or we're in offline mode, skip all network requests
+      console.log(`🔍 Checking shouldSkipNetwork: networkFailed=${networkFailed}`)
       const shouldSkipNetwork = networkFailed || shouldUseBundledData(version)
+      console.log(`🔍 shouldSkipNetwork = ${shouldSkipNetwork}`)
       
       if (shouldSkipNetwork) {
         console.log('⚡ Using fully bundled Set 14 data (no network requests)')
@@ -148,33 +437,185 @@ const fetchTFTData = async (version, networkFailed = false) => {
         if (set14Data) {
           // Add shop odds to the set data
           let shopOdds = {}
-        let unitPoolSizes = {}
+          let unitPoolSizes = {}
         
-        if (shopOddsData) {
-          shopOdds = shopOddsData.shopOdds || {}
-          unitPoolSizes = shopOddsData.unitPoolSizes || {}
-        } else {
-          // Fallback to static shop odds
-          for (let level = 1; level <= 11; level++) {
-            shopOdds[level] = getShopOdds(setId, version, level)
+          if (shopOddsData) {
+            shopOdds = shopOddsData.shopOdds || {}
+            unitPoolSizes = shopOddsData.unitPoolSizes || {}
+          } else {
+            // Fallback to static shop odds
+            for (let level = 1; level <= 11; level++) {
+              shopOdds[level] = getShopOdds(setId, version, level)
+            }
+            for (let cost = 1; cost <= 6; cost++) {
+              unitPoolSizes[cost] = getUnitPoolSize(setId, cost)
+            }
           }
-          for (let cost = 1; cost <= 6; cost++) {
-            unitPoolSizes[cost] = getUnitPoolSize(setId, cost)
+        
+          return {
+            ...set14Data,
+            gameData: {
+              shopOdds,
+              unitPoolSizes
+            },
+            teamplannerData,
+            dataSources: {
+              cdragon: true,
+              shopOdds: !!shopOddsData,
+              teamplanner: !!teamplannerData
+            }
           }
         }
+      }
+    }
+    
+    console.log(`🎆 AFTER Set 14 if block - this should always show`)
+    console.log(`✅ SKIPPED Set 14 branch, continuing to Set ${setInfo.setNumber} logic`)
+    
+    // For any other sets (not Set 14), try runtime extraction first
+    console.log(`🎯 Detected ${setName} (Set ${setInfo.setNumber}) for version ${version}`)
+    console.log(`🔥 ABOUT TO ATTEMPT EXTRACTION for Set ${setInfo.setNumber}`)
+    console.log(`🔍 Debug: networkFailed=${networkFailed}, setInfo.setNumber=${setInfo.setNumber}`)
+    console.log(`📍 Data loading progress: Successfully detected set, now checking for cached data...`)
+    
+    if (onProgress) {
+      onProgress({ stage: 'downloading', progress: 40, isActive: true })
+    }
+    
+    // Check if we have cached extracted data for this set
+    if (isSetDataCached(setInfo.setNumber)) {
+      console.log(`Using cached extracted data for Set ${setInfo.setNumber}`)
+      if (onProgress) {
+        onProgress({ stage: 'loading_cached', progress: 80, isActive: true })
+      }
+      
+      const cachedSetData = getCachedSetData(setInfo.setNumber)
+      if (cachedSetData) {
+        // Convert cached set data to our expected format
+        const convertedData = convertExtractedDataToAppFormat(cachedSetData, version, setInfo)
         
-        return {
-          ...set14Data,
-          gameData: {
-            shopOdds,
-            unitPoolSizes
-          },
-          teamplannerData,
-          dataSources: {
-            cdragon: true,
-            shopOdds: !!shopOddsData,
-            teamplanner: !!teamplannerData
+        if (convertedData) {
+          // Get shop odds and teamplanner data (with caching)
+          let shopOddsData = getCachedShopOdds(version)
+          let teamplannerData = getCachedTeamplanner(version)
+          
+          // Fetch if not cached
+          const fetchPromises = []
+          if (!shopOddsData) {
+            fetchPromises.push(fetchShopOdds(version).catch(() => null))
+          } else {
+            fetchPromises.push(Promise.resolve(shopOddsData))
           }
+          
+          if (!teamplannerData) {
+            fetchPromises.push(fetchTeamplannerData(version).catch(() => null))
+          } else {
+            fetchPromises.push(Promise.resolve(teamplannerData))
+          }
+          
+          const [fetchedShopOdds, fetchedTeamplanner] = await Promise.all(fetchPromises)
+          
+          // Cache newly fetched data
+          if (fetchedShopOdds && !shopOddsData) {
+            setCachedShopOdds(version, fetchedShopOdds)
+            shopOddsData = fetchedShopOdds
+          }
+          if (fetchedTeamplanner && !teamplannerData) {
+            setCachedTeamplanner(version, fetchedTeamplanner)
+            teamplannerData = fetchedTeamplanner
+          }
+          
+          if (onProgress) {
+            onProgress({ stage: 'complete', progress: 100, isActive: true })
+          }
+          
+          return {
+            ...convertedData,
+            gameData: {
+              shopOdds: shopOddsData?.shopOdds || {},
+              unitPoolSizes: shopOddsData?.unitPoolSizes || {}
+            },
+            teamplannerData,
+            dataSources: {
+              cdragon: true, // We extracted from CDragon
+              shopOdds: !!shopOddsData,
+              teamplanner: !!teamplannerData
+            }
+          }
+        }
+      }
+    }
+    
+    // Try to extract set data at runtime if not cached (for any set except Set 14 which has bundled data)
+    console.log(`🔍 EXTRACTION CONDITIONS: setInfo.setNumber !== 14 (${setInfo.setNumber !== 14})`)
+    console.log(`📊 Values: networkFailed=${networkFailed}, setInfo.setNumber=${setInfo.setNumber}`)
+    console.log(`🎯 ATTEMPTING extraction regardless of networkFailed status for new sets`)
+    
+    if (setInfo.setNumber !== 14) {
+      try {
+        console.log(`🎆 STARTING runtime extraction for Set ${setInfo.setNumber}`)
+        console.log(`📍 About to call extractSetData(${setInfo.setNumber}, onProgress)`)
+        const extractedData = await extractSetData(setInfo.setNumber, onProgress)
+        console.log(`🔍 Runtime extraction result:`, extractedData ? 'SUCCESS' : 'FAILED', extractedData ? Object.keys(extractedData) : 'no data')
+        
+        if (extractedData) {
+          console.log(`✅ Successfully extracted Set ${setInfo.setNumber} data`)
+          
+          // Convert extracted data to our expected format
+          const convertedData = convertExtractedDataToAppFormat(extractedData, version, setInfo)
+          
+          if (convertedData) {
+            // Get shop odds and teamplanner data (with caching)
+            let shopOddsData = getCachedShopOdds(version)
+            let teamplannerData = getCachedTeamplanner(version)
+            
+            // Fetch if not cached
+            const fetchPromises = []
+            if (!shopOddsData) {
+              fetchPromises.push(fetchShopOdds(version).catch(() => null))
+            } else {
+              fetchPromises.push(Promise.resolve(shopOddsData))
+            }
+            
+            if (!teamplannerData) {
+              fetchPromises.push(fetchTeamplannerData(version).catch(() => null))
+            } else {
+              fetchPromises.push(Promise.resolve(teamplannerData))
+            }
+            
+            const [fetchedShopOdds, fetchedTeamplanner] = await Promise.all(fetchPromises)
+            
+            // Cache newly fetched data
+            if (fetchedShopOdds && !shopOddsData) {
+              setCachedShopOdds(version, fetchedShopOdds)
+              shopOddsData = fetchedShopOdds
+            }
+            if (fetchedTeamplanner && !teamplannerData) {
+              setCachedTeamplanner(version, fetchedTeamplanner)
+              teamplannerData = fetchedTeamplanner
+            }
+            
+            return {
+              ...convertedData,
+              gameData: {
+                shopOdds: shopOddsData?.shopOdds || {},
+                unitPoolSizes: shopOddsData?.unitPoolSizes || {}
+              },
+              teamplannerData,
+              dataSources: {
+                cdragon: true, // We extracted from CDragon
+                shopOdds: !!shopOddsData,
+                teamplanner: !!teamplannerData
+              }
+            }
+          }
+        }
+      } catch (error) {
+        console.warn(`⚠️ Runtime extraction failed for Set ${setInfo.setNumber}:`, error)
+        // Fall through to existing CDragon logic if not network failed
+        if (networkFailed) {
+          console.log('⚠️ Network failed and extraction failed - cannot load data for this version')
+          throw new Error(`Cannot load Set ${setInfo.setNumber} data: network unavailable and extraction failed`)
         }
       }
     }
@@ -258,14 +699,18 @@ const fetchTFTData = async (version, networkFailed = false) => {
         unitPoolSizes
       }
     }
-    
-    }
-  }
-   catch (error) {
+  } catch (error) {
     console.error(`Error fetching TFT data for version ${version}:`, error)
     // Final fallback to static data
+    console.log(`📦 Using static fallback data due to error`)
     return getStaticFallbackData()
   }
+}
+
+// Use a ref-like approach that's more reliable than global variables
+const initializationState = {
+  promise: null,
+  completed: false
 }
 
 export const useTFTData = (initialVersion = null) => {
@@ -275,6 +720,7 @@ export const useTFTData = (initialVersion = null) => {
   const [currentVersion, setCurrentVersion] = useState('15.13.1') // Start with Set 14 as default
   const [cachedVersions, setCachedVersions] = useState([])
   const [preloadingSprites, setPreloadingSprites] = useState(false)
+  const [progress, setProgress] = useState({ isActive: false, stage: null, progress: 0 })
   
   // Update cached versions list
   const updateCachedVersions = useCallback(() => {
@@ -285,6 +731,7 @@ export const useTFTData = (initialVersion = null) => {
   const loadVersion = useCallback(async (version) => {
     setLoading(true)
     setError(null)
+    setProgress({ stage: 'fetching_version', progress: 5, isActive: true })
     
     try {
       // Try to get cached data first
@@ -296,19 +743,38 @@ export const useTFTData = (initialVersion = null) => {
         return
       }
       
-      // Fetch from API if not cached (pass network status)
+      // Fetch from API if not cached (pass network status and progress callback)
       const networkFailed = window.tftNetworkFailed || false
-      const freshData = await fetchTFTData(version, networkFailed)
-      setCachedData(version, freshData)
-      setData(freshData)
-      setCurrentVersion(version)
-      updateCachedVersions()
+      const freshData = await fetchTFTData(version, networkFailed, setProgress)
+      
+      // Only cache if we actually got valid data
+      if (freshData && freshData.champions && Object.keys(freshData.champions).length > 0) {
+        setCachedData(version, freshData)
+        setData(freshData)
+        setCurrentVersion(version)
+        updateCachedVersions()
+        console.log(`✅ Successfully loaded and cached data for version ${version}`)
+      } else {
+        console.warn(`⚠️ Failed to load valid data for version ${version}`, freshData)
+        throw new Error(`No valid data received for version ${version}`)
+      }
+      
+      setProgress({ stage: 'complete', progress: 100, isActive: true })
+      // Hide progress after a brief delay
+      setTimeout(() => {
+        setProgress({ isActive: false })
+      }, 1500)
       
       // Note: No sprite preloading needed since we're using direct image URLs
       
     } catch (err) {
       setError(err.message)
       setData(null)
+      setProgress({ stage: 'error', progress: 0, isActive: true, error: err.message })
+      // Hide error progress after a delay
+      setTimeout(() => {
+        setProgress({ isActive: false })
+      }, 3000)
     } finally {
       setLoading(false)
     }
@@ -321,25 +787,51 @@ export const useTFTData = (initialVersion = null) => {
   
   // Load initial version - try latest first, fallback to bundled
   useEffect(() => {
+    // Skip if already completed or in progress
+    if (initializationState.completed || initializationState.promise) {
+      if (initializationState.promise) {
+        console.log('🔄 Skipping duplicate initialization, using existing promise')
+        initializationState.promise.then(({ version, networkFailed }) => {
+          window.tftNetworkFailed = networkFailed
+          loadVersion(version)
+        }).catch(() => {
+          // Handle errors gracefully
+        })
+      }
+      return
+    }
+    
     const initializeData = async () => {
       try {
-        const { version: versionToUse, networkFailed } = await getVersionToUse(initialVersion)
-        console.log(`Initializing TFT data with version: ${versionToUse}`)
+        const { version: versionToUse, networkFailed } = await getVersionToUse(initialVersion, setProgress)
+        console.log(`🚀 Initializing TFT data with version: ${versionToUse}`)
         
         // Store network status for the loadVersion function
         window.tftNetworkFailed = networkFailed
         
         loadVersion(versionToUse)
+        return { version: versionToUse, networkFailed }
       } catch (error) {
         console.error('Failed to determine initial version:', error)
         // Final fallback to Set 14
         window.tftNetworkFailed = true
+        setProgress({ stage: 'error', progress: 0, isActive: true, error: error.message })
+        setTimeout(() => {
+          setProgress({ isActive: false })
+        }, 3000)
         loadVersion('15.13.1')
+        return { version: '15.13.1', networkFailed: true }
       }
     }
     
-    initializeData()
-  }, [loadVersion, initialVersion])
+    // Set and execute initialization
+    initializationState.promise = initializeData()
+      .finally(() => {
+        initializationState.completed = true
+        initializationState.promise = null
+      })
+    
+  }, [])
   
   // Clear cache for a specific version
   const clearCache = useCallback((version) => {
@@ -375,6 +867,7 @@ export const useTFTData = (initialVersion = null) => {
     currentVersion,
     cachedVersions,
     preloadingSprites,
+    progress,
     loadVersion,
     clearCache,
     clearAllCache
