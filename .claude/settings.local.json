@@ -2,7 +2,10 @@
   "permissions": {
     "allow": [
       "WebFetch(domain:developer.riotgames.com)",
-      "WebFetch(domain:ddragon.leagueoflegends.com)"
+      "WebFetch(domain:ddragon.leagueoflegends.com)",
+      "Bash(grep:*)",
+      "WebFetch(domain:raw.communitydragon.org)",
+      "Bash(curl:*)"
     ],
     "deny": []
   }

@@ -70,6 +70,29 @@ const getCachedVersions = () => {
   }
 }
 
+// Helper function to fetch teamplanner data from Community Dragon
+const fetchTeamplannerData = async (version) => {
+  try {
+    // Use specific version for Set 14 (15.13), latest for newer versions
+    const cdVersion = version === '15.13.1' ? '15.13' : (version.includes('15.') ? 'latest' : version.split('.').slice(0, 2).join('.'))
+    const teamplannerUrl = `https://raw.communitydragon.org/${cdVersion}/plugins/rcp-be-lol-game-data/global/default/v1/tftchampions-teamplanner.json`
+    
+    console.log('Fetching teamplanner data from:', teamplannerUrl)
+    const response = await fetch(teamplannerUrl)
+    
+    if (!response.ok) {
+      throw new Error(`Failed to fetch teamplanner data: ${response.status}`)
+    }
+    
+    const teamplannerData = await response.json()
+    console.log('Successfully fetched teamplanner data:', Object.keys(teamplannerData))
+    return teamplannerData
+  } catch (error) {
+    console.error('Error fetching teamplanner data:', error)
+    return null
+  }
+}
+
 // Helper function to fetch data from dual sources
 const fetchTFTData = async (version) => {
   try {
@@ -86,12 +109,13 @@ const fetchTFTData = async (version) => {
     // Check if this is Set 14 - use local setData-14.json
     if (setName === 'Set14') {
       console.log('Detected Set 14, using local setData-14.json...')
-      const set14Data = await loadSet14Data(version)
+      const [set14Data, shopOddsData, teamplannerData] = await Promise.all([
+        loadSet14Data(version),
+        fetchShopOdds(version).catch(() => null),
+        fetchTeamplannerData(version).catch(() => null)
+      ])
       
       if (set14Data) {
-        // Fetch shop odds separately
-        const shopOddsData = await fetchShopOdds(version).catch(() => null)
-        
         // Add shop odds to the set data
         let shopOdds = {}
         let unitPoolSizes = {}
@@ -115,18 +139,21 @@ const fetchTFTData = async (version) => {
             shopOdds,
             unitPoolSizes
           },
+          teamplannerData,
           dataSources: {
             cdragon: true,
-            shopOdds: !!shopOddsData
+            shopOdds: !!shopOddsData,
+            teamplanner: !!teamplannerData
           }
         }
       }
     }
     
     // For other sets, use CDragon API
-    const [shopOddsData, cdragonData] = await Promise.all([
+    const [shopOddsData, cdragonData, teamplannerData] = await Promise.all([
       fetchShopOdds(version).catch(() => null), // Data Dragon shop odds
-      fetchCDragonData().catch(() => null) // CDragon game data
+      fetchCDragonData().catch(() => null), // CDragon game data
+      fetchTeamplannerData(version).catch(() => null) // Community Dragon teamplanner data
     ])
     
     // Get current set data from CDragon
@@ -184,9 +211,11 @@ const fetchTFTData = async (version) => {
       setId,
       setName,
       cached: false,
+      teamplannerData,
       dataSources: {
         cdragon: !!currentSetData,
-        shopOdds: !!shopOddsData
+        shopOdds: !!shopOddsData,
+        teamplanner: !!teamplannerData
       },
       gameData: {
         shopOdds,

@@ -18,6 +18,7 @@ export const transformChampions = (setData, version = '15.13.1') => {
     
     champions[championId] = {
       id: championId,
+      character_id: championId, // Add character_id for teamcode parsing compatibility
       name: champion.name,
       cost: champion.cost,
       traits: champion.traits || [],

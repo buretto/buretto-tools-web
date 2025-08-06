@@ -4,6 +4,7 @@
 import setDataFallback from './setData-14-fallback.json'
 import { transformChampions, transformTraits, createChampionTraitRelationships } from '../utils/setDataTransformer'
 import { getShopOdds, getUnitPoolSize } from './shopOdds'
+import teamplannerData from './tftchampions-teamplanner-15.13.json'
 
 // Transform the setData using our transformer for consistency
 const version = '15.13.1'
@@ -24,6 +25,9 @@ export const STATIC_FALLBACK_DATA = {
   
   // Champion-trait relationships from real data
   championTraitRelationships,
+  
+  // Real teamplanner data from Community Dragon
+  teamplannerData: teamplannerData,
   
   // Game data with static shop odds
   gameData: {
@@ -46,7 +50,8 @@ export const STATIC_FALLBACK_DATA = {
   // Data sources status
   dataSources: {
     cdragon: false, // This is fallback, not live CDragon
-    shopOdds: false // Using static shop odds
+    shopOdds: false, // Using static shop odds
+    teamplanner: true // Using real Community Dragon teamplanner data
   }
 }
 
