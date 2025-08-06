@@ -37,13 +37,21 @@ export const generateImageUrls = (version, championId, type = 'champion') => {
 
 /**
  * Generates image URL for a specific champion/trait with mapping support
+ * For Set 14 (version 15.13.1), uses local bundled images when available
  */
 export const generateDirectImageUrl = (version, entityId, type = 'champion') => {
-  const baseUrl = `https://ddragon.leagueoflegends.com/cdn/${version}/img/tft-${type}`
-  
   // Apply name mapping if available
   const mappingInfo = getMappingInfo(version, entityId, type)
   const mappedId = mappingInfo.name
+  
+  // For Set 14, try to use local bundled images first
+  if (version === '15.13.1') {
+    const localUrl = generateLocalImageUrl(mappedId, type, mappingInfo)
+    if (localUrl) return localUrl
+  }
+  
+  // Fallback to Data Dragon CDN
+  const baseUrl = `https://ddragon.leagueoflegends.com/cdn/${version}/img/tft-${type}`
   
   if (type === 'champion') {
     return `${baseUrl}/${mappedId}.TFT_Set14.png`
@@ -66,6 +74,36 @@ export const generateDirectImageUrl = (version, entityId, type = 'champion') => 
     // Fallback to original logic for non-standard names
     const traitName = mappedId.replace('TFT14_', '').replace('TFT_', '')
     return `${baseUrl}/Trait_Icon_14_${traitName}.TFT_Set14.png`
+  }
+  
+  return null
+}
+
+/**
+ * Generates local bundled image URL for Set 14 assets
+ */
+const generateLocalImageUrl = (mappedId, type, mappingInfo) => {
+  if (type === 'champion') {
+    // Champion images use the mapped ID directly
+    return `/images/tft-${type}/${mappedId}.TFT_Set14.png`
+  } else if (type === 'trait') {
+    // Trait images follow the Trait_Icon pattern
+    if (mappedId.startsWith('TFT')) {
+      const match = mappedId.match(/^TFT(\d+)_(.+)$/)
+      if (match) {
+        const [, setNumber, traitName] = match
+        
+        if (mappingInfo.hasSetSuffix) {
+          return `/images/tft-${type}/Trait_Icon_${setNumber}_${traitName}.TFT_Set${setNumber}.png`
+        } else {
+          return `/images/tft-${type}/Trait_Icon_${setNumber}_${traitName}.png`
+        }
+      }
+    }
+    
+    // Fallback for non-standard trait names
+    const traitName = mappedId.replace('TFT14_', '').replace('TFT_', '')
+    return `/images/tft-${type}/Trait_Icon_14_${traitName}.TFT_Set14.png`
   }
   
   return null
@@ -163,6 +201,7 @@ const createSpriteCanvas = (spriteImage, coordinates) => {
 /**
  * Loads TFT champion or trait image with fallback strategy
  * Priority: Direct Data Dragon URL → Placeholder
+ * Image failures are non-critical and won't prevent app loading
  */
 export const loadTFTImage = async (version, entityId, type = 'champion') => {
   const cacheKey = `${version}-${type}-${entityId}`
@@ -187,11 +226,15 @@ export const loadTFTImage = async (version, entityId, type = 'champion') => {
       throw new Error('Could not generate image URL')
     }
     
-    const image = await loadImage(imageUrl)
+    // Try to load the image with a shorter timeout for non-critical loading
+    const image = await loadImage(imageUrl, 2, 500) // 2 retries, 500ms delay
     IMAGE_CACHE.set(cacheKey, image)
     return image
   } catch (error) {
-    // Fallback to placeholder
+    // Log but don't throw - image failures shouldn't prevent app from working
+    console.warn(`Failed to load ${type} image for ${entityId}:`, error.message)
+    
+    // Create placeholder and cache it
     const placeholder = await createPlaceholderImage(entityId, type)
     IMAGE_CACHE.set(cacheKey, placeholder)
     return placeholder
@@ -260,15 +303,19 @@ export const preloadSprites = async (version, spriteNames, type = 'champion') =>
 }
 
 /**
- * Batch loads multiple TFT images
+ * Batch loads multiple TFT images - failures are non-critical
+ * Returns placeholders for failed images
  */
 export const loadTFTImages = async (version, entityIds, type = 'champion') => {
-  const promises = entityIds.map(entityId => 
-    loadTFTImage(version, entityId, type).catch(error => {
-      console.warn(`Failed to load image ${entityId}:`, error)
-      return null
-    })
-  )
+  const promises = entityIds.map(async (entityId) => {
+    try {
+      return await loadTFTImage(version, entityId, type)
+    } catch (error) {
+      // This should rarely happen since loadTFTImage handles its own errors
+      console.warn(`Unexpected error loading image ${entityId}:`, error)
+      return await createPlaceholderImage(entityId, type)
+    }
+  })
   
   return Promise.all(promises)
 }

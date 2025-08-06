@@ -117,16 +117,14 @@ function TeamPlannerModal({ isOpen, onClose, tftData, tftImages }) {
         return
       }
 
+      // Check if teamplanner data is available
+      if (!tftData?.teamplannerData) {
+        alert('Teamplanner data not available. Please try again when data has loaded.')
+        return
+      }
+
       // Parse the teamcode
-      const parseResult = parseTeamcode(clipboardText, tftData?.teamplannerData)
-      
-      console.log('=== TEAMCODE DEBUGGING ===')
-      console.log('Input teamcode:', clipboardText)
-      console.log('Parse result:', parseResult)
-      console.log('Teamplanner data available:', !!tftData?.teamplannerData)
-      console.log('TFTSet14 champions count:', tftData?.teamplannerData?.TFTSet14?.length || 0)
-      console.log('TFT Data sources:', tftData?.dataSources)
-      console.log('TFT Data cached?', tftData?.cached)
+      const parseResult = parseTeamcode(clipboardText, tftData.teamplannerData)
       
       if (!parseResult.success) {
         alert(`Failed to parse teamcode: ${parseResult.error}`)
@@ -147,23 +145,14 @@ function TeamPlannerModal({ isOpen, onClose, tftData, tftImages }) {
       const newTeamSlots = new Array(10).fill(null)
       let loadedCount = 0
 
-      console.log('Champions to match:', parseResult.champions)
-      console.log('Available champion data sample:', Object.keys(tftData?.champions || {}).slice(0, 5))
-      console.log('Sample champion object:', Object.values(tftData?.champions || {})[0])
-
       parseResult.champions.forEach((characterId, index) => {
         if (characterId && index < 10) {
-          console.log(`\n--- Slot ${index} ---`)
-          console.log(`Looking for character_id: "${characterId}"`)
-          
           // Find the champion by character_id
           const champion = Object.values(tftData?.champions || {}).find(champ => 
             champ.character_id === characterId || champ.id === characterId
           )
           
-          console.log('Match found:', !!champion)
           if (champion) {
-            console.log('Champion name:', champion.name)
             newTeamSlots[index] = {
               ...champion,
               starTarget: 2, // Default to 2 star
@@ -173,9 +162,6 @@ function TeamPlannerModal({ isOpen, onClose, tftData, tftImages }) {
             loadedCount++
           } else {
             console.warn(`Champion not found for character_id: ${characterId}`)
-            // Show what character_ids are actually available
-            const availableIds = Object.values(tftData?.champions || {}).map(c => c.character_id || c.id).filter(Boolean)
-            console.log('First few available character_ids:', availableIds.slice(0, 10))
           }
         }
       })

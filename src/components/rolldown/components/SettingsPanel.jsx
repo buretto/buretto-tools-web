@@ -1,9 +1,18 @@
-import React, { useState } from 'react'
-import { X, RotateCcw } from 'lucide-react'
+import React, { useState, useEffect } from 'react'
+import { X, RotateCcw, Wifi, WifiOff } from 'lucide-react'
+import { shouldUseOfflineMode, enableOfflineMode, disableOfflineMode } from '../utils/networkUtils'
 
 function SettingsPanel({ isOpen, onClose, hotkeys, onUpdateHotkeys, defaultHotkeys }) {
   const [editingHotkeys, setEditingHotkeys] = useState(hotkeys)
   const [recordingKey, setRecordingKey] = useState(null)
+  const [isOfflineMode, setIsOfflineMode] = useState(shouldUseOfflineMode())
+
+  // Update offline mode state when panel opens
+  useEffect(() => {
+    if (isOpen) {
+      setIsOfflineMode(shouldUseOfflineMode())
+    }
+  }, [isOpen])
 
   // Add event listener when recording - must be before early return
   React.useEffect(() => {
@@ -79,6 +88,16 @@ function SettingsPanel({ isOpen, onClose, hotkeys, onUpdateHotkeys, defaultHotke
     return Object.keys(editingHotkeys).find(key => editingHotkeys[key] === action) || 'None'
   }
 
+  const handleOfflineModeToggle = () => {
+    if (isOfflineMode) {
+      disableOfflineMode()
+      setIsOfflineMode(false)
+    } else {
+      enableOfflineMode()
+      setIsOfflineMode(true)
+    }
+  }
+
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -120,6 +139,33 @@ function SettingsPanel({ isOpen, onClose, hotkeys, onUpdateHotkeys, defaultHotke
               </div>
             )
           })}
+        </div>
+
+        {/* Offline Mode Section */}
+        <div className="mt-6 pt-4 border-t border-gray-600">
+          <div className="flex justify-between items-center">
+            <div className="flex items-center gap-2">
+              {isOfflineMode ? <WifiOff size={16} className="text-gray-400" /> : <Wifi size={16} className="text-green-400" />}
+              <div>
+                <div className="text-white text-sm font-medium">Offline Mode</div>
+                <div className="text-gray-400 text-xs">
+                  {isOfflineMode ? 'Using bundled data only' : 'Fetching latest data from network'}
+                </div>
+              </div>
+            </div>
+            <button
+              onClick={handleOfflineModeToggle}
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                isOfflineMode ? 'bg-blue-600' : 'bg-gray-700'
+              }`}
+            >
+              <span
+                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                  isOfflineMode ? 'translate-x-6' : 'translate-x-1'
+                }`}
+              />
+            </button>
+          </div>
         </div>
 
         <div className="flex justify-between mt-6 pt-4 border-t border-gray-600">

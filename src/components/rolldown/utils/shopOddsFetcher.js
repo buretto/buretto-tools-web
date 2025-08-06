@@ -1,11 +1,14 @@
 // Shop Odds Fetcher from Data Dragon API
 // Fetches real-time shop drop rates and unit pool data
 
+import { fetchWithFallback } from './networkUtils'
+import { getBundledShopOdds, hasBundledShopOdds } from '../data/bundledShopOdds'
+
 const SHOP_ODDS_CACHE = new Map()
 const CACHE_EXPIRY = 60 * 60 * 1000 // 1 hour cache
 
 /**
- * Fetches shop odds data from Data Dragon API
+ * Fetches shop odds data from Data Dragon API with bundled fallback
  */
 export const fetchShopOdds = async (version) => {
   const cacheKey = `shop_odds_${version}`
@@ -18,16 +21,31 @@ export const fetchShopOdds = async (version) => {
     }
   }
   
+  // Fallback function for bundled data
+  const fallbackFn = () => {
+    if (hasBundledShopOdds(version)) {
+      return getBundledShopOdds()
+    }
+    throw new Error(`No bundled shop odds available for version ${version}`)
+  }
+  
   try {
     const url = `https://ddragon.leagueoflegends.com/cdn/${version}/data/en_US/tft-shop-drop-rates-data.json`
-    const response = await fetch(url)
     
-    if (!response.ok) {
-      throw new Error(`Failed to fetch shop odds: ${response.status}`)
-    }
-    
-    const data = await response.json()
-    const processedData = processShopOddsData(data)
+    // Use fetchWithFallback for automatic timeout and offline mode handling  
+    const processedData = await fetchWithFallback(
+      url,
+      fallbackFn,
+      'shop odds',
+      true // Major failure - triggers circuit breaker
+    ).then(data => {
+      // If data is already processed (from fallback), return as-is
+      if (data && (data.shopOdds || data.unitPoolSizes)) {
+        return data
+      }
+      // Otherwise, process the raw network data
+      return processShopOddsData(data)
+    })
     
     // Cache the processed data
     SHOP_ODDS_CACHE.set(cacheKey, {

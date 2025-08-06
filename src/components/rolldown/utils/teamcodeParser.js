@@ -29,15 +29,6 @@ export const extractSetFromTeamcode = (teamcode) => {
  */
 export const generateChampionMappings = (teamplannerData, setId) => {
   try {
-    console.log('generateChampionMappings called with:', { 
-      setId, 
-      hasData: !!teamplannerData,
-      dataType: typeof teamplannerData,
-      keys: teamplannerData ? Object.keys(teamplannerData) : 'No data',
-      targetSetExists: teamplannerData && teamplannerData[setId] ? true : false,
-      targetSetLength: teamplannerData && teamplannerData[setId] ? teamplannerData[setId].length : 'N/A'
-    })
-    
     if (!teamplannerData || !setId || !teamplannerData[setId]) {
       console.warn('Invalid teamplanner data or set ID:', { setId, hasData: !!teamplannerData })
       return { hexToChampion: {}, championToHex: {} }
@@ -106,9 +97,6 @@ export const parseTeamcode = (teamcode, teamplannerData) => {
     // Generate champion mappings for this set
     const { hexToChampion } = generateChampionMappings(teamplannerData, setId)
     
-    console.log('Generated mappings for', setId, ':', Object.keys(hexToChampion).length, 'champions')
-    console.log('First few mappings:', Object.entries(hexToChampion).slice(0, 10))
-
     // Parse champion codes (each champion is represented by 2 hex digits)
     const champions = []
     for (let i = 0; i < codesOnly.length; i += 2) {

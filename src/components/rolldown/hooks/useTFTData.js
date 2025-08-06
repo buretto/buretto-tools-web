@@ -12,6 +12,10 @@ import {
   loadSet14Data
 } from '../utils/cdragonParser'
 import { getStaticFallbackData, shouldUseStaticFallback } from '../data/staticFallback'
+import staticTeamplannerData from '../data/tftchampions-teamplanner-15.13.json'
+import { fetchWithFallback } from '../utils/networkUtils'
+import { getVersionToUse, shouldUseBundledData, getSetInfoFromVersion } from '../utils/versionDetector'
+import { getBundledShopOdds } from '../data/bundledShopOdds'
 
 const BASE_URL = 'https://ddragon.leagueoflegends.com/cdn'
 const CACHE_PREFIX = 'tft_data_'
@@ -72,29 +76,23 @@ const getCachedVersions = () => {
 
 // Helper function to fetch teamplanner data from Community Dragon
 const fetchTeamplannerData = async (version) => {
-  try {
-    // Use specific version for Set 14 (15.13), latest for newer versions
-    const cdVersion = version === '15.13.1' ? '15.13' : (version.includes('15.') ? 'latest' : version.split('.').slice(0, 2).join('.'))
-    const teamplannerUrl = `https://raw.communitydragon.org/${cdVersion}/plugins/rcp-be-lol-game-data/global/default/v1/tftchampions-teamplanner.json`
-    
-    console.log('Fetching teamplanner data from:', teamplannerUrl)
-    const response = await fetch(teamplannerUrl)
-    
-    if (!response.ok) {
-      throw new Error(`Failed to fetch teamplanner data: ${response.status}`)
+  // Use specific version for Set 14 (15.13), latest for newer versions
+  const cdVersion = version === '15.13.1' ? '15.13' : (version.includes('15.') ? 'latest' : version.split('.').slice(0, 2).join('.'))
+  const teamplannerUrl = `https://raw.communitydragon.org/${cdVersion}/plugins/rcp-be-lol-game-data/global/default/v1/tftchampions-teamplanner.json`
+  
+  // Fallback function for bundled data (only available for Set 14)
+  const fallbackFn = () => {
+    if (version === '15.13.1') {
+      return staticTeamplannerData
     }
-    
-    const teamplannerData = await response.json()
-    console.log('Successfully fetched teamplanner data:', Object.keys(teamplannerData))
-    return teamplannerData
-  } catch (error) {
-    console.error('Error fetching teamplanner data:', error)
-    return null
+    throw new Error(`No bundled teamplanner data available for version ${version}`)
   }
+  
+  return fetchWithFallback(teamplannerUrl, fallbackFn, 'teamplanner data', true)
 }
 
-// Helper function to fetch data from dual sources
-const fetchTFTData = async (version) => {
+// Helper function to fetch data from dual sources with smart network handling
+const fetchTFTData = async (version, networkFailed = false) => {
   try {
     // Check if we should use static fallback
     if (shouldUseStaticFallback(version)) {
@@ -109,15 +107,47 @@ const fetchTFTData = async (version) => {
     // Check if this is Set 14 - use local setData-14.json
     if (setName === 'Set14') {
       console.log('Detected Set 14, using local setData-14.json...')
-      const [set14Data, shopOddsData, teamplannerData] = await Promise.all([
-        loadSet14Data(version),
-        fetchShopOdds(version).catch(() => null),
-        fetchTeamplannerData(version).catch(() => null)
-      ])
       
-      if (set14Data) {
-        // Add shop odds to the set data
-        let shopOdds = {}
+      // If network failed or we're in offline mode, skip all network requests
+      const shouldSkipNetwork = networkFailed || shouldUseBundledData(version)
+      
+      if (shouldSkipNetwork) {
+        console.log('⚡ Using fully bundled Set 14 data (no network requests)')
+        const [set14Data, shopOddsData, teamplannerData] = await Promise.all([
+          loadSet14Data(version),
+          Promise.resolve({ // Use bundled shop odds immediately
+            shopOdds: getBundledShopOdds().shopOdds,
+            unitPoolSizes: getBundledShopOdds().unitPoolSizes
+          }),
+          Promise.resolve(staticTeamplannerData) // Use bundled teamplanner data
+        ])
+        
+        if (set14Data) {
+          return {
+            ...set14Data,
+            gameData: {
+              shopOdds: shopOddsData.shopOdds,
+              unitPoolSizes: shopOddsData.unitPoolSizes
+            },
+            teamplannerData,
+            dataSources: {
+              cdragon: true,
+              shopOdds: true, // We have bundled data
+              teamplanner: true // We have bundled data
+            }
+          }
+        }
+      } else {
+        // Try network requests for Set 14 supplementary data
+        const [set14Data, shopOddsData, teamplannerData] = await Promise.all([
+          loadSet14Data(version),
+          fetchShopOdds(version),
+          fetchTeamplannerData(version)
+        ])
+        
+        if (set14Data) {
+          // Add shop odds to the set data
+          let shopOdds = {}
         let unitPoolSizes = {}
         
         if (shopOddsData) {
@@ -149,11 +179,17 @@ const fetchTFTData = async (version) => {
       }
     }
     
-    // For other sets, use CDragon API
+    // For other sets, use CDragon API (skip if network failed)
+    if (networkFailed) {
+      console.log('⚠️ Network failed - cannot fetch data for non-bundled version:', version)
+      throw new Error('Network unavailable for non-bundled version')
+    }
+    
+    console.log(`Fetching CDragon data for ${setName}...`)
     const [shopOddsData, cdragonData, teamplannerData] = await Promise.all([
-      fetchShopOdds(version).catch(() => null), // Data Dragon shop odds
-      fetchCDragonData().catch(() => null), // CDragon game data
-      fetchTeamplannerData(version).catch(() => null) // Community Dragon teamplanner data
+      fetchShopOdds(version), // Data Dragon shop odds (with bundled fallback)
+      fetchCDragonData().catch(() => null), // CDragon game data (no bundled fallback yet)
+      fetchTeamplannerData(version) // Community Dragon teamplanner data (with bundled fallback)
     ])
     
     // Get current set data from CDragon
@@ -222,18 +258,21 @@ const fetchTFTData = async (version) => {
         unitPoolSizes
       }
     }
-  } catch (error) {
+    
+    }
+  }
+   catch (error) {
     console.error(`Error fetching TFT data for version ${version}:`, error)
     // Final fallback to static data
     return getStaticFallbackData()
   }
 }
 
-export const useTFTData = (initialVersion = '15.13.1') => {
+export const useTFTData = (initialVersion = null) => {
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
-  const [currentVersion, setCurrentVersion] = useState(initialVersion)
+  const [currentVersion, setCurrentVersion] = useState('15.13.1') // Start with Set 14 as default
   const [cachedVersions, setCachedVersions] = useState([])
   const [preloadingSprites, setPreloadingSprites] = useState(false)
   
@@ -257,8 +296,9 @@ export const useTFTData = (initialVersion = '15.13.1') => {
         return
       }
       
-      // Fetch from API if not cached
-      const freshData = await fetchTFTData(version)
+      // Fetch from API if not cached (pass network status)
+      const networkFailed = window.tftNetworkFailed || false
+      const freshData = await fetchTFTData(version, networkFailed)
       setCachedData(version, freshData)
       setData(freshData)
       setCurrentVersion(version)
@@ -279,9 +319,26 @@ export const useTFTData = (initialVersion = '15.13.1') => {
     updateCachedVersions()
   }, [updateCachedVersions])
   
-  // Load initial version
+  // Load initial version - try latest first, fallback to bundled
   useEffect(() => {
-    loadVersion(initialVersion)
+    const initializeData = async () => {
+      try {
+        const { version: versionToUse, networkFailed } = await getVersionToUse(initialVersion)
+        console.log(`Initializing TFT data with version: ${versionToUse}`)
+        
+        // Store network status for the loadVersion function
+        window.tftNetworkFailed = networkFailed
+        
+        loadVersion(versionToUse)
+      } catch (error) {
+        console.error('Failed to determine initial version:', error)
+        // Final fallback to Set 14
+        window.tftNetworkFailed = true
+        loadVersion('15.13.1')
+      }
+    }
+    
+    initializeData()
   }, [loadVersion, initialVersion])
   
   // Clear cache for a specific version
