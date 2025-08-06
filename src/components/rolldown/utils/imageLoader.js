@@ -403,17 +403,54 @@ export const getCacheStats = () => {
 }
 
 /**
+ * Gets blacklist for a specific version
+ */
+export const getImageBlacklist = (version) => {
+  try {
+    const stored = localStorage.getItem(`tft_image_blacklist_${version}`)
+    if (stored) {
+      return JSON.parse(stored)
+    }
+  } catch (error) {
+    console.error('Failed to parse blacklist:', error)
+  }
+  return { champions: [], traits: [] }
+}
+
+/**
+ * Checks if an image URL is blacklisted
+ */
+export const isImageBlacklisted = (imageUrl, version) => {
+  const blacklist = getImageBlacklist(version)
+  const filename = imageUrl.split('/').pop()
+  if (!filename) return false
+  
+  // Determine type from URL
+  const type = imageUrl.includes('tft-champion') ? 'champions' : 'traits'
+  
+  return blacklist[type].some(pattern => 
+    filename.toLowerCase().includes(pattern.toLowerCase())
+  )
+}
+
+/**
  * Gets failed image statistics
  */
-export const getFailedImageStats = () => {
+export const getFailedImageStats = (version = null) => {
   const failed = Array.from(FAILED_IMAGES.entries()).map(([url, data]) => ({
     url,
     ...data
   }))
   
+  // If version is provided, filter out blacklisted images
+  const filteredFailed = version 
+    ? failed.filter(img => !isImageBlacklisted(img.url, version))
+    : failed
+  
   return {
-    count: FAILED_IMAGES.size,
-    failed: failed
+    count: filteredFailed.length,
+    failed: filteredFailed,
+    totalFailed: failed.length
   }
 }
 

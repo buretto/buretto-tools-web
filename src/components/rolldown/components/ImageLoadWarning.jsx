@@ -5,26 +5,35 @@ import { getFailedImageStats } from '../utils/imageLoader.js'
 const ImageLoadWarning = ({ onOpenMappings, version, totalImages = 0 }) => {
   const [failedStats, setFailedStats] = useState({ count: 0, failed: [] })
   const [showTooltip, setShowTooltip] = useState(false)
+  const [delayCompleted, setDelayCompleted] = useState(false)
 
   useEffect(() => {
     const updateStats = () => {
-      const stats = getFailedImageStats()
+      const stats = getFailedImageStats(version)
       setFailedStats(stats)
     }
 
-    // Update immediately
-    updateStats()
+    let interval
 
-    // Update every 2 seconds while images are loading
-    const interval = setInterval(updateStats, 2000)
+    // Don't show warnings immediately - give images time to load/retry
+    const initialDelay = setTimeout(() => {
+      setDelayCompleted(true)
+      updateStats()
+      
+      // Update every 2 seconds after initial delay
+      interval = setInterval(updateStats, 2000)
+    }, 5000) // 5 second delay before checking for failures
 
-    return () => clearInterval(interval)
+    return () => {
+      clearTimeout(initialDelay)
+      if (interval) clearInterval(interval)
+    }
   }, [])
 
-  if (failedStats.count === 0) return null
+  if (!delayCompleted || failedStats.count === 0) return null
 
-  const successfulImages = totalImages - failedStats.count
-  const successRate = totalImages > 0 ? Math.round((successfulImages / totalImages) * 100) : 0
+  const failedCount = failedStats.count
+  const isPlural = failedCount !== 1
 
   return (
     <div className="relative inline-block">
@@ -36,7 +45,7 @@ const ImageLoadWarning = ({ onOpenMappings, version, totalImages = 0 }) => {
       >
         <AlertTriangle className="w-4 h-4 text-amber-600 mr-2" />
         <span className="text-sm text-amber-800 font-medium">
-          {successfulImages}/{totalImages} images loaded
+          {failedCount} image{isPlural ? 's' : ''} failed to load
         </span>
         <Settings className="w-4 h-4 text-amber-600 ml-2" />
       </div>
@@ -46,8 +55,7 @@ const ImageLoadWarning = ({ onOpenMappings, version, totalImages = 0 }) => {
         <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 w-80 z-50">
           <div className="bg-gray-900 text-white text-sm rounded-lg p-3 shadow-lg">
             <div className="mb-2">
-              <strong>{failedStats.count} images failed to load</strong>
-              <span className="text-gray-300"> ({successRate}% success rate)</span>
+              <strong>{failedCount} image{isPlural ? 's' : ''} failed to load</strong>
             </div>
             <p className="text-gray-300 mb-2">
               Often due to mismatch between Riot internal names and Data Dragon API. 

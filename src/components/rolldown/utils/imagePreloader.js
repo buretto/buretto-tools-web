@@ -1,7 +1,7 @@
 // TFT Image Preloading System
 // Handles phased loading: critical images first, then background preloading
 
-import { loadTFTImage, getCacheStats } from './imageLoader'
+import { loadTFTImage, getCacheStats, getImageBlacklist } from './imageLoader'
 
 /**
  * Preloading phases
@@ -13,15 +13,27 @@ export const PRELOAD_PHASES = {
 }
 
 /**
+ * Helper function to check if an entity is blacklisted
+ */
+const isEntityBlacklisted = (entityId, type, version) => {
+  const blacklist = getImageBlacklist(version)
+  const typeKey = type === 'champion' ? 'champions' : 'traits'
+  
+  return blacklist[typeKey].some(pattern => 
+    entityId.toLowerCase().includes(pattern.toLowerCase())
+  )
+}
+
+/**
  * Image preloader class with progress tracking
  */
 class ImagePreloader {
   constructor() {
     this.phase = null
     this.progress = {
-      critical: { loaded: 0, total: 0, complete: false },
-      background: { loaded: 0, total: 0, complete: false },
-      overall: { loaded: 0, total: 0, percentage: 0 }
+      critical: { loaded: 0, total: 0, successful: 0, failed: 0, blacklisted: 0, complete: false },
+      background: { loaded: 0, total: 0, successful: 0, failed: 0, blacklisted: 0, complete: false },
+      overall: { loaded: 0, total: 0, successful: 0, failed: 0, blacklisted: 0, percentage: 0 }
     }
     this.callbacks = {
       onProgress: null,
@@ -44,13 +56,19 @@ class ImagePreloader {
   /**
    * Update progress and trigger callbacks
    */
-  updateProgress(phase, loaded, total) {
+  updateProgress(phase, loaded, total, successful = loaded, failed = 0, blacklisted = 0) {
     this.progress[phase].loaded = loaded
     this.progress[phase].total = total
+    this.progress[phase].successful = successful
+    this.progress[phase].failed = failed
+    this.progress[phase].blacklisted = blacklisted
     
     // Update overall progress
     this.progress.overall.loaded = this.progress.critical.loaded + this.progress.background.loaded
     this.progress.overall.total = this.progress.critical.total + this.progress.background.total
+    this.progress.overall.successful = (this.progress.critical.successful || 0) + (this.progress.background.successful || 0)
+    this.progress.overall.failed = (this.progress.critical.failed || 0) + (this.progress.background.failed || 0)
+    this.progress.overall.blacklisted = (this.progress.critical.blacklisted || 0) + (this.progress.background.blacklisted || 0)
     this.progress.overall.percentage = this.progress.overall.total > 0 
       ? Math.round((this.progress.overall.loaded / this.progress.overall.total) * 100)
       : 0
@@ -95,24 +113,50 @@ class ImagePreloader {
     console.log(`Loading ${championIds.length} critical champion images...`)
 
     const results = []
+    const failedImages = new Set()
     let loaded = 0
+    let successful = 0
+    let failed = 0
+    let blacklisted = 0
 
     for (const championId of championIds) {
       if (this.abortController?.signal.aborted) break
 
+      // Check if this champion is blacklisted
+      if (isEntityBlacklisted(championId, 'champion', version)) {
+        results.push({ championId, success: false, blacklisted: true })
+        blacklisted++
+        loaded++
+        this.updateProgress('critical', loaded, championIds.length, successful, failed, blacklisted)
+        console.log(`🚫 Skipping blacklisted critical champion: ${championId}`)
+        continue
+      }
+
       try {
         const image = await loadTFTImage(version, championId, 'champion')
         results.push({ championId, image, success: true })
+        successful++
       } catch (error) {
-        console.warn(`Failed to load critical image for ${championId}:`, error)
+        // Only track when an image completely fails (after all retries)
+        failedImages.add(`critical:${championId}`)
         results.push({ championId, error, success: false })
+        failed++
       }
 
       loaded++
-      this.updateProgress('critical', loaded, championIds.length)
+      this.updateProgress('critical', loaded, championIds.length, successful, failed, blacklisted)
     }
 
-    console.log(`Critical images loaded: ${results.filter(r => r.success).length}/${championIds.length}`)
+    console.log(`Critical images: ${successful} loaded, ${failed} failed, ${blacklisted} blacklisted / ${championIds.length} total`)
+    
+    // Report failed images only if there are any
+    if (failedImages.size > 0) {
+      console.warn(`⚠️ ${failedImages.size} critical image(s) failed to load after all retry attempts`)
+    }
+    if (blacklisted > 0) {
+      console.log(`🚫 ${blacklisted} critical image(s) skipped due to blacklist`)
+    }
+    
     return results
   }
 
@@ -140,43 +184,84 @@ class ImagePreloader {
     console.log(`Preloading ${championIds.length} champions + ${traitIds.length} traits = ${totalImages} total images...`)
 
     const results = { champions: [], traits: [] }
+    const failedImages = new Set()
     let loaded = 0
+    let successful = 0
+    let failed = 0
+    let blacklisted = 0
 
     // Load champion images
     for (const championId of championIds) {
       if (this.abortController?.signal.aborted) break
 
+      // Check if this champion is blacklisted
+      if (isEntityBlacklisted(championId, 'champion', version)) {
+        results.champions.push({ championId, success: false, blacklisted: true })
+        blacklisted++
+        loaded++
+        this.updateProgress('background', loaded, totalImages, successful, failed, blacklisted)
+        console.log(`🚫 Skipping blacklisted champion: ${championId}`)
+        continue
+      }
+
       try {
         const image = await loadTFTImage(version, championId, 'champion')
         results.champions.push({ championId, image, success: true })
+        successful++
       } catch (error) {
-        console.warn(`Failed to preload champion image for ${championId}:`, error)
+        // Only warn when an image completely fails (after all retries)
+        failedImages.add(`champion:${championId}`)
         results.champions.push({ championId, error, success: false })
+        failed++
       }
 
       loaded++
-      this.updateProgress('background', loaded, totalImages)
+      this.updateProgress('background', loaded, totalImages, successful, failed, blacklisted)
     }
 
     // Load trait images  
     for (const traitId of traitIds) {
       if (this.abortController?.signal.aborted) break
 
+      // Check if this trait is blacklisted
+      if (isEntityBlacklisted(traitId, 'trait', version)) {
+        results.traits.push({ traitId, success: false, blacklisted: true })
+        blacklisted++
+        loaded++
+        this.updateProgress('background', loaded, totalImages, successful, failed, blacklisted)
+        console.log(`🚫 Skipping blacklisted trait: ${traitId}`)
+        continue
+      }
+
       try {
         const image = await loadTFTImage(version, traitId, 'trait')
         results.traits.push({ traitId, image, success: true })
+        successful++
       } catch (error) {
-        console.warn(`Failed to preload trait image for ${traitId}:`, error)
+        // Only warn when an image completely fails (after all retries)
+        failedImages.add(`trait:${traitId}`)
         results.traits.push({ traitId, error, success: false })
+        failed++
       }
 
       loaded++
-      this.updateProgress('background', loaded, totalImages)
+      this.updateProgress('background', loaded, totalImages, successful, failed, blacklisted)
     }
 
     const successfulChampions = results.champions.filter(r => r.success).length
     const successfulTraits = results.traits.filter(r => r.success).length
-    console.log(`Background preloading complete: ${successfulChampions}/${championIds.length} champions, ${successfulTraits}/${traitIds.length} traits`)
+    const blacklistedChampions = results.champions.filter(r => r.blacklisted).length
+    const blacklistedTraits = results.traits.filter(r => r.blacklisted).length
+    
+    console.log(`Background preloading: ${successfulChampions}/${championIds.length} champions (${blacklistedChampions} blacklisted), ${successfulTraits}/${traitIds.length} traits (${blacklistedTraits} blacklisted)`)
+    
+    // Report failed images only if there are any
+    if (failedImages.size > 0) {
+      console.warn(`⚠️ ${failedImages.size} image(s) failed to load after all retry attempts`)
+    }
+    if (blacklisted > 0) {
+      console.log(`🚫 ${blacklisted} image(s) skipped due to blacklist`)
+    }
 
     return results
   }

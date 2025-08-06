@@ -984,6 +984,7 @@ function RolldownTool() {
           isOpen={mappingModalOpen}
           onClose={handleCloseMappings}
           version={mappingModalVersion}
+          tftData={tftData}
         />
 
         {/* Analytics Panel */}

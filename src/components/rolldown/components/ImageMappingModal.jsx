@@ -10,7 +10,7 @@ import {
 } from '../utils/imageMappings.js'
 import { getFailedImageStats } from '../utils/imageLoader.js'
 
-const ImageMappingModal = ({ isOpen, onClose, version }) => {
+const ImageMappingModal = ({ isOpen, onClose, version, tftData }) => {
   const [mappings, setMappings] = useState({ champions: {}, traits: {} })
   const [newMapping, setNewMapping] = useState({ 
     type: 'champions', 
@@ -19,13 +19,21 @@ const ImageMappingModal = ({ isOpen, onClose, version }) => {
   })
   const [failedImages, setFailedImages] = useState({ count: 0, failed: [] })
   const [activeTab, setActiveTab] = useState('champions')
+  const [blacklist, setBlacklist] = useState({ champions: [], traits: [] })
+  const [newBlacklistItem, setNewBlacklistItem] = useState('')
 
   useEffect(() => {
     if (isOpen && version) {
       loadMappings()
       loadFailedImages()
+      loadBlacklist()
     }
   }, [isOpen, version])
+
+  // Sync newMapping type with active tab
+  useEffect(() => {
+    setNewMapping(prev => ({ ...prev, type: activeTab }))
+  }, [activeTab])
 
   const loadMappings = () => {
     const versionMappings = getVersionMappings(version)
@@ -33,8 +41,49 @@ const ImageMappingModal = ({ isOpen, onClose, version }) => {
   }
 
   const loadFailedImages = () => {
-    const stats = getFailedImageStats()
+    const stats = getFailedImageStats(version)
     setFailedImages(stats)
+  }
+
+  const loadBlacklist = () => {
+    const stored = localStorage.getItem(`tft_image_blacklist_${version}`)
+    if (stored) {
+      try {
+        const parsed = JSON.parse(stored)
+        setBlacklist(parsed)
+      } catch (error) {
+        console.error('Failed to parse blacklist:', error)
+        setBlacklist({ champions: [], traits: [] })
+      }
+    } else {
+      setBlacklist({ champions: [], traits: [] })
+    }
+  }
+
+  const saveBlacklist = (newBlacklist) => {
+    try {
+      localStorage.setItem(`tft_image_blacklist_${version}`, JSON.stringify(newBlacklist))
+      setBlacklist(newBlacklist)
+      // Refresh failed images stats after blacklist change
+      setTimeout(() => loadFailedImages(), 100)
+    } catch (error) {
+      console.error('Failed to save blacklist:', error)
+    }
+  }
+
+  const addBlacklistItem = () => {
+    if (newBlacklistItem.trim()) {
+      const newBlacklist = { ...blacklist }
+      newBlacklist[activeTab].push(newBlacklistItem.trim())
+      saveBlacklist(newBlacklist)
+      setNewBlacklistItem('')
+    }
+  }
+
+  const removeBlacklistItem = (index) => {
+    const newBlacklist = { ...blacklist }
+    newBlacklist[activeTab].splice(index, 1)
+    saveBlacklist(newBlacklist)
   }
 
   const handleAddMapping = () => {
@@ -82,9 +131,44 @@ const ImageMappingModal = ({ isOpen, onClose, version }) => {
     }
   }
 
+  const isImageBlacklisted = (imageUrl, type) => {
+    const filename = imageUrl.split('/').pop()
+    if (!filename) return false
+    
+    return blacklist[type].some(pattern => 
+      filename.toLowerCase().includes(pattern.toLowerCase())
+    )
+  }
+
   const getFailedImagesByType = (type) => {
     const typeStr = type === 'champions' ? 'tft-champion' : 'tft-trait'
-    return failedImages.failed.filter(img => img.url.includes(typeStr))
+    return failedImages.failed.filter(img => 
+      img.url.includes(typeStr) && !isImageBlacklisted(img.url, type)
+    )
+  }
+
+  const getIgnoredImagesByType = (type) => {
+    const typeStr = type === 'champions' ? 'tft-champion' : 'tft-trait'
+    return failedImages.failed.filter(img => 
+      img.url.includes(typeStr) && isImageBlacklisted(img.url, type)
+    )
+  }
+
+  const getBlacklistedEntitiesFromTFTData = (type) => {
+    // Get blacklisted entities from current TFT data
+    if (!tftData || !tftData[type]) return []
+    
+    const entities = Object.keys(tftData[type])
+    
+    return entities.filter(entityId => {
+      return blacklist[type].some(pattern => 
+        entityId.toLowerCase().includes(pattern.toLowerCase())
+      )
+    }).map(entityId => ({
+      entityId,
+      name: tftData[type][entityId]?.name || entityId,
+      url: `fake-url-for-${type}/${entityId}` // Create a fake URL for consistency
+    }))
   }
 
   if (!isOpen) return null
@@ -128,23 +212,47 @@ const ImageMappingModal = ({ isOpen, onClose, version }) => {
           <div className="flex border-b border-gray-200 mx-6 mt-4">
             <button
               onClick={() => setActiveTab('champions')}
-              className={`px-4 py-2 text-sm font-medium ${
+              className={`px-4 py-2 text-sm font-medium flex items-center gap-2 ${
                 activeTab === 'champions'
                   ? 'text-buretto-secondary border-b-2 border-buretto-secondary'
                   : 'text-gray-500 hover:text-gray-700'
               }`}
             >
-              Champions ({Object.keys(mappings.champions || {}).length})
+              <span>Champions ({Object.keys(mappings.champions || {}).length})</span>
+              <div className="flex gap-1">
+                {getFailedImagesByType('champions').length > 0 && (
+                  <span className="bg-orange-500 text-white text-xs px-1.5 py-0.5 rounded-full">
+                    {getFailedImagesByType('champions').length}
+                  </span>
+                )}
+                {getBlacklistedEntitiesFromTFTData('champions').length > 0 && (
+                  <span className="bg-gray-700 text-white text-xs px-1.5 py-0.5 rounded-full">
+                    {getBlacklistedEntitiesFromTFTData('champions').length}
+                  </span>
+                )}
+              </div>
             </button>
             <button
               onClick={() => setActiveTab('traits')}
-              className={`px-4 py-2 text-sm font-medium ${
+              className={`px-4 py-2 text-sm font-medium flex items-center gap-2 ${
                 activeTab === 'traits'
                   ? 'text-buretto-secondary border-b-2 border-buretto-secondary'
                   : 'text-gray-500 hover:text-gray-700'
               }`}
             >
-              Traits ({Object.keys(mappings.traits || {}).length})
+              <span>Traits ({Object.keys(mappings.traits || {}).length})</span>
+              <div className="flex gap-1">
+                {getFailedImagesByType('traits').length > 0 && (
+                  <span className="bg-orange-500 text-white text-xs px-1.5 py-0.5 rounded-full">
+                    {getFailedImagesByType('traits').length}
+                  </span>
+                )}
+                {getBlacklistedEntitiesFromTFTData('traits').length > 0 && (
+                  <span className="bg-gray-700 text-white text-xs px-1.5 py-0.5 rounded-full">
+                    {getBlacklistedEntitiesFromTFTData('traits').length}
+                  </span>
+                )}
+              </div>
             </button>
           </div>
 
@@ -162,8 +270,8 @@ const ImageMappingModal = ({ isOpen, onClose, version }) => {
                     type="text"
                     value={newMapping.original}
                     onChange={(e) => setNewMapping({ ...newMapping, original: e.target.value })}
-                    placeholder="e.g., TFT14_Chogath"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                    placeholder={newMapping.type === 'champions' ? "e.g., TFT14_Chogath" : "e.g., TFT14_Set14_Assassin"}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm text-gray-900"
                   />
                 </div>
                 <div>
@@ -174,8 +282,8 @@ const ImageMappingModal = ({ isOpen, onClose, version }) => {
                     type="text"
                     value={newMapping.mapped}
                     onChange={(e) => setNewMapping({ ...newMapping, mapped: e.target.value })}
-                    placeholder="e.g., TFT14_ChoGath"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                    placeholder={newMapping.type === 'champions' ? "e.g., TFT14_ChoGath" : "e.g., TFT14_Assassin"}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm text-gray-900"
                   />
                 </div>
                 <div className="flex items-end">
@@ -236,22 +344,6 @@ const ImageMappingModal = ({ isOpen, onClose, version }) => {
                 Current {activeTab} Mappings
               </h3>
               
-              {/* Failed Images for this type */}
-              {getFailedImagesByType(activeTab).length > 0 && (
-                <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-4">
-                  <h4 className="text-sm font-medium text-red-800 mb-2">
-                    Failed {activeTab} ({getFailedImagesByType(activeTab).length})
-                  </h4>
-                  <div className="space-y-1 max-h-32 overflow-auto">
-                    {getFailedImagesByType(activeTab).map((img, index) => (
-                      <div key={index} className="text-xs text-red-700 font-mono">
-                        {img.url.split('/').pop()}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
               <div className="space-y-2 max-h-64 overflow-auto">
                 {Object.entries(mappings[activeTab] || {}).length === 0 ? (
                   <p className="text-sm text-gray-500 italic">
@@ -291,6 +383,107 @@ const ImageMappingModal = ({ isOpen, onClose, version }) => {
                   ))
                 )}
               </div>
+            </div>
+
+            {/* Blacklist Section */}
+            <div className="mt-8">
+              <h3 className="text-sm font-medium text-gray-900 mb-3">
+                Blacklist/Ignore {activeTab} (String Contains)
+              </h3>
+              <p className="text-xs text-gray-600 mb-3">
+                Add patterns to ignore failed images. Images matching these patterns won't trigger warnings.
+                Uses case-insensitive "contains" matching.
+              </p>
+              
+              {/* Add blacklist item */}
+              <div className="bg-gray-50 rounded-lg p-3 mb-4">
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={newBlacklistItem}
+                    onChange={(e) => setNewBlacklistItem(e.target.value)}
+                    placeholder="e.g., TFT15_TutorialBot, _Dummy, TestUnit"
+                    className="flex-1 px-3 py-2 border border-gray-300 rounded-md text-sm text-gray-900"
+                    onKeyPress={(e) => e.key === 'Enter' && addBlacklistItem()}
+                  />
+                  <button
+                    onClick={addBlacklistItem}
+                    disabled={!newBlacklistItem.trim()}
+                    className="px-4 py-2 bg-gray-600 text-white rounded-md text-sm hover:bg-gray-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
+                  >
+                    Add Pattern
+                  </button>
+                </div>
+              </div>
+
+              {/* Current blacklist items */}
+              <div className="space-y-2 mb-4">
+                {blacklist[activeTab].length === 0 ? (
+                  <p className="text-sm text-gray-500 italic">
+                    No blacklist patterns for {activeTab}
+                  </p>
+                ) : (
+                  blacklist[activeTab].map((pattern, index) => (
+                    <div
+                      key={index}
+                      className="flex items-center justify-between p-2 bg-gray-50 rounded border"
+                    >
+                      <code className="text-sm text-gray-700">contains: "{pattern}"</code>
+                      <button
+                        onClick={() => removeBlacklistItem(index)}
+                        className="p-1 text-red-500 hover:text-red-700 hover:bg-red-50 rounded"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  ))
+                )}
+              </div>
+
+              {/* Ignored/Blacklisted items for this type */}
+              {(getIgnoredImagesByType(activeTab).length > 0 || getBlacklistedEntitiesFromTFTData(activeTab).length > 0) && (
+                <div className="bg-gray-900 border border-gray-700 rounded-lg p-3 mb-4">
+                  <h4 className="text-sm font-medium text-white mb-2">
+                    Ignored {activeTab} ({getIgnoredImagesByType(activeTab).length + getBlacklistedEntitiesFromTFTData(activeTab).length})
+                  </h4>
+                  <p className="text-xs text-gray-300 mb-2">
+                    These items are ignored due to blacklist patterns
+                  </p>
+                  <div className="space-y-1 max-h-32 overflow-auto">
+                    {/* Failed images that are blacklisted */}
+                    {getIgnoredImagesByType(activeTab).map((img, index) => (
+                      <div key={`failed-${index}`} className="text-xs text-gray-300 font-mono">
+                        {img.url.split('/').pop()} <span className="text-red-400">(failed)</span>
+                      </div>
+                    ))}
+                    {/* Blacklisted entities from TFT data */}
+                    {getBlacklistedEntitiesFromTFTData(activeTab).map((entity, index) => (
+                      <div key={`blacklisted-${index}`} className="text-xs text-gray-300 font-mono">
+                        {entity.entityId} <span className="text-yellow-400">(blacklisted)</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Failed Images for this type */}
+              {getFailedImagesByType(activeTab).length > 0 && (
+                <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+                  <h4 className="text-sm font-medium text-red-800 mb-2">
+                    Failed {activeTab} ({getFailedImagesByType(activeTab).length})
+                  </h4>
+                  <p className="text-xs text-red-600 mb-2">
+                    These images failed to load and are not blacklisted
+                  </p>
+                  <div className="space-y-1 max-h-32 overflow-auto">
+                    {getFailedImagesByType(activeTab).map((img, index) => (
+                      <div key={index} className="text-xs text-red-700 font-mono">
+                        {img.url.split('/').pop()}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 

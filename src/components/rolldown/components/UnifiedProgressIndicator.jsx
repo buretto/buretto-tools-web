@@ -53,16 +53,16 @@ const UnifiedProgressIndicator = ({
       case 'caching':
         return 'Caching data...'
       case 'loading_images':
-        return 'Loading shop images...'
+        return 'Loading TFT images...'
       case 'downloading_images':
         if (current && total) {
-          return `Loading images... ${current}/${total}`
+          return `Loading TFT images... ${current}/${total}`
         }
-        return 'Loading images...'
+        return 'Loading TFT images...'
       case 'complete':
         return 'Data loaded successfully!'
       case 'complete_images':
-        return 'Images loaded successfully!'
+        return 'TFT images loaded successfully!'
       case 'error':
         return progress.error || 'Loading failed'
       default:
@@ -106,7 +106,7 @@ const UnifiedProgressIndicator = ({
               {progressText}
             </div>
             
-            <div className="w-full bg-gray-600 rounded-full h-3 mb-4">
+            <div className="w-full bg-gray-600 rounded-full h-3 mb-4 overflow-hidden">
               <div 
                 className={`h-3 rounded-full transition-all duration-300 ${progressColor}`}
                 style={{ width: `${percentage}%` }}
