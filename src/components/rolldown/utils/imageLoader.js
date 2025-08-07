@@ -22,6 +22,7 @@ const CACHE_METADATA = new Map() // Track cache timestamp and hit count
 const FAILED_IMAGES = new Map() // Track failed image loads with version info
 const FAILED_IMAGES_BY_VERSION = new Map() // Track failed images per version for easy filtering
 const DDRAGON_FILE_MAPS = new Map() // Cache for pre-fetched DDragon file mappings per version-type
+const DDRAGON_PREFETCH_STATUS = new Map() // Synchronous tracking to prevent race conditions
 
 // Reactive notification system for failed images changes
 const FAILED_IMAGES_LISTENERS = new Set()
@@ -146,22 +147,34 @@ export const preFetchDDragonFileListing = async (version, types = ['champion', '
   for (const type of types) {
     const cacheKey = `${versionTag}-${type}`
     
+    // Check synchronous status first to prevent race conditions
+    const status = DDRAGON_PREFETCH_STATUS.get(cacheKey)
+    if (status === 'completed' || status === 'in_progress') {
+      continue // Already handled or in progress
+    }
+    
     // Skip if already cached
     if (DDRAGON_FILE_MAPS.has(cacheKey)) {
+      DDRAGON_PREFETCH_STATUS.set(cacheKey, 'completed')
       continue
     }
+    
+    // Mark as in progress immediately (synchronously)
+    DDRAGON_PREFETCH_STATUS.set(cacheKey, 'in_progress')
     
     console.log(`📥 Pre-fetching DDragon file listing for ${versionTag}-${type}`)
     
     const promise = fetchDDragonFileListing(versionTag, type)
       .then(fileMap => {
         DDRAGON_FILE_MAPS.set(cacheKey, fileMap)
+        DDRAGON_PREFETCH_STATUS.set(cacheKey, 'completed')
         console.log(`✅ Pre-fetched ${fileMap.size} ${type} filenames for ${versionTag}`)
         return { type, fileMap }
       })
       .catch(error => {
         console.warn(`❌ Failed to pre-fetch DDragon listing for ${versionTag}-${type}:`, error)
         DDRAGON_FILE_MAPS.set(cacheKey, new Map()) // Cache empty map to prevent retries
+        DDRAGON_PREFETCH_STATUS.set(cacheKey, 'failed')
         return { type, fileMap: new Map() }
       })
     
@@ -549,6 +562,7 @@ export const clearImageCache = () => {
   FAILED_IMAGES.clear()
   FAILED_IMAGES_BY_VERSION.clear()
   DDRAGON_FILE_MAPS.clear()
+  DDRAGON_PREFETCH_STATUS.clear()
 }
 
 /**

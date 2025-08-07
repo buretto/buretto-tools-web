@@ -15,6 +15,8 @@ export const useTFTImages = (tftData) => {
     setCacheStats(getCacheStats()) // Initial update only
   }, [])
 
+  // No need for complex ensurePreFetch - preFetchDDragonFileListing now handles race conditions internally
+
   /**
    * Loads a single TFT image (with automatic DDragon pre-fetch if needed)
    */
@@ -41,13 +43,9 @@ export const useTFTImages = (tftData) => {
       return null
     }
 
-    // Ensure DDragon files are pre-fetched for this version and type
-    // This is a lightweight operation that will skip if already cached
-    try {
-      await preFetchDDragonFileListing(tftData.version, [type])
-    } catch (preFetchError) {
-      console.warn(`Pre-fetch failed for ${type}, continuing with fallback:`, preFetchError)
-    }
+    // Ensure DDragon files are pre-fetched for this version and type (only once)
+    // preFetchDDragonFileListing now has built-in race condition protection
+    await preFetchDDragonFileListing(tftData.version, [type])
     
     try {
       setLoadingImages(prev => new Set(prev).add(cacheKey))
@@ -147,12 +145,12 @@ export const useTFTImages = (tftData) => {
   const preloadAllChampions = useCallback(async () => {
     if (!tftData?.champions) return
     
-    // Pre-fetch DDragon file listings first (will skip if already cached)
-    await preFetchDDragonFiles()
+    // Pre-fetch DDragon file listings first (built-in race condition protection)
+    await preFetchDDragonFileListing(tftData.version, ['champion'])
     
     const championIds = Object.keys(tftData.champions)
     return loadImageBatch(championIds, 'champion')
-  }, [tftData, loadImageBatch, preFetchDDragonFiles])
+  }, [tftData, loadImageBatch])
 
   /**
    * Preloads all trait images for current set
@@ -160,12 +158,12 @@ export const useTFTImages = (tftData) => {
   const preloadAllTraits = useCallback(async () => {
     if (!tftData?.traits) return
     
-    // Pre-fetch DDragon file listings first (will skip if already cached)
-    await preFetchDDragonFiles()
+    // Pre-fetch DDragon file listings first (built-in race condition protection)
+    await preFetchDDragonFileListing(tftData.version, ['trait'])
     
     const traitIds = Object.keys(tftData.traits)
     return loadImageBatch(traitIds, 'trait')
-  }, [tftData, loadImageBatch, preFetchDDragonFiles])
+  }, [tftData, loadImageBatch])
 
   /**
    * Clears all image caches
@@ -226,6 +224,8 @@ export const useTFTImages = (tftData) => {
         }
         return newMap
       })
+      
+      // Note: DDragon pre-fetch status is now managed internally by imageLoader
     }
   }, [tftData?.version])
 

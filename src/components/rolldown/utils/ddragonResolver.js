@@ -61,16 +61,20 @@ export const fetchDDragonFileListing = async (version, type) => {
     })
     
     // Sort files with custom priority:
-    // 1. Files without .TFT_SetX suffix (hasSetSuffix = false) 
-    // 2. Then by highest set number
+    // 1. Higher set number first
+    // 2. Within same set number, prefer files without .TFT_SetX suffix
     fileMap.forEach(files => {
       files.sort((a, b) => {
-        // First priority: files without suffix come first
+        // First priority: higher set number
+        if (a.setNumber !== b.setNumber) {
+          return b.setNumber - a.setNumber
+        }
+        // Second priority: within same set, prefer files without suffix
         if (a.hasSetSuffix !== b.hasSetSuffix) {
           return a.hasSetSuffix ? 1 : -1 // false (no suffix) comes before true (has suffix)
         }
-        // Second priority: higher set number
-        return b.setNumber - a.setNumber
+        // Third priority: alphabetical order for consistency
+        return a.filename.localeCompare(b.filename)
       })
     })
     
