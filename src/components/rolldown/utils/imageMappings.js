@@ -1,9 +1,12 @@
 // TFT Image Name Mapping System
 // Handles discrepancies between Riot internal names and Data Dragon file names
 
+import { getSetInfoFromVersion } from './versionDetector.js'
+
 // Default mappings for known discrepancies - Based on actual GitHub file analysis
-const DEFAULT_MAPPINGS = {
-  '15.13.1': {
+// Structure: set-based mappings that work across all patches within a set
+const DEFAULT_MAPPINGS_BY_SET = {
+  'set14': {
     champions: {
       'TFT14_Chogath': 'TFT14_ChoGath', // Case sensitivity fix - icon shows ChoGath with capital G
     },
@@ -26,6 +29,21 @@ const DEFAULT_MAPPINGS = {
       'TFT14_Thirsty': 'TFT14_Dynamo', // Trait_Icon_14_Dynamo.TFT_Set14.png
       'TFT14_HotRod': 'TFT14_NitroForge', // Trait_Icon_14_NitroForge.TFT_Set14.png
       'TFT14_Suits': 'TFT14_Cypher' // Trait_Icon_14_Cypher.TFT_Set14.png
+    }
+  },
+  'set15': {
+    champions: {},
+    traits: {
+      // Set 15 trait mappings - Based on actual Data Dragon file names
+      // Format: Internal name -> DDragon filename pattern
+      'TFT15_TheCrew': 'TFT15_StarCrew', // Trait_Icon_15_StarCrew.TFT_Set15.png
+      'TFT15_Luchador': 'TFT15_RingKings', // Trait_Icon_15_RingKings.TFT_Set15.png
+      'TFT15_ElTigre': 'TFT15_TheChamp', // Trait_Icon_15_TheChamp.TFT_Set15.png
+      'TFT15_BattleAcademia': 'TFT15_BattleClub', // Trait_Icon_15_BattleClub.TFT_Set15.png
+      'TFT15_Spellslinger': 'TFT15_Sorcerer', // Trait_Icon_15_Sorcerer.TFT_Set15.png
+      'TFT15_Captain': 'TFT15_RogueCaptain', // Trait_Icon_15_RogueCaptain.TFT_Set15.png
+      'TFT15_SentaiRanger': 'TFT15_RoboRangers', // Trait_Icon_15_RoboRangers.TFT_Set15.png
+      'TFT15_Edgelord': { name: 'TFT10_Edgelord', hasSetSuffix: false } // Trait_Icon_10_Edgelord.png (Set 10, no suffix)
     }
   }
 }
@@ -59,18 +77,29 @@ export const saveMappings = (mappings) => {
 }
 
 /**
- * Get combined mappings (default + user stored)
+ * Get combined mappings (default + user stored) using set-based lookup
+ * @param {string} version - Game version to get mappings for
  */
-export const getCombinedMappings = () => {
+export const getCombinedMappings = (version) => {
   const stored = getStoredMappings()
-  const combined = { ...DEFAULT_MAPPINGS }
   
-  // Merge stored mappings
-  Object.keys(stored).forEach(version => {
-    if (!combined[version]) {
-      combined[version] = { champions: {}, traits: {} }
+  // Get set info from version
+  const setInfo = getSetInfoFromVersion(version)
+  const setId = setInfo.setId
+  
+  // Start with default mappings for this set
+  const defaultMappings = DEFAULT_MAPPINGS_BY_SET[setId] || { champions: {}, traits: {} }
+  
+  // Create combined mappings structure for this version
+  const combined = {
+    [version]: {
+      champions: { ...defaultMappings.champions },
+      traits: { ...defaultMappings.traits }
     }
-    
+  }
+  
+  // Merge stored mappings for this specific version
+  if (stored[version]) {
     if (stored[version].champions) {
       combined[version].champions = { 
         ...combined[version].champions, 
@@ -84,7 +113,7 @@ export const getCombinedMappings = () => {
         ...stored[version].traits 
       }
     }
-  })
+  }
   
   return combined
 }
@@ -94,7 +123,7 @@ export const getCombinedMappings = () => {
  * Returns either a string or an object with name and hasSetSuffix
  */
 export const getMappedName = (version, entityId, type = 'champion') => {
-  const mappings = getCombinedMappings()
+  const mappings = getCombinedMappings(version)
   
   if (mappings[version] && mappings[version][type + 's']) {
     return mappings[version][type + 's'][entityId] || entityId
@@ -159,7 +188,7 @@ export const removeMapping = (version, entityId, type = 'champion') => {
  * Get all mappings for a version
  */
 export const getVersionMappings = (version) => {
-  const mappings = getCombinedMappings()
+  const mappings = getCombinedMappings(version)
   return mappings[version] || { champions: {}, traits: {} }
 }
 
