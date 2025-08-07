@@ -266,7 +266,7 @@ const ImageMappingModal = ({ isOpen, onClose, version, tftData }) => {
                     type="text"
                     value={newMapping.original}
                     onChange={(e) => setNewMapping({ ...newMapping, original: e.target.value })}
-                    placeholder={newMapping.type === 'champions' ? "e.g., TFT14_Chogath" : "e.g., TFT14_Set14_Assassin"}
+                    placeholder={newMapping.type === 'champions' ? "e.g., TFT14_Chogath" : "e.g., TFT15_Edgelord"}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm text-gray-900"
                   />
                 </div>
@@ -278,7 +278,7 @@ const ImageMappingModal = ({ isOpen, onClose, version, tftData }) => {
                     type="text"
                     value={newMapping.mapped}
                     onChange={(e) => setNewMapping({ ...newMapping, mapped: e.target.value })}
-                    placeholder={newMapping.type === 'champions' ? "e.g., TFT14_ChoGath" : "e.g., TFT14_Assassin"}
+                    placeholder={newMapping.type === 'champions' ? "e.g., TFT14_ChoGath" : "e.g., TFT10_Edgelord"}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm text-gray-900"
                   />
                 </div>

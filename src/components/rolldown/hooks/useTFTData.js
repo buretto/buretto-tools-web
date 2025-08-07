@@ -266,7 +266,7 @@ const convertExtractedDataToAppFormat = (extractedData, version, setInfo) => {
       console.log(`✅ Filtered champions (object format): ${realUnits} real units, ${skippedUnits} non-real units skipped`)
     }
     
-    // Parse traits from the extracted set data (raw CDragon format)
+    // Parse traits from the extracted set data (raw CDragon format) 
     const traits = {}
     const traitsList = extractedData.traits || []
     
@@ -275,71 +275,56 @@ const convertExtractedDataToAppFormat = (extractedData, version, setInfo) => {
       name: t?.name,
       id: t?.id,
       apiName: t?.apiName,
-      effectKeys: t ? Object.keys(t) : []
+      effectKeys: t ? Object.keys(t) : [],
+      hasEffects: !!t?.effects,
+      effectsLength: t?.effects?.length || 0
     })))
     
-    if (Array.isArray(traitsList)) {
-      let realTraits = 0
-      let skippedTraits = 0
-      
-      traitsList.forEach((trait, index) => {
-        if (trait && (trait.name || trait.id || trait.apiName)) {
-          // Traits use apiName like champions, not name/id
-          const traitId = trait.apiName || trait.name || trait.id
-          
-          // Filter out non-real traits: only include traits with the set number in their ID
-          if (!traitId.startsWith(realUnitPrefix)) {
-            skippedTraits++
-            // Log first few skipped traits to see the pattern
-            if (skippedTraits <= 5) {
-              console.log(`🚫 Skipping non-real trait: ${traitId}`)
-            }
-            return
+    let realTraits = 0
+    let skippedTraits = 0
+    
+    traitsList.forEach((trait, index) => {
+      if (trait && (trait.name || trait.id || trait.apiName)) {
+        // Traits use apiName like champions, not name/id
+        const traitId = trait.apiName || trait.name || trait.id
+        
+        // Filter out non-real traits: only include traits with the set number in their ID
+        if (!traitId.startsWith(realUnitPrefix)) {
+          skippedTraits++
+          // Log first few skipped traits to see the pattern
+          if (skippedTraits <= 5) {
+            console.log(`🚫 Skipping non-real trait: ${traitId}`)
           }
-          
-          realTraits++
-          traits[traitId] = {
-            id: traitId,
-            name: trait.display_name || trait.name || traitId,
-            description: trait.description || trait.desc || '',
-            imageUrl: generateDirectImageUrl(version, traitId, 'trait')
-          }
-          
-          if (realTraits <= 5) {
-            console.log(`✅ Adding real trait: ${traitId} (${trait.display_name || trait.name || 'unnamed'})`)
-          }
+          return
         }
-      })
-      
-      console.log(`✅ Filtered traits: ${realTraits} real traits, ${skippedTraits} non-real traits skipped`)
-    } else if (typeof traitsList === 'object' && traitsList !== null) {
-      // Handle object format (CDragon sometimes uses objects instead of arrays)
-      let realTraits = 0
-      let skippedTraits = 0
-      
-      Object.values(traitsList).forEach(trait => {
-        if (trait && (trait.name || trait.id || trait.apiName)) {
-          // Traits use apiName like champions, not name/id
-          const traitId = trait.apiName || trait.name || trait.id
-          
-          // Filter out non-real traits: only include traits with the set number in their ID
-          if (!traitId.startsWith(realUnitPrefix)) {
-            skippedTraits++
-            return
-          }
-          
-          realTraits++
-          traits[traitId] = {
-            id: traitId,
-            name: trait.display_name || trait.name || traitId,
-            description: trait.description || trait.desc || '',
-            imageUrl: generateDirectImageUrl(version, traitId, 'trait')
-          }
+        
+        realTraits++
+        
+        // Convert effects to breakpoints format (same logic as setDataTransformer but generic)
+        const breakpoints = trait.effects?.map(effect => ({
+          minUnits: effect.minUnits,
+          maxUnits: effect.maxUnits === 25000 ? null : effect.maxUnits,
+          style: effect.style, // Keep raw style for now
+          variables: effect.variables || {}
+        })) || []
+        
+        traits[traitId] = {
+          id: traitId,
+          apiName: trait.apiName,
+          name: trait.display_name || trait.name || traitId,
+          description: trait.description || trait.desc || '',
+          effects: trait.effects, // Keep original effects for compatibility
+          breakpoints: breakpoints, // Add breakpoints in expected format
+          imageUrl: generateDirectImageUrl(version, traitId, 'trait')
         }
-      })
-      
-      console.log(`✅ Filtered traits (object format): ${realTraits} real traits, ${skippedTraits} non-real traits skipped`)
-    }
+        
+        if (realTraits <= 5) {
+          console.log(`✅ Adding real trait: ${traitId} (${trait.display_name || trait.name || 'unnamed'}) with ${breakpoints.length} breakpoints`)
+        }
+      }
+    })
+    
+    console.log(`✅ Filtered traits: ${realTraits} real traits, ${skippedTraits} non-real traits skipped`)
     
     console.log(`🔄 Converted extracted data: ${Object.keys(champions).length} champions, ${Object.keys(traits).length} traits`)
     
