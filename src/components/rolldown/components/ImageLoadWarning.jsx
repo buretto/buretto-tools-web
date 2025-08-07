@@ -1,33 +1,21 @@
 import React, { useState, useEffect } from 'react'
 import { AlertTriangle, Settings } from 'lucide-react'
-import { getFailedImageStats } from '../utils/imageLoader.js'
+import { useFailedImages } from '../hooks/useFailedImages.js'
 
 const ImageLoadWarning = ({ onOpenMappings, version, totalImages = 0 }) => {
-  const [failedStats, setFailedStats] = useState({ count: 0, failed: [] })
   const [showTooltip, setShowTooltip] = useState(false)
   const [delayCompleted, setDelayCompleted] = useState(false)
+  
+  // Use reactive hook for real-time failed images updates
+  const failedStats = useFailedImages(version)
 
   useEffect(() => {
-    const updateStats = () => {
-      const stats = getFailedImageStats(version)
-      setFailedStats(stats)
-    }
-
-    let interval
-
     // Don't show warnings immediately - give images time to load/retry
     const initialDelay = setTimeout(() => {
       setDelayCompleted(true)
-      updateStats()
-      
-      // Update every 2 seconds after initial delay
-      interval = setInterval(updateStats, 2000)
     }, 5000) // 5 second delay before checking for failures
 
-    return () => {
-      clearTimeout(initialDelay)
-      if (interval) clearInterval(interval)
-    }
+    return () => clearTimeout(initialDelay)
   }, [])
 
   if (!delayCompleted || failedStats.count === 0) return null

@@ -9,6 +9,7 @@ import {
   clearAllMappings 
 } from '../utils/imageMappings.js'
 import { getFailedImageStats } from '../utils/imageLoader.js'
+import { useFailedImages } from '../hooks/useFailedImages.js'
 
 const ImageMappingModal = ({ isOpen, onClose, version, tftData }) => {
   const [mappings, setMappings] = useState({ champions: {}, traits: {} })
@@ -17,15 +18,16 @@ const ImageMappingModal = ({ isOpen, onClose, version, tftData }) => {
     original: '', 
     mapped: '' 
   })
-  const [failedImages, setFailedImages] = useState({ count: 0, failed: [] })
   const [activeTab, setActiveTab] = useState('champions')
   const [blacklist, setBlacklist] = useState({ champions: [], traits: [] })
   const [newBlacklistItem, setNewBlacklistItem] = useState('')
+  
+  // Use reactive hook for real-time failed images updates
+  const failedImages = useFailedImages(version)
 
   useEffect(() => {
     if (isOpen && version) {
       loadMappings()
-      loadFailedImages()
       loadBlacklist()
     }
   }, [isOpen, version])
@@ -38,11 +40,6 @@ const ImageMappingModal = ({ isOpen, onClose, version, tftData }) => {
   const loadMappings = () => {
     const versionMappings = getVersionMappings(version)
     setMappings(versionMappings)
-  }
-
-  const loadFailedImages = () => {
-    const stats = getFailedImageStats(version)
-    setFailedImages(stats)
   }
 
   const loadBlacklist = () => {
@@ -64,8 +61,7 @@ const ImageMappingModal = ({ isOpen, onClose, version, tftData }) => {
     try {
       localStorage.setItem(`tft_image_blacklist_${version}`, JSON.stringify(newBlacklist))
       setBlacklist(newBlacklist)
-      // Refresh failed images stats after blacklist change
-      setTimeout(() => loadFailedImages(), 100)
+      // Note: Failed images will update automatically via reactive hook
     } catch (error) {
       console.error('Failed to save blacklist:', error)
     }

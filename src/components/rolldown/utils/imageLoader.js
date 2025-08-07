@@ -20,6 +20,9 @@ const LOADING_PROMISES = new Map()
 const CACHE_METADATA = new Map() // Track cache timestamp and hit count
 const FAILED_IMAGES = new Map() // Track failed image loads
 
+// Reactive notification system for failed images changes
+const FAILED_IMAGES_LISTENERS = new Set()
+
 // Cache management constants
 const MAX_CACHE_SIZE = 200 // Maximum number of cached images
 const CACHE_EXPIRY_TIME = Infinity // Cache indefinitely for patch-specific images
@@ -177,6 +180,9 @@ const loadImage = (url, maxRetries = 3, retryDelay = 1000) => {
             attempts: maxRetries,
             error: 'Failed to load'
           })
+          
+          // Notify listeners about failed images change
+          notifyFailedImagesChanged()
           
           console.error(`Failed to load image after ${maxRetries} attempts: ${url}`)
           reject(new Error(`Failed to load image after ${maxRetries} attempts: ${url}`))
@@ -455,10 +461,32 @@ export const getFailedImageStats = (version = null) => {
 }
 
 /**
+ * Subscribe to failed images changes
+ */
+export const subscribeToFailedImagesChanges = (listener) => {
+  FAILED_IMAGES_LISTENERS.add(listener)
+  return () => FAILED_IMAGES_LISTENERS.delete(listener) // Return unsubscribe function
+}
+
+/**
+ * Notify all listeners about failed images changes
+ */
+const notifyFailedImagesChanged = () => {
+  FAILED_IMAGES_LISTENERS.forEach(listener => {
+    try {
+      listener()
+    } catch (error) {
+      console.error('Error in failed images listener:', error)
+    }
+  })
+}
+
+/**
  * Clear failed images tracking
  */
 export const clearFailedImages = () => {
   FAILED_IMAGES.clear()
+  notifyFailedImagesChanged()
 }
 
 

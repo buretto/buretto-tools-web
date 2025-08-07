@@ -65,6 +65,7 @@ function RolldownTool() {
     overall: { loaded: 0, total: 0, percentage: 0 }
   })
   const [preloadPhase, setPreloadPhase] = useState(null)
+  const [progressUpdateCounter, setProgressUpdateCounter] = useState(0)
   const [mappingModalOpen, setMappingModalOpen] = useState(false)
   const [mappingModalVersion, setMappingModalVersion] = useState(null)
   const [analyticsOpen, setAnalyticsOpen] = useState(false)
@@ -113,7 +114,11 @@ function RolldownTool() {
   useEffect(() => {
     setPreloadCallbacks({
       onProgress: (progress) => {
-        setPreloadProgress(progress)
+        console.log('🔄 RolldownTool: Preload progress received:', progress.overall.loaded + '/' + progress.overall.total)
+        // Force a new object to ensure React detects the change
+        setPreloadProgress({...progress})
+        // Increment counter to force re-render
+        setProgressUpdateCounter(prev => prev + 1)
       },
       onPhaseComplete: (phase, progress) => {
         console.log(`Preload phase '${phase}' complete`)
@@ -158,7 +163,8 @@ function RolldownTool() {
               .filter(unit => unit && unit.id)
               .map(unit => unit.id)
             
-            console.log(`Starting preload with ${criticalChampionIds.length} critical images`)
+            console.log(`🚀 Starting preload with ${criticalChampionIds.length} critical images, version: ${currentVersion}`)
+            console.log('🚀 Critical champion IDs:', criticalChampionIds)
             
             await startImagePreloading(tftData, criticalChampionIds, currentVersion)
           } catch (error) {
@@ -743,14 +749,27 @@ function RolldownTool() {
             
             {/* Unified Progress Indicator */}
             <UnifiedProgressIndicator 
-              progress={dataProgress.isActive ? dataProgress : 
-                (preloadPhase !== PRELOAD_PHASES.COMPLETE && preloadProgress.overall.total > 0) ? {
-                  isActive: true,
-                  stage: preloadPhase === PRELOAD_PHASES.CRITICAL ? 'loading_images' : 'downloading_images',
-                  progress: preloadProgress.overall.percentage,
-                  current: preloadProgress.overall.loaded,
-                  total: preloadProgress.overall.total
-                } : null}
+              progress={(() => {
+                // Debug logging for progress selection
+                if (dataProgress.isActive && dataProgress.stage !== 'complete') {
+                  console.log('🎯 Showing data progress:', dataProgress.stage, dataProgress.progress + '%')
+                  return dataProgress
+                } else if (preloadPhase !== PRELOAD_PHASES.COMPLETE && preloadProgress.overall.total > 0) {
+                  const imageProgress = {
+                    isActive: true,
+                    stage: preloadPhase === PRELOAD_PHASES.CRITICAL ? 'loading_images' : 'downloading_images',
+                    progress: preloadProgress.overall.percentage,
+                    current: preloadProgress.overall.loaded,
+                    total: preloadProgress.overall.total,
+                    updateCounter: progressUpdateCounter // Include counter to force re-renders
+                  }
+                  console.log('🎯 Showing image progress:', imageProgress.stage, imageProgress.progress + '%', imageProgress.current + '/' + imageProgress.total, 'counter:', progressUpdateCounter)
+                  return imageProgress
+                } else {
+                  console.log('🎯 No progress to show')
+                  return null
+                }
+              })()}
               showInHeader={true}
             />
 

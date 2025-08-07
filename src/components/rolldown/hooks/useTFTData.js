@@ -731,7 +731,6 @@ export const useTFTData = (initialVersion = null) => {
   const loadVersion = useCallback(async (version) => {
     setLoading(true)
     setError(null)
-    setProgress({ stage: 'fetching_version', progress: 5, isActive: true })
     
     try {
       // Try to get cached data first
@@ -740,8 +739,15 @@ export const useTFTData = (initialVersion = null) => {
         setData({ ...cachedData, cached: true })
         setCurrentVersion(version)
         setLoading(false)
+        // Clear any existing progress when using cached data
+        // Use setTimeout to ensure progress state updates properly
+        setTimeout(() => setProgress({ isActive: false }), 0)
+        console.log(`✅ Using cached data for version ${version}`)
         return
       }
+      
+      // Only show fetching progress if we need to actually fetch data
+      setProgress({ stage: 'fetching_version', progress: 5, isActive: true })
       
       // Fetch from API if not cached (pass network status and progress callback)
       const networkFailed = window.tftNetworkFailed || false

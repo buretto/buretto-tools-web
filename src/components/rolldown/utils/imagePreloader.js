@@ -33,7 +33,8 @@ class ImagePreloader {
     this.progress = {
       critical: { loaded: 0, total: 0, successful: 0, failed: 0, blacklisted: 0, complete: false },
       background: { loaded: 0, total: 0, successful: 0, failed: 0, blacklisted: 0, complete: false },
-      overall: { loaded: 0, total: 0, successful: 0, failed: 0, blacklisted: 0, percentage: 0 }
+      overall: { loaded: 0, total: 0, successful: 0, failed: 0, blacklisted: 0, percentage: 0 },
+      updateCounter: 0 // Force React re-renders
     }
     this.callbacks = {
       onProgress: null,
@@ -72,10 +73,15 @@ class ImagePreloader {
     this.progress.overall.percentage = this.progress.overall.total > 0 
       ? Math.round((this.progress.overall.loaded / this.progress.overall.total) * 100)
       : 0
+    
+    // Increment counter to force React re-renders
+    this.progress.updateCounter++
 
     // Trigger progress callback
     if (this.callbacks.onProgress) {
       this.callbacks.onProgress(this.progress)
+      // Debug logging to verify progress updates
+      console.log(`📊 Progress update: ${phase} ${loaded}/${total}, overall: ${this.progress.overall.loaded}/${this.progress.overall.total} (${this.progress.overall.percentage}%)`)
     }
 
     // Check if phase is complete
