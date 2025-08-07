@@ -1,6 +1,7 @@
 // TFT Image Loading Utility with Sprite Sheet Support
 
 import { getMappingInfo } from './imageMappings.js'
+import { resolveDDragonFilename, fetchDDragonFileListing } from './ddragonResolver.js'
 
 /**
  * Gets the set number from a version string
@@ -20,6 +21,7 @@ const LOADING_PROMISES = new Map()
 const CACHE_METADATA = new Map() // Track cache timestamp and hit count
 const FAILED_IMAGES = new Map() // Track failed image loads with version info
 const FAILED_IMAGES_BY_VERSION = new Map() // Track failed images per version for easy filtering
+const DDRAGON_FILE_MAPS = new Map() // Cache for pre-fetched DDragon file mappings per version-type
 
 // Reactive notification system for failed images changes
 const FAILED_IMAGES_LISTENERS = new Set()
@@ -55,6 +57,7 @@ export const generateImageUrls = (version, championId, type = 'champion') => {
 /**
  * Generates image URL for a specific champion/trait with mapping support
  * For Set 14 (version 15.13.1), uses local bundled images when available
+ * For other versions, uses standard logic (resolution happens only when pre-fetched data is available)
  */
 export const generateDirectImageUrl = (version, entityId, type = 'champion') => {
   // Apply name mapping if available
@@ -67,7 +70,36 @@ export const generateDirectImageUrl = (version, entityId, type = 'champion') => 
     if (localUrl) return localUrl
   }
   
-  // Fallback to Data Dragon CDN
+  // For other versions, try automatic resolution if pre-fetched data is available
+  if (version !== '15.13.1') {
+    try {
+      const versionTag = version.startsWith('v') ? version : `v${version}`
+      const cacheKey = `${versionTag}-${type}`
+      const fileMap = DDRAGON_FILE_MAPS.get(cacheKey)
+      
+      if (fileMap && fileMap.size > 0) {
+        const resolvedFile = resolveDDragonFilename(fileMap, mappedId, type)
+        
+        if (resolvedFile) {
+          // Use the resolved filename
+          const baseUrl = `https://ddragon.leagueoflegends.com/cdn/${version}/img/tft-${type}`
+          return `${baseUrl}/${resolvedFile.filename}`
+        }
+      }
+    } catch (error) {
+      // Silently fall through to existing logic - no need to log for every image
+    }
+  }
+  
+  // Fallback to existing synchronous logic
+  return generateDirectImageUrlSync(version, mappedId, type, mappingInfo)
+}
+
+/**
+ * Synchronous version of generateDirectImageUrl (existing logic)
+ */
+const generateDirectImageUrlSync = (version, mappedId, type, mappingInfo) => {
+  // Fallback to Data Dragon CDN with existing logic
   const baseUrl = `https://ddragon.leagueoflegends.com/cdn/${version}/img/tft-${type}`
   const setNumber = getSetNumberFromVersion(version)
   
@@ -95,6 +127,95 @@ export const generateDirectImageUrl = (version, entityId, type = 'champion') => 
   }
   
   return null
+}
+
+/**
+ * Pre-fetches DDragon file listings for a version and types
+ * This should be called once before batch image loading to avoid excessive API calls
+ * @param {string} version - Patch version
+ * @param {string[]} types - Array of types to pre-fetch ('champion', 'trait')
+ */
+export const preFetchDDragonFileListing = async (version, types = ['champion', 'trait']) => {
+  if (version === '15.13.1') {
+    return // Skip pre-fetch for Set 14 (uses local images)
+  }
+  
+  const versionTag = version.startsWith('v') ? version : `v${version}`
+  const promises = []
+  
+  for (const type of types) {
+    const cacheKey = `${versionTag}-${type}`
+    
+    // Skip if already cached
+    if (DDRAGON_FILE_MAPS.has(cacheKey)) {
+      continue
+    }
+    
+    console.log(`📥 Pre-fetching DDragon file listing for ${versionTag}-${type}`)
+    
+    const promise = fetchDDragonFileListing(versionTag, type)
+      .then(fileMap => {
+        DDRAGON_FILE_MAPS.set(cacheKey, fileMap)
+        console.log(`✅ Pre-fetched ${fileMap.size} ${type} filenames for ${versionTag}`)
+        return { type, fileMap }
+      })
+      .catch(error => {
+        console.warn(`❌ Failed to pre-fetch DDragon listing for ${versionTag}-${type}:`, error)
+        DDRAGON_FILE_MAPS.set(cacheKey, new Map()) // Cache empty map to prevent retries
+        return { type, fileMap: new Map() }
+      })
+    
+    promises.push(promise)
+  }
+  
+  if (promises.length > 0) {
+    const results = await Promise.all(promises)
+    console.log(`🎯 DDragon pre-fetch complete for ${versionTag}: ${results.map(r => `${r.type}(${r.fileMap.size})`).join(', ')}`)
+  } else {
+    console.log(`💾 Using cached DDragon file listings for ${versionTag}`)
+  }
+}
+
+/**
+ * Generates image URL with automatic DDragon resolution using pre-fetched data
+ * Tries to resolve the correct filename from pre-fetched DDragon data first, then falls back to existing logic
+ */
+export const generateImageUrlWithResolution = (version, entityId, type = 'champion') => {
+  // Apply name mapping if available
+  const mappingInfo = getMappingInfo(version, entityId, type)
+  const mappedId = mappingInfo.name
+  
+  // For Set 14, try to use local bundled images first
+  if (version === '15.13.1') {
+    const localUrl = generateLocalImageUrl(mappedId, type, mappingInfo)
+    if (localUrl) return localUrl
+  }
+  
+  // For other versions, try automatic resolution using pre-fetched data
+  if (version !== '15.13.1') {
+    try {
+      const versionTag = version.startsWith('v') ? version : `v${version}`
+      const cacheKey = `${versionTag}-${type}`
+      const fileMap = DDRAGON_FILE_MAPS.get(cacheKey)
+      
+      if (fileMap && fileMap.size > 0) {
+        const resolvedFile = resolveDDragonFilename(fileMap, mappedId, type)
+        
+        if (resolvedFile) {
+          // Use the resolved filename
+          const baseUrl = `https://ddragon.leagueoflegends.com/cdn/${version}/img/tft-${type}`
+          console.log(`🎯 Resolved ${mappedId} (${type}) -> ${resolvedFile.filename} (set ${resolvedFile.setNumber})`)
+          return `${baseUrl}/${resolvedFile.filename}`
+        }
+      }
+    } catch (error) {
+      console.warn(`Failed to resolve DDragon filename for ${mappedId} (${type}):`, error)
+      // Fall through to existing logic
+    }
+  }
+  
+  // Fallback to existing synchronous logic
+  return generateDirectImageUrlSync(version, mappedId, type, mappingInfo)
 }
 
 /**
@@ -236,8 +357,8 @@ const createSpriteCanvas = (spriteImage, coordinates) => {
 }
 
 /**
- * Loads TFT champion or trait image with fallback strategy
- * Priority: Direct Data Dragon URL → Placeholder
+ * Loads TFT champion or trait image with fallback strategy and automatic resolution
+ * Priority: Automatic DDragon Resolution → Direct Data Dragon URL → Placeholder
  * Image failures are non-critical and won't prevent app loading
  */
 export const loadTFTImage = async (version, entityId, type = 'champion') => {
@@ -255,8 +376,8 @@ export const loadTFTImage = async (version, entityId, type = 'champion') => {
     if (typeof entityId === 'string' && entityId.startsWith('http')) {
       imageUrl = entityId
     } else {
-      // Generate URL from entityId
-      imageUrl = generateDirectImageUrl(version, entityId, type)
+      // Use automatic resolution with pre-fetched data (now synchronous)
+      imageUrl = generateImageUrlWithResolution(version, entityId, type)
     }
     
     if (!imageUrl) {
@@ -268,6 +389,23 @@ export const loadTFTImage = async (version, entityId, type = 'champion') => {
     IMAGE_CACHE.set(cacheKey, image)
     return image
   } catch (error) {
+    // For non-Set 14 versions, if automatic resolution failed, try one more time with fallback logic
+    if (version !== '15.13.1' && !error.message.includes('fallback already attempted')) {
+      try {
+        console.log(`🔄 Retrying ${entityId} with fallback logic after resolution failure`)
+        const fallbackUrl = generateDirectImageUrl(version, entityId, type)
+        if (fallbackUrl) {
+          const image = await loadImage(fallbackUrl, 1, 500) // Single retry for fallback
+          IMAGE_CACHE.set(cacheKey, image)
+          return image
+        }
+      } catch (fallbackError) {
+        // Mark that we've tried fallback to prevent infinite recursion
+        fallbackError.message = 'fallback already attempted: ' + fallbackError.message
+        // Continue to placeholder creation below
+      }
+    }
+    
     // Log but don't throw - image failures shouldn't prevent app from working
     console.warn(`Failed to load ${type} image for ${entityId}:`, error.message)
     
@@ -410,7 +548,13 @@ export const clearImageCache = () => {
   CACHE_METADATA.clear()
   FAILED_IMAGES.clear()
   FAILED_IMAGES_BY_VERSION.clear()
+  DDRAGON_FILE_MAPS.clear()
 }
+
+/**
+ * Re-export DDragon cache utilities for external access
+ */
+export { clearDDragonCache, getDDragonCacheStats } from './ddragonResolver.js'
 
 /**
  * Gets failed image statistics for all versions
@@ -449,18 +593,31 @@ export const getCacheStats = () => {
 }
 
 /**
- * Gets blacklist for a specific version
+ * Gets blacklist for a specific version with default entries for certain sets
  */
 export const getImageBlacklist = (version) => {
+  let blacklist = { champions: [], traits: [] }
+  
+  // Add default blacklist entries based on set/version
+  const setNumber = getSetNumberFromVersion(version)
+  if (setNumber === 15) {
+    // Default blacklist for Set 15
+    blacklist.traits.push('MechanicTrait')
+  }
+  
   try {
     const stored = localStorage.getItem(`tft_image_blacklist_${version}`)
     if (stored) {
-      return JSON.parse(stored)
+      const storedBlacklist = JSON.parse(stored)
+      // Merge stored blacklist with defaults (avoiding duplicates)
+      blacklist.champions = [...new Set([...blacklist.champions, ...storedBlacklist.champions])]
+      blacklist.traits = [...new Set([...blacklist.traits, ...storedBlacklist.traits])]
     }
   } catch (error) {
     console.error('Failed to parse blacklist:', error)
   }
-  return { champions: [], traits: [] }
+  
+  return blacklist
 }
 
 /**

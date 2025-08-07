@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
-import { loadTFTImage, loadTFTImages, clearImageCache, getCacheStats } from '../utils/imageLoader'
+import { loadTFTImage, loadTFTImages, clearImageCache, getCacheStats, preFetchDDragonFileListing } from '../utils/imageLoader'
 
 /**
  * Hook for managing TFT image loading and caching
@@ -16,7 +16,7 @@ export const useTFTImages = (tftData) => {
   }, [])
 
   /**
-   * Loads a single TFT image
+   * Loads a single TFT image (with automatic DDragon pre-fetch if needed)
    */
   const loadImage = useCallback(async (championId, type = 'champion') => {
     if (!tftData || !tftData[`${type}s`]) return null
@@ -39,6 +39,14 @@ export const useTFTImages = (tftData) => {
     // Return cached error if exists
     if (imageErrors.has(cacheKey)) {
       return null
+    }
+
+    // Ensure DDragon files are pre-fetched for this version and type
+    // This is a lightweight operation that will skip if already cached
+    try {
+      await preFetchDDragonFileListing(tftData.version, [type])
+    } catch (preFetchError) {
+      console.warn(`Pre-fetch failed for ${type}, continuing with fallback:`, preFetchError)
     }
     
     try {
@@ -123,14 +131,28 @@ export const useTFTImages = (tftData) => {
   }, [tftData, imageErrors])
 
   /**
+   * Pre-fetches DDragon file listings for the current version
+   * Should be called before any batch image operations
+   */
+  const preFetchDDragonFiles = useCallback(async () => {
+    if (!tftData?.version) return
+    
+    console.log(`📥 Pre-fetching DDragon file listings for ${tftData.version}`)
+    await preFetchDDragonFileListing(tftData.version, ['champion', 'trait'])
+  }, [tftData?.version])
+
+  /**
    * Preloads all champion images for current set
    */
   const preloadAllChampions = useCallback(async () => {
     if (!tftData?.champions) return
     
+    // Pre-fetch DDragon file listings first (will skip if already cached)
+    await preFetchDDragonFiles()
+    
     const championIds = Object.keys(tftData.champions)
     return loadImageBatch(championIds, 'champion')
-  }, [tftData, loadImageBatch])
+  }, [tftData, loadImageBatch, preFetchDDragonFiles])
 
   /**
    * Preloads all trait images for current set
@@ -138,9 +160,12 @@ export const useTFTImages = (tftData) => {
   const preloadAllTraits = useCallback(async () => {
     if (!tftData?.traits) return
     
+    // Pre-fetch DDragon file listings first (will skip if already cached)
+    await preFetchDDragonFiles()
+    
     const traitIds = Object.keys(tftData.traits)
     return loadImageBatch(traitIds, 'trait')
-  }, [tftData, loadImageBatch])
+  }, [tftData, loadImageBatch, preFetchDDragonFiles])
 
   /**
    * Clears all image caches
@@ -210,6 +235,7 @@ export const useTFTImages = (tftData) => {
     getImage,
     isImageLoading,
     hasImageError,
+    preFetchDDragonFiles,
     preloadAllChampions,
     preloadAllTraits,
     clearAllCaches,
@@ -224,6 +250,7 @@ export const useTFTImages = (tftData) => {
     getImage,
     isImageLoading,
     hasImageError,
+    preFetchDDragonFiles,
     preloadAllChampions,
     preloadAllTraits,
     clearAllCaches,

@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { generateDirectImageUrl } from '../utils/imageLoader'
+import { generateDirectImageUrl, preFetchDDragonFileListing } from '../utils/imageLoader'
 import { fetchShopOdds } from '../utils/shopOddsFetcher'
 import { getShopOdds, getUnitPoolSize, getSetFromVersion } from '../data/shopOdds'
 import { 
@@ -746,6 +746,9 @@ export const useTFTData = (initialVersion = null) => {
         // Use setTimeout to ensure progress state updates properly
         setTimeout(() => setProgress({ isActive: false }), 0)
         console.log(`✅ Using cached data for version ${version}`)
+        
+        // Pre-fetch DDragon data in background for cached data too (non-blocking)
+        preFetchDDragonDataInBackground(version)
         return
       }
       
@@ -763,6 +766,9 @@ export const useTFTData = (initialVersion = null) => {
         setCurrentVersion(version)
         updateCachedVersions()
         console.log(`✅ Successfully loaded and cached data for version ${version}`)
+        
+        // Pre-fetch DDragon data in background (non-blocking)
+        preFetchDDragonDataInBackground(version)
       } else {
         console.warn(`⚠️ Failed to load valid data for version ${version}`, freshData)
         throw new Error(`No valid data received for version ${version}`)
@@ -788,6 +794,18 @@ export const useTFTData = (initialVersion = null) => {
       setLoading(false)
     }
   }, [updateCachedVersions])
+
+  // Helper function to pre-fetch DDragon data in background (non-blocking)
+  const preFetchDDragonDataInBackground = (version) => {
+    // Run in background - don't await or block the UI
+    preFetchDDragonFileListing(version, ['champion', 'trait'])
+      .then(() => {
+        console.log(`🔍 Background DDragon pre-fetch completed for ${version}`)
+      })
+      .catch(error => {
+        console.warn(`⚠️ Background DDragon pre-fetch failed for ${version}:`, error.message)
+      })
+  }
   
   // Initialize cached versions on mount
   useEffect(() => {
