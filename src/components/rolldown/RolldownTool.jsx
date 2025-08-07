@@ -23,7 +23,8 @@ import { useStarringSystem } from './hooks/useStarringSystem'
 import { useKeyboardHotkeys } from './hooks/useKeyboardHotkeys'
 import { useHoveredUnit } from './hooks/useHoveredUnit'
 import { canCreateStarUpCombination } from './utils/starUpChecker'
-import { startImagePreloading, setPreloadCallbacks, getPreloadProgress, PRELOAD_PHASES } from './utils/imagePreloader'
+import { startImagePreloading, setPreloadCallbacks, getPreloadProgress, setActiveVersionForProgress, PRELOAD_PHASES } from './utils/imagePreloader'
+import { saveLastSelectedVersion } from './utils/versionDetector'
 import { getShopOdds, getSetFromVersion } from './data/shopOdds'
 import audioManager from './utils/audioManager'
 import './styles/rolldown.css'
@@ -74,6 +75,12 @@ function RolldownTool() {
   const [lastRerollTime, setLastRerollTime] = useState(0)
   const [rerollCooldown, setRerollCooldown] = useState(false)
   const [teamPlannerOpen, setTeamPlannerOpen] = useState(false)
+  
+  // Transition state management
+  const [isTransitioning, setIsTransitioning] = useState(false)
+  const [transitionError, setTransitionError] = useState(null)
+  const transitionAbortController = useRef(null)
+  const previousVersion = useRef(null)
   
   const { 
     data: tftData, 
@@ -128,24 +135,72 @@ function RolldownTool() {
         setPreloadPhase(PRELOAD_PHASES.COMPLETE)
       }
     })
+    
+    // Make preloader globally accessible for transition management
+    import('./utils/imagePreloader').then(module => {
+      window.imagePreloader = module.imagePreloader
+      // Set initial active version for progress display
+      if (currentVersion) {
+        setActiveVersionForProgress(currentVersion)
+      }
+    })
   }, [])
+  
+  // Update active version for progress when currentVersion changes
+  useEffect(() => {
+    if (currentVersion) {
+      setActiveVersionForProgress(currentVersion)
+      console.log(`📱 Updated active version for progress display: ${currentVersion}`)
+    }
+  }, [currentVersion])
 
   // Initialize pool when tftData is loaded
   useEffect(() => {
+    // Skip initialization during transitions to prevent race conditions
+    if (isTransitioning) {
+      console.log('⏸️ Skipping pool initialization during transition')
+      return
+    }
+    
     if (tftData && tftData.champions && Object.keys(tftData.champions).length > 0 && !tftLoading) {
       console.log('Initializing pool with tftData:', Object.keys(tftData.champions).length, 'champions')
       
       // Initialize pool - preloading will happen after shop is generated
       unitPoolHook.initializePool()
     }
-  }, [tftData, tftLoading])
+  }, [tftData, tftLoading, isTransitioning])
   
   // Generate shop when unitPool is ready and shop is empty
   useEffect(() => {
+    console.log('🔍 Shop generation effect triggered:', {
+      isTransitioning,
+      unitPoolSize: unitPoolHook.unitPool?.size,
+      shopLength: gameState.player.shop.length,
+      currentVersion,
+      tftDataVersion: tftData?.version
+    })
+    
+    // Skip shop generation during transitions to prevent race conditions
+    if (isTransitioning) {
+      console.log('⏸️ Skipping shop generation during transition')
+      return
+    }
+    
     if (unitPoolHook.unitPool.size > 0 && gameState.player.shop.length === 0) {
-      console.log('Pool is ready with', unitPoolHook.unitPool.size, 'units, generating initial shop...')
+      console.log('🛒 Pool is ready with', unitPoolHook.unitPool.size, 'units, generating initial shop...')
+      
+      // Additional validation: make sure TFT data matches current version
+      if (!tftData || !currentVersion || tftData.version !== currentVersion) {
+        console.warn('⚠️ Skipping shop generation: TFT data version mismatch', {
+          tftDataVersion: tftData?.version,
+          currentVersion,
+          hasData: !!tftData
+        })
+        return
+      }
+      
       const initialShop = shopHook.generateShop(gameState.player.level)
-      console.log('Generated initial shop:', initialShop)
+      console.log('✅ Generated initial shop:', initialShop)
       setGameState(prev => ({
         ...prev,
         player: {
@@ -174,13 +229,18 @@ function RolldownTool() {
         startPreloading()
       }
     }
-  }, [unitPoolHook.unitPool.size, gameState.player.shop.length, tftData, currentVersion])
+  }, [unitPoolHook.unitPool.size, gameState.player.shop.length, tftData, currentVersion, isTransitioning])
   
   // Track shop rerolls to force component re-mounting (restarts animations)
   const [shopKey, setShopKey] = useState(0)
 
   // Handle shop reroll with rate limiting
   const handleReroll = () => {
+    if (isTransitioning) {
+      console.log('🚫 Cannot reroll during set transition')
+      return
+    }
+    
     const rerollCost = shopHook.getRerollCost()
     const now = Date.now()
     const timeSinceLastReroll = now - lastRerollTime
@@ -224,6 +284,11 @@ function RolldownTool() {
   
   // Handle buy XP
   const handleBuyXP = () => {
+    if (isTransitioning) {
+      console.log('🚫 Cannot buy XP during set transition')
+      return
+    }
+    
     const xpCost = 4
     
     if (gameState.player.gold >= xpCost && gameState.player.level < 10) {
@@ -266,6 +331,11 @@ function RolldownTool() {
   
   // Handle unit purchase
   const handlePurchase = (unit, shopSlotIndex) => {
+    if (isTransitioning) {
+      console.log('🚫 Cannot purchase units during set transition')
+      return
+    }
+    
     console.log('Purchasing unit:', unit, 'at slot:', shopSlotIndex)
     
     // Check if bench is full (9 slots)
@@ -575,8 +645,131 @@ function RolldownTool() {
     })
   }
 
+  // Handle safe set transition
+  const handleVersionTransition = useCallback(async (newVersion) => {
+    if (isTransitioning) {
+      console.warn('🚫 Transition already in progress, ignoring request')
+      return
+    }
+
+    if (newVersion === currentVersion) {
+      console.log('🔄 Same version selected, no transition needed')
+      return
+    }
+
+    console.log(`🔄 Starting transition from ${currentVersion} to ${newVersion}`)
+    
+    // Store previous version for potential rollback
+    previousVersion.current = currentVersion
+    setIsTransitioning(true)
+    setTransitionError(null)
+    
+    // Create abort controller for this transition
+    if (transitionAbortController.current) {
+      transitionAbortController.current.abort()
+    }
+    transitionAbortController.current = new AbortController()
+
+    try {
+      // Phase 1: Stop current processes
+      console.log('🛑 Phase 1: Stopping current processes')
+      
+      // Set the new version as active for progress display
+      setActiveVersionForProgress(newVersion)
+      
+      // Cancel ongoing image preloading for old version
+      if (window.imagePreloader) {
+        window.imagePreloader.stopPreloading()
+      }
+      
+      // Clear cached images for old version to free memory
+      if (tftImages && tftImages.clearVersionImages) {
+        console.log('🗑️ Clearing images for previous version:', currentVersion)
+        tftImages.clearVersionImages(currentVersion)
+      }
+      
+      // Note: We now maintain separate counters per version instead of clearing
+      // This preserves accurate failure counts when switching back and forth between sets
+      
+      // Phase 2: Reset game state to prevent conflicts
+      console.log('🔄 Phase 2: Resetting game state')
+      setGameState(INITIAL_GAME_STATE)
+      setPreloadProgress({
+        critical: { loaded: 0, total: 0, complete: false },
+        background: { loaded: 0, total: 0, complete: false },
+        overall: { loaded: 0, total: 0, percentage: 0 }
+      })
+      setPreloadPhase(null)
+      setProgressUpdateCounter(0)
+      
+      // Phase 3: Load new version data
+      console.log('📥 Phase 3: Loading new version data')
+      
+      // Check if transition was aborted
+      if (transitionAbortController.current.signal.aborted) {
+        throw new Error('Transition was cancelled')
+      }
+      
+      // Use the existing loadVersion function
+      await loadVersion(newVersion)
+      
+      // Save user's version preference for next session
+      saveLastSelectedVersion(newVersion)
+      
+      console.log('✅ Transition completed successfully')
+      
+    } catch (error) {
+      console.error('❌ Transition failed:', error)
+      setTransitionError(error.message)
+      
+      // Attempt to rollback to previous version if possible
+      if (previousVersion.current && previousVersion.current !== newVersion) {
+        console.log(`🔄 Rolling back to previous version: ${previousVersion.current}`)
+        try {
+          await loadVersion(previousVersion.current)
+          console.log('✅ Rollback successful')
+        } catch (rollbackError) {
+          console.error('❌ Rollback failed:', rollbackError)
+          setTransitionError(`Transition failed and rollback failed: ${rollbackError.message}`)
+        }
+      }
+    } finally {
+      setIsTransitioning(false)
+      transitionAbortController.current = null
+      
+      // Phase 4: Force shop regeneration after transition is complete
+      setTimeout(() => {
+        console.log('🛒 Phase 4: Regenerating shop for new set (post-transition)')
+        console.log('🔍 Debug - unitPoolHook.unitPool.size:', unitPoolHook.unitPool?.size)
+        console.log('🔍 Debug - tftData available:', !!tftData)
+        console.log('🔍 Debug - currentVersion:', currentVersion)
+        
+        // Clear shop to trigger regeneration now that transition is complete
+        setGameState(prev => {
+          console.log('🔍 Debug - previous shop length:', prev.player.shop.length)
+          return {
+            ...prev,
+            player: {
+              ...prev.player,
+              shop: [] // Clear shop to trigger regeneration
+            }
+          }
+        })
+      }, 100) // Increased delay to ensure all state has updated
+      
+      // Clear transition error after a delay
+      setTimeout(() => {
+        setTransitionError(null)
+      }, 5000)
+    }
+  }, [currentVersion, isTransitioning, loadVersion, tftImages])
+
   // Handle opening mapping modal
   const handleOpenMappings = (version = currentVersion) => {
+    if (isTransitioning) {
+      console.warn('🚫 Cannot open mapping modal during transition')
+      return
+    }
     setMappingModalVersion(version)
     setMappingModalOpen(true)
   }
@@ -722,8 +915,29 @@ function RolldownTool() {
     onPlaceUnit: handlePlaceUnit,
     hotkeyConfig: hotkeys,
     hoveredUnit,
-    enabled: !analyticsOpen && !settingsOpen && !mappingModalOpen && !teamPlannerOpen
+    enabled: !analyticsOpen && !settingsOpen && !mappingModalOpen && !teamPlannerOpen && !isTransitioning
   })
+  
+  // Cleanup effect on unmount and version changes
+  useEffect(() => {
+    return () => {
+      // Cleanup on component unmount
+      console.log('🧹 Cleaning up RolldownTool component')
+      
+      // Cancel any ongoing transitions
+      if (transitionAbortController.current) {
+        transitionAbortController.current.abort()
+      }
+      
+      // Stop image preloading
+      if (window.imagePreloader) {
+        window.imagePreloader.stopPreloading()
+      }
+      
+      // Clear timeouts
+      clearTimeout()
+    }
+  }, [])
   
   return (
       <div className="game-root w-full h-full">
@@ -733,6 +947,22 @@ function RolldownTool() {
           <div className="bench-full-warning">
             <div className="bench-full-warning-text">
               Your bench is full, you must free up space on your bench to purchase a unit!
+            </div>
+          </div>
+        )}
+        
+        {/* Transition Warning */}
+        {isTransitioning && (
+          <div className="transition-warning">
+            <div className="transition-warning-content">
+              <div className="transition-warning-text">
+                🔄 Switching TFT Set - UI temporarily disabled...
+              </div>
+              {transitionError && (
+                <div className="transition-error-text">
+                  ❌ Transition failed: {transitionError}
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -988,9 +1218,9 @@ function RolldownTool() {
         <TFTVersionSelector
           currentVersion={currentVersion}
           cachedVersions={cachedVersions}
-          loading={tftLoading}
-          error={tftError}
-          onVersionSelect={loadVersion}
+          loading={tftLoading || isTransitioning}
+          error={tftError || transitionError}
+          onVersionSelect={handleVersionTransition}
           onOpenMappings={handleOpenMappings}
         />
 

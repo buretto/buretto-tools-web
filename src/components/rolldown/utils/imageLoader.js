@@ -18,7 +18,8 @@ const IMAGE_CACHE = new Map()
 const SPRITE_CACHE = new Map()
 const LOADING_PROMISES = new Map()
 const CACHE_METADATA = new Map() // Track cache timestamp and hit count
-const FAILED_IMAGES = new Map() // Track failed image loads
+const FAILED_IMAGES = new Map() // Track failed image loads with version info
+const FAILED_IMAGES_BY_VERSION = new Map() // Track failed images per version for easy filtering
 
 // Reactive notification system for failed images changes
 const FAILED_IMAGES_LISTENERS = new Set()
@@ -174,17 +175,33 @@ const loadImage = (url, maxRetries = 3, retryDelay = 1000) => {
         } else {
           LOADING_PROMISES.delete(url)
           
-          // Track failed image
-          FAILED_IMAGES.set(url, {
+          // Track failed image with version information
+          // Extract version from URL to categorize failures
+          const versionMatch = url.match(/\/cdn\/([^\/]+)\//)
+          const imageVersion = versionMatch ? versionMatch[1] : 'unknown'
+          
+          const failureData = {
+            url,
             timestamp: Date.now(),
             attempts: maxRetries,
-            error: 'Failed to load'
-          })
+            error: 'Failed to load',
+            version: imageVersion
+          }
+          
+          // Store in global map
+          FAILED_IMAGES.set(url, failureData)
+          
+          // Store in per-version map for efficient filtering
+          if (!FAILED_IMAGES_BY_VERSION.has(imageVersion)) {
+            FAILED_IMAGES_BY_VERSION.set(imageVersion, new Map())
+          }
+          FAILED_IMAGES_BY_VERSION.get(imageVersion).set(url, failureData)
           
           // Notify listeners about failed images change
           notifyFailedImagesChanged()
           
-          console.error(`Failed to load image after ${maxRetries} attempts: ${url}`)
+          console.error(`Failed to load image after ${maxRetries} attempts: ${url} (version: ${imageVersion})`)
+          console.log(`📊 Failed images by version:`, Array.from(FAILED_IMAGES_BY_VERSION.entries()).map(([v, failures]) => `${v}: ${failures.size}`).join(', '))
           reject(new Error(`Failed to load image after ${maxRetries} attempts: ${url}`))
         }
       }
@@ -392,6 +409,29 @@ export const clearImageCache = () => {
   LOADING_PROMISES.clear()
   CACHE_METADATA.clear()
   FAILED_IMAGES.clear()
+  FAILED_IMAGES_BY_VERSION.clear()
+}
+
+/**
+ * Gets failed image statistics for all versions
+ * (useful for debugging and overall statistics)
+ */
+export const getFailedImageStatsByVersion = () => {
+  const statsByVersion = new Map()
+  
+  for (const [version, versionFailures] of FAILED_IMAGES_BY_VERSION) {
+    const failed = Array.from(versionFailures.values()).filter(img => 
+      !isImageBlacklisted(img.url, version)
+    )
+    
+    statsByVersion.set(version, {
+      count: failed.length,
+      failed: failed,
+      totalFailed: versionFailures.size
+    })
+  }
+  
+  return statsByVersion
 }
 
 /**
@@ -443,20 +483,41 @@ export const isImageBlacklisted = (imageUrl, version) => {
  * Gets failed image statistics
  */
 export const getFailedImageStats = (version = null) => {
-  const failed = Array.from(FAILED_IMAGES.entries()).map(([url, data]) => ({
-    url,
-    ...data
-  }))
-  
-  // If version is provided, filter out blacklisted images
-  const filteredFailed = version 
-    ? failed.filter(img => !isImageBlacklisted(img.url, version))
-    : failed
-  
-  return {
-    count: filteredFailed.length,
-    failed: filteredFailed,
-    totalFailed: failed.length
+  if (version) {
+    // Use efficient per-version lookup
+    const versionFailures = FAILED_IMAGES_BY_VERSION.get(version)
+    if (!versionFailures) {
+      console.log(`📊 No failures found for version ${version}`)
+      return {
+        count: 0,
+        failed: [],
+        totalFailed: FAILED_IMAGES.size
+      }
+    }
+    
+    // Filter out blacklisted images for the specific version
+    const failed = Array.from(versionFailures.values()).filter(img => 
+      !isImageBlacklisted(img.url, version)
+    )
+    
+    console.log(`📊 Version ${version} failures: ${failed.length} (${versionFailures.size} total, ${versionFailures.size - failed.length} blacklisted)`)
+    
+    return {
+      count: failed.length,
+      failed: failed,
+      totalFailed: FAILED_IMAGES.size
+    }
+  } else {
+    // Return all failed images (filtered by blacklist per version)
+    const failed = Array.from(FAILED_IMAGES.values()).filter(img => 
+      !isImageBlacklisted(img.url, img.version)
+    )
+    
+    return {
+      count: failed.length,
+      failed: failed,
+      totalFailed: FAILED_IMAGES.size
+    }
   }
 }
 

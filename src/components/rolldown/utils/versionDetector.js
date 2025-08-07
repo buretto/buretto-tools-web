@@ -3,6 +3,38 @@
 
 import { fetchWithFallback, shouldUseOfflineMode, enableOfflineMode } from './networkUtils'
 
+const LAST_SELECTED_VERSION_KEY = 'tft_last_selected_version'
+
+/**
+ * Saves the user's last selected version to localStorage
+ * @param {string} version - Version to save
+ */
+export const saveLastSelectedVersion = (version) => {
+  try {
+    localStorage.setItem(LAST_SELECTED_VERSION_KEY, version)
+    console.log(`💾 Saved last selected version: ${version}`)
+  } catch (error) {
+    console.error('Failed to save last selected version:', error)
+  }
+}
+
+/**
+ * Gets the user's last selected version from localStorage
+ * @returns {string|null} Last selected version or null if none saved
+ */
+export const getLastSelectedVersion = () => {
+  try {
+    const version = localStorage.getItem(LAST_SELECTED_VERSION_KEY)
+    if (version) {
+      console.log(`📂 Retrieved last selected version: ${version}`)
+      return version
+    }
+  } catch (error) {
+    console.error('Failed to get last selected version:', error)
+  }
+  return null
+}
+
 /**
  * Gets the latest TFT version from Data Dragon versions API
  * @param {Function} onTimeoutProgress - Optional callback for timeout progress updates
@@ -63,6 +95,15 @@ export const getVersionToUse = async (requestedVersion = null, onProgress = null
   // If user specifically requested a version, use it
   if (requestedVersion) {
     return { version: requestedVersion, networkFailed: false }
+  }
+  
+  // Check for user's last selected version preference
+  const lastSelectedVersion = getLastSelectedVersion()
+  if (lastSelectedVersion) {
+    console.log(`🎯 Using user's last selected version: ${lastSelectedVersion}`)
+    return { version: lastSelectedVersion, networkFailed: false }
+  } else {
+    console.log('📂 No saved version preference found, will use latest available version')
   }
   
   // Check offline mode preference

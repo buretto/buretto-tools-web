@@ -74,10 +74,20 @@ const setCachedData = (version, data) => {
 const getCachedVersions = () => {
   try {
     const versions = []
+    
+    // Always include the bundled Set 14 version since it's always available
+    const bundledVersion = '15.13.1'
+    versions.push(bundledVersion)
+    
     for (let i = 0; i < localStorage.length; i++) {
       const key = localStorage.key(i)
       if (key && key.startsWith(CACHE_PREFIX)) {
         const version = key.substring(CACHE_PREFIX.length)
+        // Skip if this is the bundled version (already added)
+        if (version === bundledVersion) {
+          continue
+        }
+        
         const cached = localStorage.getItem(key)
         if (cached) {
           const parsed = JSON.parse(cached)
@@ -90,7 +100,8 @@ const getCachedVersions = () => {
     return versions.sort((a, b) => b.localeCompare(a, undefined, { numeric: true }))
   } catch (error) {
     console.error('Error getting cached versions:', error)
-    return []
+    // Even on error, return the bundled version
+    return ['15.13.1']
   }
 }
 

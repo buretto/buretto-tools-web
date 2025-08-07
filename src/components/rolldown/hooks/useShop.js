@@ -59,7 +59,15 @@ export const useShop = (tftData, version, unitPoolHook) => {
         if (fallbackUnits.length > 0) {
           const randomIndex = Math.floor(Math.random() * fallbackUnits.length)
           const selectedUnitId = fallbackUnits[randomIndex]
-          return createShopUnit(selectedUnitId, tftData.champions[selectedUnitId])
+          
+          // Validate that the champion data exists before creating the unit
+          const championData = tftData.champions[selectedUnitId]
+          if (!championData) {
+            console.warn(`⚠️ Champion data not found for fallback unit ${selectedUnitId} during shop generation`)
+            continue // Try next fallback cost
+          }
+          
+          return createShopUnit(selectedUnitId, championData)
         }
       }
       return null // No units available at all
@@ -69,15 +77,27 @@ export const useShop = (tftData, version, unitPoolHook) => {
     const randomIndex = Math.floor(Math.random() * availableUnits.length)
     const selectedUnitId = availableUnits[randomIndex]
     
-    return createShopUnit(selectedUnitId, tftData.champions[selectedUnitId])
+    // Validate that the champion data exists before creating the unit
+    const championData = tftData.champions[selectedUnitId]
+    if (!championData) {
+      console.warn(`⚠️ Champion data not found for ${selectedUnitId} during shop generation - skipping slot`)
+      return null
+    }
+    
+    return createShopUnit(selectedUnitId, championData)
   }, [tftData, setId, version, unitPoolHook])
   
   // Create a shop unit object
   const createShopUnit = useCallback((unitId, championData) => {
+    if (!championData) {
+      console.error(`❌ Cannot create shop unit: championData is null/undefined for ${unitId}`)
+      return null
+    }
+    
     return {
       id: unitId,
-      name: championData.name,
-      cost: championData.cost,
+      name: championData.name || unitId,
+      cost: championData.cost || 1,
       traits: championData.traits || [],
       stars: 1, // Shop units always start at 1 star
       shopId: `shop_${Date.now()}_${Math.random()}` // Unique ID for shop tracking
@@ -87,6 +107,17 @@ export const useShop = (tftData, version, unitPoolHook) => {
   // Generate a complete shop
   const generateShop = useCallback((playerLevel) => {
     console.log('Generating shop for level', playerLevel)
+    
+    // Validate that we have the necessary data before generating shop
+    if (!tftData?.champions || Object.keys(tftData.champions).length === 0) {
+      console.warn('⚠️ Cannot generate shop: no champion data available')
+      return []
+    }
+    
+    if (!unitPoolHook || !unitPoolHook.unitPool || unitPoolHook.unitPool.size === 0) {
+      console.warn('⚠️ Cannot generate shop: unit pool not initialized')
+      return []
+    }
     
     // First, return any existing shop units to pool
     currentShop.forEach(unit => {

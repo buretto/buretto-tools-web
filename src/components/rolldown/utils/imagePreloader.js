@@ -30,6 +30,8 @@ const isEntityBlacklisted = (entityId, type, version) => {
 class ImagePreloader {
   constructor() {
     this.phase = null
+    this.currentVersion = null // Track which version we're loading for
+    this.activeVersion = null // Track which version should show progress
     this.progress = {
       critical: { loaded: 0, total: 0, successful: 0, failed: 0, blacklisted: 0, complete: false },
       background: { loaded: 0, total: 0, successful: 0, failed: 0, blacklisted: 0, complete: false },
@@ -55,6 +57,14 @@ class ImagePreloader {
   }
 
   /**
+   * Set active version (version that should show progress in UI)
+   */
+  setActiveVersion(version) {
+    this.activeVersion = version
+    console.log(`📱 Active version for UI progress set to: ${version}`)
+  }
+
+  /**
    * Update progress and trigger callbacks
    */
   updateProgress(phase, loaded, total, successful = loaded, failed = 0, blacklisted = 0) {
@@ -77,18 +87,24 @@ class ImagePreloader {
     // Increment counter to force React re-renders
     this.progress.updateCounter++
 
-    // Trigger progress callback
-    if (this.callbacks.onProgress) {
+    // Only trigger callbacks if this is for the active version
+    const shouldShowProgress = !this.activeVersion || this.currentVersion === this.activeVersion
+    
+    if (shouldShowProgress && this.callbacks.onProgress) {
       this.callbacks.onProgress(this.progress)
       // Debug logging to verify progress updates
-      console.log(`📊 Progress update: ${phase} ${loaded}/${total}, overall: ${this.progress.overall.loaded}/${this.progress.overall.total} (${this.progress.overall.percentage}%)`)
+      console.log(`📊 [${this.currentVersion}] Progress update: ${phase} ${loaded}/${total}, overall: ${this.progress.overall.loaded}/${this.progress.overall.total} (${this.progress.overall.percentage}%)`)
+    } else if (!shouldShowProgress) {
+      console.log(`🔇 [${this.currentVersion}] Suppressing progress update for background version (active: ${this.activeVersion})`)
     }
 
     // Check if phase is complete
     if (loaded >= total && !this.progress[phase].complete) {
       this.progress[phase].complete = true
       
-      if (this.callbacks.onPhaseComplete) {
+      // Recalculate for phase completion callback
+      const shouldShowPhaseComplete = !this.activeVersion || this.currentVersion === this.activeVersion
+      if (shouldShowPhaseComplete && this.callbacks.onPhaseComplete) {
         this.callbacks.onPhaseComplete(phase, this.progress)
       }
 
@@ -97,7 +113,9 @@ class ImagePreloader {
         this.phase = PRELOAD_PHASES.COMPLETE
         this.isPreloading = false
         
-        if (this.callbacks.onComplete) {
+        // Recalculate for completion callback
+        const shouldShowComplete = !this.activeVersion || this.currentVersion === this.activeVersion
+        if (shouldShowComplete && this.callbacks.onComplete) {
           this.callbacks.onComplete(this.progress)
         }
       }
@@ -282,9 +300,10 @@ class ImagePreloader {
     }
 
     this.isPreloading = true
+    this.currentVersion = version // Set the version we're loading for
     this.abortController = new AbortController()
     
-    console.log('Starting TFT image preloading...')
+    console.log(`Starting TFT image preloading for version ${version}...`)
 
     try {
       // Phase 1: Load critical images first
@@ -315,7 +334,17 @@ class ImagePreloader {
       this.abortController.abort()
     }
     this.isPreloading = false
-    console.log('Preloading stopped')
+    this.currentVersion = null // Clear current loading version
+    
+    // Reset progress to prevent stale progress from showing
+    this.progress = {
+      critical: { loaded: 0, total: 0, successful: 0, failed: 0, blacklisted: 0, complete: false },
+      background: { loaded: 0, total: 0, successful: 0, failed: 0, blacklisted: 0, complete: false },
+      overall: { loaded: 0, total: 0, successful: 0, failed: 0, blacklisted: 0, percentage: 0 },
+      updateCounter: 0
+    }
+    
+    console.log(`Preloading stopped${this.currentVersion ? ` for version ${this.currentVersion}` : ''}`)
   }
 
   /**
@@ -351,4 +380,8 @@ export const getPreloadProgress = () => {
 
 export const stopImagePreloading = () => {
   imagePreloader.stopPreloading()
+}
+
+export const setActiveVersionForProgress = (version) => {
+  imagePreloader.setActiveVersion(version)
 }
