@@ -42,20 +42,33 @@ const openCircuitBreaker = () => {
 }
 
 /**
- * Fetch with timeout and circuit breaker protection
+ * Fetch with timeout and circuit breaker protection, with optional progress updates
  * @param {string} url - URL to fetch
  * @param {number} timeout - Timeout in milliseconds (default 10s)
+ * @param {Function} onTimeoutProgress - Optional callback for timeout progress updates
  * @returns {Promise<Response>}
  */
-export const fetchWithTimeout = async (url, timeout = NETWORK_TIMEOUT) => {
+export const fetchWithTimeout = async (url, timeout = NETWORK_TIMEOUT, onTimeoutProgress = null) => {
   // Check circuit breaker first
   if (checkCircuitBreaker()) {
     throw new Error('Circuit breaker open - network requests blocked')
   }
   
   const controller = new AbortController()
+  const startTime = Date.now()
+  let progressInterval = null
+  let timeoutId = null
   
-  const timeoutId = setTimeout(() => {
+  // Set up progress updates if callback is provided
+  if (onTimeoutProgress && typeof onTimeoutProgress === 'function') {
+    progressInterval = setInterval(() => {
+      const elapsed = Date.now() - startTime
+      const progress = Math.floor(Math.min((elapsed / timeout) * 100, 99)) // Cap at 99% until actual completion, truncate decimals
+      onTimeoutProgress(progress)
+    }, 100) // Update every 100ms for smooth progress
+  }
+  
+  timeoutId = setTimeout(() => {
     controller.abort()
   }, timeout)
   
@@ -63,10 +76,22 @@ export const fetchWithTimeout = async (url, timeout = NETWORK_TIMEOUT) => {
     const response = await fetch(url, {
       signal: controller.signal
     })
+    
+    // Clear timeout and progress interval on success
     clearTimeout(timeoutId)
+    if (progressInterval) {
+      clearInterval(progressInterval)
+      onTimeoutProgress && onTimeoutProgress(100) // Complete progress on success
+    }
+    
     return response
   } catch (error) {
+    // Clear timeout and progress interval on error
     clearTimeout(timeoutId)
+    if (progressInterval) {
+      clearInterval(progressInterval)
+    }
+    
     if (error.name === 'AbortError') {
       throw new Error(`Request timeout after ${timeout}ms`)
     }
@@ -169,9 +194,10 @@ export const trackFailedRequest = (url, isMajorFailure = false) => {
  * @param {Function} fallbackFn - Function to call if request fails
  * @param {string} dataType - Type of data being fetched (for logging)
  * @param {boolean} isMajorFailure - Whether this is a critical request (version, JSON data)
+ * @param {Function} onTimeoutProgress - Optional callback for timeout progress updates
  * @returns {Promise<any>}
  */
-export const fetchWithFallback = async (url, fallbackFn, dataType = 'data', isMajorFailure = false) => {
+export const fetchWithFallback = async (url, fallbackFn, dataType = 'data', isMajorFailure = false, onTimeoutProgress = null) => {
   // Check if we should skip network requests
   if (shouldUseOfflineMode()) {
     console.log(`🔌 Offline mode: using bundled ${dataType}`)
@@ -182,7 +208,7 @@ export const fetchWithFallback = async (url, fallbackFn, dataType = 'data', isMa
     // Use request deduplication to prevent multiple identical requests
     const data = await deduplicateRequest(url, async () => {
       console.log(`🌐 Fetching ${dataType} from:`, url)
-      const response = await fetchWithTimeout(url)
+      const response = await fetchWithTimeout(url, NETWORK_TIMEOUT, onTimeoutProgress)
       
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`)

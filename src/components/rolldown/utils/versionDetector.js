@@ -5,9 +5,10 @@ import { fetchWithFallback, shouldUseOfflineMode, enableOfflineMode } from './ne
 
 /**
  * Gets the latest TFT version from Data Dragon versions API
+ * @param {Function} onTimeoutProgress - Optional callback for timeout progress updates
  * @returns {Promise<string>} Latest version (e.g., "15.15.1")
  */
-export const getLatestVersion = async () => {
+export const getLatestVersion = async (onTimeoutProgress = null) => {
   const fallbackFn = () => {
     // Fallback to known good Set 14 version if API fails
     console.log('Using fallback version: 15.13.1 (Set 14)')
@@ -19,7 +20,8 @@ export const getLatestVersion = async () => {
       'https://ddragon.leagueoflegends.com/api/versions.json',
       fallbackFn,
       'version data',
-      true // This is a major failure - triggers circuit breaker
+      true, // This is a major failure - triggers circuit breaker
+      onTimeoutProgress
     )
     
     // If we got the fallback string, return it directly
@@ -75,7 +77,15 @@ export const getVersionToUse = async (requestedVersion = null, onProgress = null
       onProgress({ stage: 'fetching_version', progress: 10, isActive: true })
     }
     
-    const latestVersion = await getLatestVersion()
+    // Create timeout progress callback to update the main progress during timeout
+    const onTimeoutProgress = onProgress ? (timeoutProgress) => {
+      // Map timeout progress (0-100) to our stage progress (10-90)
+      // Leave 10% for completion and 10% buffer at start
+      const mappedProgress = Math.floor(Math.min(10 + (timeoutProgress * 0.8), 90))
+      onProgress({ stage: 'fetching_version', progress: mappedProgress, isActive: true })
+    } : null
+    
+    const latestVersion = await getLatestVersion(onTimeoutProgress)
     
     // If we got the fallback version, we know network failed
     if (latestVersion === '15.13.1') {

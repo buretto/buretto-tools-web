@@ -381,7 +381,14 @@ const fetchTFTData = async (version, networkFailed = false, onProgress = null) =
       onProgress({ stage: 'detecting_set', progress: 30, isActive: true })
     }
     
-    const setInfo = await detectSetInfo(version)
+    // Create timeout progress callback to update the main progress during timeout
+    const onTimeoutProgress = onProgress ? (timeoutProgress) => {
+      // Map timeout progress (0-100) to our stage progress (30-60)
+      const mappedProgress = Math.floor(Math.min(30 + (timeoutProgress * 0.3), 60))
+      onProgress({ stage: 'detecting_set', progress: mappedProgress, isActive: true })
+    } : null
+    
+    const setInfo = await detectSetInfo(version, onTimeoutProgress)
     const setId = `set${setInfo.setNumber}`
     const setName = setInfo.setName
     

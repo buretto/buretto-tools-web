@@ -114,7 +114,6 @@ function RolldownTool() {
   useEffect(() => {
     setPreloadCallbacks({
       onProgress: (progress) => {
-        console.log('🔄 RolldownTool: Preload progress received:', progress.overall.loaded + '/' + progress.overall.total)
         // Force a new object to ensure React detects the change
         setPreloadProgress({...progress})
         // Increment counter to force re-render
@@ -752,7 +751,6 @@ function RolldownTool() {
               progress={(() => {
                 // Debug logging for progress selection
                 if (dataProgress.isActive && dataProgress.stage !== 'complete') {
-                  console.log('🎯 Showing data progress:', dataProgress.stage, dataProgress.progress + '%')
                   return dataProgress
                 } else if (preloadPhase !== PRELOAD_PHASES.COMPLETE && preloadProgress.overall.total > 0) {
                   const imageProgress = {
@@ -763,10 +761,8 @@ function RolldownTool() {
                     total: preloadProgress.overall.total,
                     updateCounter: progressUpdateCounter // Include counter to force re-renders
                   }
-                  console.log('🎯 Showing image progress:', imageProgress.stage, imageProgress.progress + '%', imageProgress.current + '/' + imageProgress.total, 'counter:', progressUpdateCounter)
                   return imageProgress
                 } else {
-                  console.log('🎯 No progress to show')
                   return null
                 }
               })()}

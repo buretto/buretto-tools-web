@@ -7,9 +7,10 @@ import { fetchWithFallback } from './networkUtils'
 /**
  * Detects the TFT set number from a given patch version
  * @param {string} version - Patch version (e.g., "15.15.1")
+ * @param {Function} onTimeoutProgress - Optional callback for timeout progress updates
  * @returns {Promise<{setNumber: number, setName: string}>} Set information
  */
-export const detectSetFromVersion = async (version) => {
+export const detectSetFromVersion = async (version, onTimeoutProgress = null) => {
   try {
     // Fetch champion data to extract set information
     const championUrl = `https://ddragon.leagueoflegends.com/cdn/${version}/data/en_US/tft-champion.json`
@@ -24,7 +25,8 @@ export const detectSetFromVersion = async (version) => {
       championUrl,
       fallbackFn,
       `champion data for ${version}`,
-      true // This is a major failure - important for set detection
+      true, // This is a major failure - important for set detection
+      onTimeoutProgress
     )
     
     // If we got the fallback object, return it directly
@@ -152,9 +154,10 @@ export const isSetDataCached = (setNumber) => {
 /**
  * Maps version to appropriate set information with caching
  * @param {string} version - Game version
+ * @param {Function} onTimeoutProgress - Optional callback for timeout progress updates
  * @returns {Promise<Object>} Set information
  */
-export const getSetInfoFromVersion = async (version) => {
+export const getSetInfoFromVersion = async (version, onTimeoutProgress = null) => {
   // Check if we have cached set info for this version
   const cacheKey = `tft_version_set_${version}`
   
@@ -170,7 +173,7 @@ export const getSetInfoFromVersion = async (version) => {
   }
   
   // Detect set from version
-  const setInfo = await detectSetFromVersion(version)
+  const setInfo = await detectSetFromVersion(version, onTimeoutProgress)
   
   // Cache the result
   try {
