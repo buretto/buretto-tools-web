@@ -1254,6 +1254,7 @@ function RolldownTool() {
           onClose={() => setTeamPlannerOpen(false)}
           tftData={tftData}
           tftImages={tftImages}
+          version={currentVersion}
         />
         </div>
         

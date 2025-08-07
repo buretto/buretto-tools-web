@@ -51,11 +51,19 @@ function UnitImage({ unit, tftData, tftImages }) {
   return <div ref={imageRef} className="unit-image" />
 }
 
-function TeamPlannerModal({ isOpen, onClose, tftData, tftImages }) {
+function TeamPlannerModal({ isOpen, onClose, tftData, tftImages, version }) {
   const [teamSlots, setTeamSlots] = useState(new Array(10).fill(null))
   const [unitsByTier, setUnitsByTier] = useState({})
   const [helpOpen, setHelpOpen] = useState(false)
   const [currentTraitPage, setCurrentTraitPage] = useState(0)
+
+  // Clear team planner when version changes (switching sets)
+  useEffect(() => {
+    if (version) {
+      console.log(`🗑️ Clearing team planner for version change: ${version}`)
+      setTeamSlots(new Array(10).fill(null))
+    }
+  }, [version])
 
   // Initialize units by tier when tftData is available
   useEffect(() => {
