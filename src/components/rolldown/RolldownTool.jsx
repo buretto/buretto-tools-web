@@ -75,6 +75,7 @@ function RolldownTool() {
   const [lastRerollTime, setLastRerollTime] = useState(0)
   const [rerollCooldown, setRerollCooldown] = useState(false)
   const [teamPlannerOpen, setTeamPlannerOpen] = useState(false)
+  const [teamPlannerSlots, setTeamPlannerSlots] = useState(new Array(10).fill(null))
   
   // Transition state management
   const [isTransitioning, setIsTransitioning] = useState(false)
@@ -918,6 +919,14 @@ function RolldownTool() {
     enabled: !analyticsOpen && !settingsOpen && !mappingModalOpen && !teamPlannerOpen && !isTransitioning
   })
   
+  // Clear team planner when version changes (switching sets)
+  useEffect(() => {
+    if (currentVersion) {
+      console.log(`🗑️ Clearing team planner for version change in RolldownTool: ${currentVersion}`)
+      setTeamPlannerSlots(new Array(10).fill(null))
+    }
+  }, [currentVersion])
+
   // Cleanup effect on unmount and version changes
   useEffect(() => {
     return () => {
@@ -1190,6 +1199,7 @@ function RolldownTool() {
                   tftImages={tftImages}
                   benchUnits={gameState.player.bench}
                   boardUnits={gameState.player.board}
+                  teamPlannerSlots={teamPlannerSlots}
                   onPurchase={(unit, shopSlotIndex) => {
                     handlePurchase(unit, shopSlotIndex)
                   }}
@@ -1255,6 +1265,8 @@ function RolldownTool() {
           tftData={tftData}
           tftImages={tftImages}
           version={currentVersion}
+          teamSlots={teamPlannerSlots}
+          setTeamSlots={setTeamPlannerSlots}
         />
         </div>
         

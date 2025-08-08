@@ -110,9 +110,16 @@
   /* Note: overflow handled by sheen pseudo-element itself */
 }
 
+.unit-display.highlight-in_planner {
+  border: 1px solid rgba(156, 163, 175, 0.5);
+  position: relative;
+  /* Note: overflow handled by sheen pseudo-element itself */
+}
+
 /* Unified sheen animation for all highlighted units */
 .unit-display.highlight-combination::after,
-.unit-display.highlight-owned::after {
+.unit-display.highlight-owned::after,
+.unit-display.highlight-in_planner::after {
   content: '';
   position: absolute;
   top: 0;
@@ -121,7 +128,7 @@
   bottom: 0;
   overflow: hidden; /* Clip sheen to exact unit boundaries */
   pointer-events: none;
-  z-index: 11; /* Above border animation and unit-avatar */
+  z-index: 3; /* Above border animation and unit-avatar */
   background-image: linear-gradient(
     -75deg,
     transparent 0%,
@@ -145,6 +152,20 @@
   100% {
     background-position: 1500%;
   }
+}
+
+/* Team Planner Badge Icon */
+.unit-display.highlight-in_planner::before {
+  content: '';
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  background-image: url('/images/in_planner_shop_badge.png');
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+  z-index: 2; /* Below sell overlay (z-index: 5) and sheen animation */
+  pointer-events: none;
 }
 
 
@@ -1069,7 +1090,10 @@ body.dragging-from-board .bench-slot.drop-zone.hovered {
 }
 
 /* Ensure shop UI elements don't interfere with dragged elements */
-body.dragging-active .shop-slots-sell-overlay,
+body.dragging-active .shop-slots-sell-overlay {
+  z-index: 10 !important; /* High enough to stay above all highlight effects */
+}
+
 body.dragging-active .refresh-btn,
 body.dragging-active .player-level-display,
 body.dragging-active .shop-area-content {

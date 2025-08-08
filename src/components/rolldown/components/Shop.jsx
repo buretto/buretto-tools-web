@@ -8,7 +8,7 @@ import { getShopUnitHighlightType } from '../utils/starUpChecker'
 
 const SHOP_SLOTS = 5
 
-function Shop({ units = [], playerGold = 0, tftData, tftImages, onPurchase, onSell, benchUnits = [], boardUnits = [] }) {
+function Shop({ units = [], playerGold = 0, tftData, tftImages, onPurchase, onSell, benchUnits = [], boardUnits = [], teamPlannerSlots = [] }) {
   // Track ongoing drags to prevent click handlers from interfering
   const isDragActiveRef = useRef(false)
   
@@ -90,6 +90,7 @@ function Shop({ units = [], playerGold = 0, tftData, tftImages, onPurchase, onSe
               isDragActiveRef={isDragActiveRef}
               benchUnits={benchUnits}
               boardUnits={boardUnits}
+              teamPlannerSlots={teamPlannerSlots}
               playerGold={playerGold}
             />
           )}
@@ -166,12 +167,12 @@ function Shop({ units = [], playerGold = 0, tftData, tftImages, onPurchase, onSe
 /**
  * Component for displaying a unit in the shop
  */
-function ShopUnitDisplay({ unit, tftData, tftImages, slotIndex, onPurchase, isDragActiveRef, benchUnits = [], boardUnits = [], playerGold = 0 }) {
+function ShopUnitDisplay({ unit, tftData, tftImages, slotIndex, onPurchase, isDragActiveRef, benchUnits = [], boardUnits = [], teamPlannerSlots = [], playerGold = 0 }) {
   const imageRef = useRef(null)
   const championData = tftData?.champions?.[unit.id]
   
   // Get highlighting type for future animations
-  const highlightType = getShopUnitHighlightType(unit, benchUnits, boardUnits)
+  const highlightType = getShopUnitHighlightType(unit, benchUnits, boardUnits, teamPlannerSlots)
   
   // Calculate unit cost and check affordability
   const unitCost = unit.cost * (unit.stars || 1) * (unit.stars || 1)

@@ -105,19 +105,34 @@ export function getStarUpCombinationInfo(shopUnit, benchUnits = [], boardUnits =
 }
 
 /**
+ * Checks if a unit is in the team planner
+ * @param {string} unitId - The ID of the unit to check for
+ * @param {Array} teamPlannerSlots - Array of units in the team planner (can contain null values)
+ * @returns {boolean} - True if the unit exists in team planner
+ */
+export function hasUnitInTeamPlanner(unitId, teamPlannerSlots = []) {
+  if (!unitId || !Array.isArray(teamPlannerSlots)) return false
+  
+  return teamPlannerSlots.some(slot => slot && slot.id === unitId)
+}
+
+/**
  * Determines highlighting type for a shop unit
  * @param {Object} shopUnit - The unit from the shop
  * @param {Array} benchUnits - Array of units on the bench
  * @param {Array} boardUnits - Array of units on the board
- * @returns {string} - Highlighting type: 'combination', 'owned', 'none'
+ * @param {Array} teamPlannerSlots - Array of units in the team planner (optional)
+ * @returns {string} - Highlighting type: 'combination', 'owned', 'in_planner', 'none'
  */
-export function getShopUnitHighlightType(shopUnit, benchUnits = [], boardUnits = []) {
+export function getShopUnitHighlightType(shopUnit, benchUnits = [], boardUnits = [], teamPlannerSlots = []) {
   const info = getStarUpCombinationInfo(shopUnit, benchUnits, boardUnits)
   
   if (info.canCombine) {
     return 'combination' // Strong highlight for star-up combinations
   } else if (info.hasUnitOnBoard) {
     return 'owned' // Subtle highlight for units already owned
+  } else if (hasUnitInTeamPlanner(shopUnit.id, teamPlannerSlots)) {
+    return 'in_planner' // Highlight for units in team planner
   }
   
   return 'none' // No highlighting

@@ -51,19 +51,23 @@ function UnitImage({ unit, tftData, tftImages }) {
   return <div ref={imageRef} className="unit-image" />
 }
 
-function TeamPlannerModal({ isOpen, onClose, tftData, tftImages, version }) {
-  const [teamSlots, setTeamSlots] = useState(new Array(10).fill(null))
+function TeamPlannerModal({ isOpen, onClose, tftData, tftImages, version, teamSlots, setTeamSlots }) {
+  // Use teamSlots from props instead of local state
+  // Fallback to local state if not provided (for backward compatibility)
+  const [localTeamSlots, setLocalTeamSlots] = useState(new Array(10).fill(null))
+  const currentTeamSlots = teamSlots || localTeamSlots
+  const currentSetTeamSlots = setTeamSlots || setLocalTeamSlots
   const [unitsByTier, setUnitsByTier] = useState({})
   const [helpOpen, setHelpOpen] = useState(false)
   const [currentTraitPage, setCurrentTraitPage] = useState(0)
 
   // Clear team planner when version changes (switching sets)
   useEffect(() => {
-    if (version) {
+    if (version && currentSetTeamSlots) {
       console.log(`🗑️ Clearing team planner for version change: ${version}`)
-      setTeamSlots(new Array(10).fill(null))
+      currentSetTeamSlots(new Array(10).fill(null))
     }
-  }, [version])
+  }, [version, currentSetTeamSlots])
 
   // Initialize units by tier when tftData is available
   useEffect(() => {
@@ -101,12 +105,12 @@ function TeamPlannerModal({ isOpen, onClose, tftData, tftImages, version }) {
   if (!isOpen) return null
 
   const handleClearAll = () => {
-    setTeamSlots(new Array(10).fill(null))
+    currentSetTeamSlots(new Array(10).fill(null))
   }
 
   const handleSnapshot = () => {
     // TODO: Implement snapshot functionality
-    console.log('Snapshot team:', teamSlots)
+    console.log('Snapshot team:', currentTeamSlots)
   }
 
   const handlePasteTeamcode = async () => {
@@ -175,7 +179,7 @@ function TeamPlannerModal({ isOpen, onClose, tftData, tftImages, version }) {
       })
 
       // Update team slots
-      setTeamSlots(newTeamSlots)
+      currentSetTeamSlots(newTeamSlots)
       
       // Show success message
       alert(`Successfully loaded teamcode! ${loadedCount} champions imported.`)
@@ -193,34 +197,34 @@ function TeamPlannerModal({ isOpen, onClose, tftData, tftImages, version }) {
 
   const handleUnitClick = (unit) => {
     // Check if unit is already in team (prevent duplicates)
-    const isUnitAlreadyInTeam = teamSlots.some(slot => slot && slot.id === unit.id)
+    const isUnitAlreadyInTeam = currentTeamSlots.some(slot => slot && slot.id === unit.id)
     if (isUnitAlreadyInTeam) {
       return // Don't add duplicate units
     }
 
     // Find first empty slot and add unit
-    const emptySlotIndex = teamSlots.findIndex(slot => slot === null)
+    const emptySlotIndex = currentTeamSlots.findIndex(slot => slot === null)
     if (emptySlotIndex !== -1) {
-      const newSlots = [...teamSlots]
+      const newSlots = [...currentTeamSlots]
       newSlots[emptySlotIndex] = {
         ...unit,
         starTarget: 2, // Default to 2 star
         isCarry: false,
         isTraitBot: false
       }
-      setTeamSlots(newSlots)
+      currentSetTeamSlots(newSlots)
     }
   }
 
   const handleSlotClick = (index) => {
     // Clear the slot
-    const newSlots = [...teamSlots]
+    const newSlots = [...currentTeamSlots]
     newSlots[index] = null
-    setTeamSlots(newSlots)
+    currentSetTeamSlots(newSlots)
   }
 
   const handleStarToggle = (index, toggleType) => {
-    const newSlots = [...teamSlots]
+    const newSlots = [...currentTeamSlots]
     const unit = newSlots[index]
     if (!unit) return
 
@@ -245,7 +249,7 @@ function TeamPlannerModal({ isOpen, onClose, tftData, tftImages, version }) {
       }
     }
 
-    setTeamSlots(newSlots)
+    currentSetTeamSlots(newSlots)
   }
 
   const getTierColorClass = (cost) => {
@@ -270,7 +274,7 @@ function TeamPlannerModal({ isOpen, onClose, tftData, tftImages, version }) {
               </div>
               <div className="unit-grid">
                 {(unitsByTier[tier] || []).map(unit => {
-                  const isAlreadyInTeam = teamSlots.some(slot => slot && slot.id === unit.id)
+                  const isAlreadyInTeam = currentTeamSlots.some(slot => slot && slot.id === unit.id)
                   return (
                     <div
                       key={unit.id}
@@ -292,8 +296,8 @@ function TeamPlannerModal({ isOpen, onClose, tftData, tftImages, version }) {
 
   const renderTeamSlots = () => {
     const rows = [
-      teamSlots.slice(0, 5), // First row
-      teamSlots.slice(5, 10) // Second row
+      currentTeamSlots.slice(0, 5), // First row
+      currentTeamSlots.slice(5, 10) // Second row
     ]
 
     return (
@@ -363,7 +367,7 @@ function TeamPlannerModal({ isOpen, onClose, tftData, tftImages, version }) {
 
   const renderTraitRow = () => {
     // Calculate traits using the exact same logic as TraitsColumn
-    if (!tftData || !teamSlots) {
+    if (!tftData || !currentTeamSlots) {
       return (
         <div className="trait-row">
           <div className="trait-items">
@@ -377,7 +381,7 @@ function TeamPlannerModal({ isOpen, onClose, tftData, tftImages, version }) {
     
     // Count traits from unique champions on team (duplicates count as one)
     const uniqueChampions = new Set()
-    teamSlots.filter(Boolean).forEach(unit => {
+    currentTeamSlots.filter(Boolean).forEach(unit => {
       if (unit && unit.id && tftData.champions[unit.id]) {
         uniqueChampions.add(unit.id)
       }
