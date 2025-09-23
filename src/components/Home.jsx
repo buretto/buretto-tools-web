@@ -1,5 +1,5 @@
 import React from 'react'
-import { Calculator, TrendingUp, BarChart3, Code, Piano } from 'lucide-react'
+import { Calculator, TrendingUp, BarChart3, Code, Piano, Music } from 'lucide-react'
 
 function Home({ onNavigate }) {
   const tools = [
@@ -34,6 +34,14 @@ function Home({ onNavigate }) {
       action: () => onNavigate('piano-practice'),
       status: 'available',
       features: ['MIDI keyboard input', 'Multiple scales & clefs', 'Timed challenges', 'Progressive difficulty']
+    },
+    {
+      name: 'Piano Sight Reading',
+      description: 'Advanced sight reading practice with real-time timing analysis, musical sequences, and performance metrics.',
+      icon: Music,
+      action: () => onNavigate('piano-sight-reading'),
+      status: 'available',
+      features: ['Musical sequences', 'Timing drift analysis', 'Performance metrics', 'Detailed feedback']
     }
   ]
 

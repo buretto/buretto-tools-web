@@ -21,21 +21,35 @@ const DIFFICULTY_LEVELS = [
   { id: 'full-scale', name: 'Full Scale', range: 15 }
 ];
 
-const DeckSelector = ({ onDeckSelected, unlockedLevels, onResetSession }) => {
+const RHYTHM_PATTERNS = [
+  { id: 'quarter-notes', name: 'Quarter Notes', description: 'Steady quarter note rhythm (120 BPM)' },
+  { id: 'mixed-simple', name: 'Mixed Simple', description: 'Quarter and half notes (100 BPM)' },
+  { id: 'mixed-complex', name: 'Mixed Complex', description: 'Varied note durations (80 BPM)' },
+  { id: 'syncopated', name: 'Syncopated', description: 'Dotted rhythms and syncopation (90 BPM)' }
+];
+
+const DeckSelector = ({ onDeckSelected, unlockedLevels, onResetSession, mode = 'flashcards' }) => {
   const [selectedScale, setSelectedScale] = useState(null);
   const [selectedPracticeType, setSelectedPracticeType] = useState(null);
+  const [selectedRhythmPattern, setSelectedRhythmPattern] = useState(null);
 
   const handleScaleSelect = (scale) => {
     setSelectedScale(scale);
     setSelectedPracticeType(null);
+    setSelectedRhythmPattern(null);
   };
 
   const handlePracticeTypeSelect = (practiceType) => {
     setSelectedPracticeType(practiceType);
+    setSelectedRhythmPattern(null);
+  };
+
+  const handleRhythmPatternSelect = (rhythmPattern) => {
+    setSelectedRhythmPattern(rhythmPattern);
   };
 
   const handleDifficultySelect = (difficulty, difficultyIndex) => {
-    onDeckSelected({
+    const deckConfig = {
       scale: selectedScale,
       practiceType: selectedPracticeType.id,
       practiceTypeName: selectedPracticeType.name,
@@ -44,7 +58,15 @@ const DeckSelector = ({ onDeckSelected, unlockedLevels, onResetSession }) => {
       difficultyIndex: difficultyIndex,
       hands: selectedPracticeType.hands,
       range: difficulty.range
-    });
+    };
+
+    // Add rhythm pattern for sight reading mode
+    if (mode === 'sight-reading' && selectedRhythmPattern) {
+      deckConfig.rhythmPattern = selectedRhythmPattern.id;
+      deckConfig.rhythmPatternName = selectedRhythmPattern.name;
+    }
+
+    onDeckSelected(deckConfig);
   };
 
   const isLevelUnlocked = (difficultyIndex) => {
@@ -58,7 +80,7 @@ const DeckSelector = ({ onDeckSelected, unlockedLevels, onResetSession }) => {
       {/* Header with reset button */}
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold text-buretto-primary">
-          Select Practice Deck
+          {mode === 'sight-reading' ? 'Configure Sight Reading Session' : 'Select Practice Deck'}
         </h2>
         <button
           onClick={onResetSession}
@@ -119,8 +141,8 @@ const DeckSelector = ({ onDeckSelected, unlockedLevels, onResetSession }) => {
         </div>
       )}
 
-      {/* Step 3: Difficulty Level Selection */}
-      {selectedScale && selectedPracticeType && (
+      {/* Step 3: Difficulty Level Selection (Flashcards only) */}
+      {mode !== 'sight-reading' && selectedScale && selectedPracticeType && (
         <div className="space-y-4">
           <h3 className="text-lg font-semibold text-buretto-primary">
             3. Choose Difficulty Level
@@ -164,6 +186,78 @@ const DeckSelector = ({ onDeckSelected, unlockedLevels, onResetSession }) => {
         </div>
       )}
 
+      {/* Step 3: Rhythm Pattern Selection (Sight Reading Only) */}
+      {mode === 'sight-reading' && selectedScale && selectedPracticeType && (
+        <div className="space-y-4">
+          <h3 className="text-lg font-semibold text-buretto-primary">
+            3. Choose Rhythm Pattern
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {RHYTHM_PATTERNS.map((pattern) => (
+              <button
+                key={pattern.id}
+                onClick={() => handleRhythmPatternSelect(pattern)}
+                className={`p-4 rounded-lg border-2 text-left transition-colors ${
+                  selectedRhythmPattern?.id === pattern.id
+                    ? 'border-buretto-secondary bg-buretto-secondary text-white'
+                    : 'border-gray-300 hover:border-buretto-secondary'
+                }`}
+              >
+                <div className="font-medium">{pattern.name}</div>
+                <div className="text-sm opacity-75">
+                  {pattern.description}
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Step 4: Difficulty Selection for Sight Reading */}
+      {mode === 'sight-reading' && selectedScale && selectedPracticeType && selectedRhythmPattern && (
+        <div className="space-y-4">
+          <h3 className="text-lg font-semibold text-buretto-primary">
+            4. Choose Difficulty & Start
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            {DIFFICULTY_LEVELS.map((difficulty, index) => {
+              const isUnlocked = isLevelUnlocked(index);
+              return (
+                <button
+                  key={difficulty.id}
+                  onClick={() => isUnlocked && handleDifficultySelect(difficulty, index)}
+                  disabled={!isUnlocked}
+                  className={`p-4 rounded-lg border-2 text-left transition-colors ${
+                    isUnlocked
+                      ? 'border-gray-300 hover:border-buretto-secondary hover:bg-buretto-light'
+                      : 'border-gray-200 bg-gray-100 cursor-not-allowed'
+                  }`}
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="font-medium">
+                      {difficulty.name}
+                    </span>
+                    {isUnlocked ? (
+                      <Unlock size={16} className="text-green-600" />
+                    ) : (
+                      <Lock size={16} className="text-gray-400" />
+                    )}
+                  </div>
+                  <div className="text-sm text-gray-600">
+                    {difficulty.range} notes range
+                  </div>
+                  {!isUnlocked && (
+                    <div className="text-xs text-gray-500 mt-1">
+                      Complete previous level with 80+ notes
+                    </div>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {/* Current Selection Summary */}
       {selectedScale && selectedPracticeType && (
         <div className="bg-buretto-light p-4 rounded-lg">
@@ -173,9 +267,18 @@ const DeckSelector = ({ onDeckSelected, unlockedLevels, onResetSession }) => {
           <p className="text-buretto-accent">
             <span className="font-medium">{selectedScale}</span> scale -
             <span className="font-medium"> {selectedPracticeType.name}</span>
+            {mode === 'sight-reading' && selectedRhythmPattern && (
+              <span> - <span className="font-medium">{selectedRhythmPattern.name}</span></span>
+            )}
           </p>
           <p className="text-sm text-gray-600 mt-1">
-            Choose a difficulty level above to start practicing
+            {mode === 'sight-reading' ? (
+              selectedRhythmPattern ?
+                'Choose a difficulty level above to start your sight reading session' :
+                'Choose a rhythm pattern to continue'
+            ) : (
+              'Choose a difficulty level above to start practicing'
+            )}
           </p>
         </div>
       )}

@@ -5,6 +5,7 @@ import ReverseSeriesCalculator from './components/ReverseSeriesCalculator.jsx'
 import RangeSeriesCalculator from './components/RangeSeriesCalculator.jsx'
 import RolldownTool from './components/rolldown/RolldownTool.jsx'
 import PianoPracticeTool from './components/piano-practice/PianoPracticeTool.jsx'
+import SightReadingTool from './components/piano-practice/SightReadingTool.jsx'
 import Home from './components/Home'
 
 function App() {
@@ -22,6 +23,8 @@ function App() {
         return <RolldownTool />
       case 'piano-practice':
         return <PianoPracticeTool />
+      case 'piano-sight-reading':
+        return <SightReadingTool />
       default:
         return <Home onNavigate={setCurrentPage} />
     }
