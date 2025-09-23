@@ -1,5 +1,5 @@
 import React from 'react'
-import { Calculator, TrendingUp, BarChart3, Code } from 'lucide-react'
+import { Calculator, TrendingUp, BarChart3, Code, Piano } from 'lucide-react'
 
 function Home({ onNavigate }) {
   const tools = [
@@ -26,6 +26,14 @@ function Home({ onNavigate }) {
       action: () => onNavigate('range-series-calculator'),
       status: 'available',
       features: ['Uncertainty modeling', 'Two probability models', 'Monte Carlo simulation', 'Confidence intervals']
+    },
+    {
+      name: 'Piano Practice Flashcards',
+      description: 'Practice note reading with real-time MIDI input. Multiple scales, practice types, and difficulty levels.',
+      icon: Piano,
+      action: () => onNavigate('piano-practice'),
+      status: 'available',
+      features: ['MIDI keyboard input', 'Multiple scales & clefs', 'Timed challenges', 'Progressive difficulty']
     }
   ]
 
@@ -33,7 +41,7 @@ function Home({ onNavigate }) {
     <div className="max-w-6xl mx-auto px-4 py-12">
       <div className="text-center mb-12">
         <h1 className="text-5xl font-bold text-buretto-primary mb-4">
-          Probability Tools
+          Buretto Tools
         </h1>
         <p className="text-xl text-buretto-accent max-w-3xl mx-auto mb-4">
           Simple tools for exploration and learning.

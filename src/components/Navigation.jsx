@@ -59,14 +59,20 @@ function Navigation({ currentPage, onNavigate }) {
             >
               Range Calculator
             </button>
-            <button 
+            <button
               onClick={() => onNavigate('rolldown-tool')}
               className={`${currentPage === 'rolldown-tool' ? 'text-buretto-primary font-medium' : 'text-gray-600 hover:text-gray-900'}`}
             >
               TFT Rolldown
             </button>
-            <a 
-              href="https://www.buretto.com" 
+            <button
+              onClick={() => onNavigate('piano-practice')}
+              className={`${currentPage === 'piano-practice' ? 'text-buretto-primary font-medium' : 'text-gray-600 hover:text-gray-900'}`}
+            >
+              Piano Practice
+            </button>
+            <a
+              href="https://www.buretto.com"
               className="text-buretto-secondary font-medium hover:text-yellow-600"
             >
               ← Main Site
