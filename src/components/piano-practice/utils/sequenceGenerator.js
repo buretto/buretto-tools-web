@@ -53,10 +53,15 @@ class SequenceGenerator {
     this.hands = deckConfig.hands;
     this.rhythmPattern = deckConfig.rhythmPattern || 'quarter-notes';
     this.range = deckConfig.range;
+    this.bpm = deckConfig.bpm || 120; // Use BPM from deck config
+    this.goal = deckConfig.goal || { beats: 72, accuracy: 0.9 }; // Default goal
 
     this.scaleNotes = SCALE_PATTERNS[this.scale];
     this.octaveRange = OCTAVE_RANGES[this.difficulty];
-    this.rhythmConfig = RHYTHM_PATTERNS[this.rhythmPattern];
+    this.rhythmConfig = {
+      ...RHYTHM_PATTERNS[this.rhythmPattern],
+      tempo: this.bpm // Override tempo with selected BPM
+    };
   }
 
   // Generate a sequence that lasts approximately targetDuration seconds

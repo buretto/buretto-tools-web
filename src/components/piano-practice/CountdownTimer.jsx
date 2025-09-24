@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { ArrowLeft } from 'lucide-react';
 
-const CountdownTimer = ({ onComplete, selectedDeck }) => {
+const CountdownTimer = ({ onComplete, selectedDeck, minimal = false }) => {
   const [count, setCount] = useState(3);
 
   useEffect(() => {
@@ -15,6 +15,22 @@ const CountdownTimer = ({ onComplete, selectedDeck }) => {
     }
   }, [count, onComplete]);
 
+  if (minimal) {
+    return (
+      <div className="flex items-center justify-center">
+        {count > 0 ? (
+          <span className="text-3xl font-bold text-buretto-primary">
+            {count}
+          </span>
+        ) : (
+          <span className="text-xl font-bold text-buretto-secondary">
+            GO!
+          </span>
+        )}
+      </div>
+    );
+  }
+
   return (
     <div className="text-center space-y-8">
       {/* Deck Info */}
@@ -26,6 +42,12 @@ const CountdownTimer = ({ onComplete, selectedDeck }) => {
           <p><span className="font-medium">Scale:</span> {selectedDeck.scale}</p>
           <p><span className="font-medium">Type:</span> {selectedDeck.practiceTypeName}</p>
           <p><span className="font-medium">Level:</span> {selectedDeck.difficultyName}</p>
+          {selectedDeck.rhythmPatternName && (
+            <p><span className="font-medium">Rhythm:</span> {selectedDeck.rhythmPatternName}</p>
+          )}
+          {selectedDeck.bpmName && (
+            <p><span className="font-medium">Tempo:</span> {selectedDeck.bpmName}</p>
+          )}
         </div>
       </div>
 
@@ -51,10 +73,12 @@ const CountdownTimer = ({ onComplete, selectedDeck }) => {
 
         <div className="space-y-2">
           <p className="text-sm text-buretto-accent">
-            You have 60 seconds to complete as many flashcards as possible
+            {selectedDeck.goal
+              ? `Goal: ${selectedDeck.goal.beats} beats with ${Math.round(selectedDeck.goal.accuracy * 100)}% accuracy`
+              : 'Play the sequence accurately and in time'}
           </p>
           <p className="text-sm text-buretto-accent">
-            Score 60+ to unlock the next difficulty level
+            Follow the metronome and read ahead
           </p>
         </div>
       </div>
@@ -65,10 +89,10 @@ const CountdownTimer = ({ onComplete, selectedDeck }) => {
           Instructions:
         </h3>
         <ul className="text-sm text-yellow-700 space-y-1">
-          <li>• Notes will appear on the staff</li>
-          <li>• Play the correct note(s) on your MIDI keyboard</li>
-          <li>• Correct answers advance to the next flashcard immediately</li>
-          <li>• Work quickly but accurately!</li>
+          <li>• Music notation will appear on the staff</li>
+          <li>• Play the notes on your MIDI keyboard in rhythm</li>
+          <li>• Follow the tempo and read ahead</li>
+          <li>• Notes turn red when overdue, green when completed correctly</li>
         </ul>
       </div>
 

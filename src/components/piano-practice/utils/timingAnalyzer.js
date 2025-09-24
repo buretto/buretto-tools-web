@@ -1,9 +1,15 @@
 class TimingAnalyzer {
   constructor(config = {}) {
-    // Timing thresholds (in seconds)
-    this.earlyThreshold = config.earlyThreshold || 0.1; // 100ms early is considered early
-    this.lateThreshold = config.lateThreshold || 0.3; // 300ms late is considered a pause
-    this.accurateThreshold = config.accurateThreshold || 0.05; // Within 50ms is considered accurate
+    // BPM for proportional timing calculations
+    this.bpm = config.bpm || 120;
+
+    // Calculate proportional timing thresholds based on BPM
+    const beatDuration = 60.0 / this.bpm; // seconds per beat
+
+    // Timing thresholds (proportional to beat duration)
+    this.accurateThreshold = config.accurateThreshold || (beatDuration * 0.05); // ±5% of beat duration
+    this.earlyThreshold = config.earlyThreshold || (beatDuration * 0.10); // 10% of beat duration early
+    this.lateThreshold = config.lateThreshold || (beatDuration * 0.15); // 15% of beat duration late
 
     // Performance tracking
     this.performances = [];
@@ -66,6 +72,9 @@ class TimingAnalyzer {
     let timingAccuracy = 'accurate';
     let noteResult = 'correct';
 
+    // Get expected duration for hold analysis
+    const expectedDuration = expectedNote.duration;
+
     // Determine timing accuracy
     if (absoluteDrift <= this.accurateThreshold) {
       timingAccuracy = 'accurate';
@@ -115,7 +124,6 @@ class TimingAnalyzer {
     const timingScore = this.calculateTimingScore(absoluteDrift, timingAccuracy);
 
     // Analyze hold duration vs expected duration
-    const expectedDuration = expectedNote.duration;
     const holdAccuracy = this.analyzeHoldDuration(holdDuration, expectedDuration);
 
     return {

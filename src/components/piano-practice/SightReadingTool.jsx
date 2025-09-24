@@ -107,18 +107,33 @@ const SightReadingTool = () => {
           />
         )}
 
-        {gameState === GAME_STATES.COUNTDOWN && (
-          <CountdownTimer
-            onComplete={handleCountdownComplete}
-            selectedDeck={selectedDeck}
-          />
-        )}
+        {(gameState === GAME_STATES.COUNTDOWN || gameState === GAME_STATES.PLAYING) && (
+          <div className="relative">
+            <SightReadingSession
+              deck={selectedDeck}
+              onSessionComplete={handleSessionComplete}
+              isCountdownActive={gameState === GAME_STATES.COUNTDOWN}
+            />
 
-        {gameState === GAME_STATES.PLAYING && (
-          <SightReadingSession
-            deck={selectedDeck}
-            onSessionComplete={handleSessionComplete}
-          />
+            {gameState === GAME_STATES.COUNTDOWN && (
+              <div className="absolute inset-0 bg-black bg-opacity-30 flex items-center justify-center z-10 pointer-events-none">
+                <div className="text-center">
+                  <div className="bg-white bg-opacity-90 rounded-full w-24 h-24 flex items-center justify-center mb-4 shadow-lg mx-auto">
+                    <CountdownTimer
+                      onComplete={handleCountdownComplete}
+                      selectedDeck={selectedDeck}
+                      minimal={true}
+                    />
+                  </div>
+                  <div className="bg-white bg-opacity-90 rounded-lg px-4 py-2 shadow-lg">
+                    <p className="text-sm font-medium text-gray-800">
+                      Get ready - {selectedDeck.scale} {selectedDeck.practiceTypeName}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
         )}
 
         {gameState === GAME_STATES.RESULTS && (

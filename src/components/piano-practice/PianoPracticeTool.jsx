@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import DeckSelector from './DeckSelector';
 import CountdownTimer from './CountdownTimer';
-import FlashcardSession from './FlashcardSession';
+import SightReadingSession from './SightReadingSession';
 import ScoreDisplay from './ScoreDisplay';
 
 const GAME_STATES = {
@@ -98,9 +98,10 @@ const PianoPracticeTool = () => {
         )}
 
         {gameState === GAME_STATES.PLAYING && (
-          <FlashcardSession
+          <SightReadingSession
             deck={selectedDeck}
             onSessionComplete={handleSessionComplete}
+            isCountdownActive={gameState === GAME_STATES.COUNTDOWN}
           />
         )}
 

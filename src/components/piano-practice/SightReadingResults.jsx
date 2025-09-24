@@ -50,7 +50,11 @@ const SightReadingResults = ({
   } = results;
 
   const newRecord = notesReached > previousRecord;
-  const passed = noteAccuracy >= 0.85 && notesReached >= 80;
+
+  // Use tempo-based goals if available, otherwise fall back to default
+  const goalBeats = deck.goal ? deck.goal.beats : 80;
+  const goalAccuracy = deck.goal ? deck.goal.accuracy : 0.85;
+  const passed = noteAccuracy >= goalAccuracy && notesReached >= goalBeats;
 
   const formatPercentage = (value) => `${Math.round(value * 100)}%`;
   const formatTime = (seconds) => `${Math.round(seconds * 1000)}ms`;
