@@ -473,13 +473,11 @@ const SightReadingSession = ({ deck, onSessionComplete, isCountdownActive = fals
             setSightReadingStateBoth(SIGHT_READING_STATES.RESUMING);
             setTimeout(() => recalculateTimeline(nextNoteIndex, currentIndex), 50);
           } else {
-            // Too early but within tolerance, or training wheels disabled
-            if (sightReadingStateRef.current === SIGHT_READING_STATES.PLAYING) {
-              setSightReadingStateBoth(SIGHT_READING_STATES.PAUSED_FOR_NOTE);
-              waitingForCorrectNoteRef.current = expectedNote;
-              setPressedNotes(new Set());
-              pressedNotesRef.current = new Set();
-            }
+            // Early but within tolerance - just advance normally like an accurate note
+            setNoteStatuses(prev => ({ ...prev, [currentIndex]: 'completed' }));
+            performanceMetricsRef.current.recordCorrectNote(expectedNote, currentTime, timingPerformance);
+            setCurrentStreak(prev => prev + 1);
+            advanceToNextNote();
           }
         } else if (timingPerformance.timingAccuracy === 'late') {
           // Note played late but not pause-level late
