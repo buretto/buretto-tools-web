@@ -37,8 +37,8 @@ class TimingAnalyzer {
   }
 
   // Record a note performance
-  recordNotePerformance(expectedNote, actualPlayTime, holdDuration = 0) {
-    const performance = this.analyzeNotePerformance(expectedNote, actualPlayTime, holdDuration);
+  recordNotePerformance(expectedNote, actualPlayTime, holdDuration = 0, sequenceStartTime = null) {
+    const performance = this.analyzeNotePerformance(expectedNote, actualPlayTime, holdDuration, sequenceStartTime);
     this.performances.push(performance);
 
     // Update cumulative drift for next note timing
@@ -50,23 +50,38 @@ class TimingAnalyzer {
   }
 
   // Analyze a single note performance
-  analyzeNotePerformance(expectedNote, actualPlayTime, holdDuration = 0) {
+  analyzeNotePerformance(expectedNote, actualPlayTime, holdDuration = 0, sequenceStartTime = null) {
     // actualPlayTime is already in seconds from performance.now() / 1000
     const actualTimeSeconds = actualPlayTime;
 
-    // Set sequence start time on first note if not set
-    if (this.sequenceStartTime === null) {
+    // Use provided sequence start time, or set on first note if not provided
+    let actualSequenceStartTime;
+    if (sequenceStartTime !== null) {
+      actualSequenceStartTime = sequenceStartTime;
+    } else if (this.sequenceStartTime === null) {
       this.sequenceStartTime = actualTimeSeconds;
+      actualSequenceStartTime = this.sequenceStartTime;
+    } else {
+      actualSequenceStartTime = this.sequenceStartTime;
     }
 
     // Calculate time elapsed since sequence started
-    const sequenceElapsed = actualTimeSeconds - this.sequenceStartTime;
+    const sequenceElapsed = actualTimeSeconds - actualSequenceStartTime;
 
     // Expected time is relative to sequence start (from SequenceGenerator)
     const expectedTime = expectedNote.startTime;
 
     // Calculate drift (positive = late, negative = early)
     const drift = sequenceElapsed - expectedTime;
+
+    // Debug logging to trace the drift calculation
+    console.log('🔍 TimingAnalyzer drift calculation:');
+    console.log('  actualTimeSeconds:', actualTimeSeconds);
+    console.log('  expectedTime:', expectedTime);
+    console.log('  sequenceStartTimeParam:', sequenceStartTime);
+    console.log('  actualSequenceStartTime:', actualSequenceStartTime);
+    console.log('  sequenceElapsed:', sequenceElapsed);
+    console.log('  calculatedDrift:', drift);
     const absoluteDrift = Math.abs(drift);
 
     let timingAccuracy = 'accurate';
@@ -93,10 +108,18 @@ class TimingAnalyzer {
 
       // Adjust sequence start time to account for pause
       // This prevents the pause from affecting subsequent notes
-      this.sequenceStartTime += pauseDuration;
+      let adjustedSequenceStartTime;
+      if (sequenceStartTime !== null) {
+        // Don't modify external sequence start time - create adjusted version for calculation
+        adjustedSequenceStartTime = actualSequenceStartTime + pauseDuration;
+      } else {
+        // Modify internal sequence start time for self-managed timing
+        this.sequenceStartTime += pauseDuration;
+        adjustedSequenceStartTime = this.sequenceStartTime;
+      }
 
       // Recalculate drift after adjustment for recording purposes
-      const adjustedSequenceElapsed = actualTimeSeconds - this.sequenceStartTime;
+      const adjustedSequenceElapsed = actualTimeSeconds - adjustedSequenceStartTime;
       const adjustedDrift = adjustedSequenceElapsed - expectedTime;
 
       // Store both the original pause duration and adjusted drift

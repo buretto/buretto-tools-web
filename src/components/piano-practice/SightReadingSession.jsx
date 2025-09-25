@@ -351,7 +351,7 @@ const SightReadingSession = ({ deck, onSessionComplete, isCountdownActive = fals
 
           // Analyze timing for the corrected note
           const timingPerformance = timingAnalyzerRef.current.recordNotePerformance(
-            waitingNote, currentTime, 0
+            waitingNote, currentTime, 0, sequenceStartTimeRef.current
           );
 
           console.log('⏱️ Replay timing:', {
@@ -429,7 +429,7 @@ const SightReadingSession = ({ deck, onSessionComplete, isCountdownActive = fals
         console.log('🎉 All notes correct, analyzing timing...');
         // All notes are correct, analyze timing
         const timingPerformance = timingAnalyzerRef.current.recordNotePerformance(
-          expectedNote, currentTime, 0
+          expectedNote, currentTime, 0, sequenceStartTimeRef.current
         );
 
         console.log('Note timing analysis:', {
@@ -598,8 +598,21 @@ const SightReadingSession = ({ deck, onSessionComplete, isCountdownActive = fals
     const lateThreshold = beatDuration * 0.2;
     const originalTimeWhenNoteBecameLate = originalExpectedTime + lateThreshold;
 
-    // Set sequence start time based on original timing to prevent drift accumulation
-    sequenceStartTimeRef.current = currentTime - originalTimeWhenNoteBecameLate;
+    // For extremely late notes (pause notes), establish new baseline instead of rewinding
+    const maxReasonableDrift = 10.0; // 10 seconds max reasonable drift
+    const calculatedDrift = currentTime - (sequenceStartTimeRef.current + originalExpectedTime);
+
+    if (Math.abs(calculatedDrift) > maxReasonableDrift) {
+      // Extremely late - establish new baseline from current time
+      const nextNote = originalSequenceRef.current[fromNoteIndex];
+      const nextExpectedTime = nextNote ? nextNote.startTime : originalExpectedTime + beatDuration;
+      sequenceStartTimeRef.current = currentTime - nextExpectedTime;
+      console.log('📅 Extremely late note - establishing new baseline for next note');
+    } else {
+      // Normal late note - rewind to late threshold
+      sequenceStartTimeRef.current = currentTime - originalTimeWhenNoteBecameLate;
+      console.log('📅 Normal late note - rewinding to late threshold');
+    }
 
     console.log('📅 Timeline rewound to late threshold:', {
       currentNoteIndex,
