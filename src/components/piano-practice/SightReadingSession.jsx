@@ -15,7 +15,25 @@ const SightReadingSession = ({ deck, onSessionComplete, isCountdownActive = fals
   const [midiStatus, setMidiStatus] = useState('connecting');
   const [currentStreak, setCurrentStreak] = useState(0);
   const [notesReached, setNotesReached] = useState(0);
+  // Simple state machine for sight reading
+  const SIGHT_READING_STATES = {
+    PLAYING: 'playing',
+    PAUSED_FOR_NOTE: 'paused_for_note',
+    RESUMING: 'resuming'
+  };
+
+  const [sightReadingState, setSightReadingState] = useState(SIGHT_READING_STATES.PLAYING);
+  const sightReadingStateRef = useRef(SIGHT_READING_STATES.PLAYING);
+
+  // Helper function to update both state and ref
+  const setSightReadingStateBoth = (newState) => {
+    setSightReadingState(newState);
+    sightReadingStateRef.current = newState;
+    console.log('🔄 State changed to:', newState);
+  };
   const [noteStatuses, setNoteStatuses] = useState({}); // Track note completion/pause status
+  const [trainingWheelsMode, setTrainingWheelsMode] = useState(true); // Enable timing adjustment by default
+  const [timingAdjustment, setTimingAdjustment] = useState(null); // Show timing adjustment notifications
 
   // Refs for stable access
   const svgRef = useRef(null);
@@ -24,6 +42,7 @@ const SightReadingSession = ({ deck, onSessionComplete, isCountdownActive = fals
   const timingAnalyzerRef = useRef(null);
   const performanceMetricsRef = useRef(null);
   const sequenceRef = useRef([]);
+  const originalSequenceRef = useRef([]); // Store original sequence timing for recalculations
   const currentNoteIndexRef = useRef(0);
   const pressedNotesRef = useRef(new Set());
   const waitingForCorrectNoteRef = useRef(null);
@@ -64,6 +83,7 @@ const SightReadingSession = ({ deck, onSessionComplete, isCountdownActive = fals
         const generatedSequence = generator.generateSequence(sequenceDuration);
         setSequence(generatedSequence);
         sequenceRef.current = generatedSequence;
+        originalSequenceRef.current = generatedSequence; // Store original timing
 
         // Start session
         timingAnalyzerRef.current.startSession();
@@ -166,7 +186,7 @@ const SightReadingSession = ({ deck, onSessionComplete, isCountdownActive = fals
         const lateThreshold = beatDuration * 0.2; // 20% of beat duration - mark as overdue
 
         // Debug timing values - show more frequently to debug the issue
-        if (currentIndex < 10 || Math.floor(sequenceElapsed) % 2 === 0) {
+        if (currentIndex < 10 || Math.floor(sequenceElapsed) % 8 === 0) {
           console.log('⏰ Timing check:', {
             noteIndex: currentIndex,
             expectedTime,
@@ -183,66 +203,68 @@ const SightReadingSession = ({ deck, onSessionComplete, isCountdownActive = fals
           });
         }
 
-        // Update note status based on timing (only if not already marked as completed/paused)
-        const currentNoteStatus = noteStatuses[currentIndex];
-        if (!currentNoteStatus || currentNoteStatus === 'warning') {
-          // Don't mark as overdue if user is actively playing
-          const isUserPlaying = pressedNotesRef.current.size > 0;
+        // Simple state-based timing checks - use ref to get current state
+        if (sightReadingStateRef.current === SIGHT_READING_STATES.PLAYING) {
+          const currentNoteStatus = noteStatuses[currentIndex];
+          if (!currentNoteStatus || currentNoteStatus === 'warning') {
 
-          if (drift > 0 && drift > lateThreshold && !isUserPlaying) {
-            // Mark as overdue when past 20% threshold and no keys pressed
-            console.log('🔴 Marking note overdue:', {
-              noteIndex: currentIndex,
-              expectedTime,
-              sequenceElapsed,
-              drift,
-              lateThreshold: `${lateThreshold.toFixed(3)}s (${(lateThreshold/beatDuration*100).toFixed(0)}% of beat)`
-            });
-            setNoteStatuses(prev => ({
-              ...prev,
-              [currentIndex]: 'overdue'
-            }));
-          } else if (drift > 0 && drift > warningThreshold && !isUserPlaying) {
-            // Show warning when past 15% threshold and no keys pressed
-            console.log('🟠 Marking note as warning:', {
-              noteIndex: currentIndex,
-              expectedTime,
-              sequenceElapsed,
-              drift,
-              warningThreshold: `${warningThreshold.toFixed(3)}s (${(warningThreshold/beatDuration*100).toFixed(0)}% of beat)`
-            });
-            setNoteStatuses(prev => ({
-              ...prev,
-              [currentIndex]: 'warning'
-            }));
+            // Simple timing check - no complex grace periods or buffers
+            if (drift > lateThreshold) {
+              // Mark note as overdue and switch to PAUSED_FOR_NOTE state
+              console.log('🔴 Note overdue - switching to PAUSED_FOR_NOTE:', {
+                noteIndex: currentIndex,
+                drift,
+                lateThreshold: `${lateThreshold.toFixed(3)}s`
+              });
+
+              setNoteStatuses(prev => ({ ...prev, [currentIndex]: 'overdue' }));
+              setSightReadingStateBoth(SIGHT_READING_STATES.PAUSED_FOR_NOTE);
+
+            } else if (drift > warningThreshold) {
+              // Show warning
+              setNoteStatuses(prev => ({ ...prev, [currentIndex]: 'warning' }));
+            }
           }
         }
-      }, 100);
+        // If not in PLAYING state, skip all timing checks
+      }, 50);
 
-      // Start metronome if BPM is available
-      if (deck.bpm && metronomeIntervalRef.current === null) {
-        if (metronomeIntervalRef.current) {
-          clearInterval(metronomeIntervalRef.current);
-        }
-        const interval = (60 / deck.bpm) * 1000;
-        metronomeIntervalRef.current = setInterval(() => {
-          if (!audioContextRef.current) {
-            audioContextRef.current = new (window.AudioContext || window.webkitAudioContext)();
-          }
-          const ctx = audioContextRef.current;
-          const oscillator = ctx.createOscillator();
-          const gainNode = ctx.createGain();
-          oscillator.connect(gainNode);
-          gainNode.connect(ctx.destination);
-          oscillator.frequency.setValueAtTime(800, ctx.currentTime);
-          gainNode.gain.setValueAtTime(0.1, ctx.currentTime);
-          gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.1);
-          oscillator.start(ctx.currentTime);
-          oscillator.stop(ctx.currentTime + 0.1);
-        }, interval);
-      }
+      // Metronome is now handled by separate useEffect for pause state management
     }
   }, [isCountdownActive, sessionStarted, deck.bpm, noteStatuses]);
+
+  // Manage metronome based on sight reading state
+  useEffect(() => {
+    const shouldPlayMetronome = sightReadingState === SIGHT_READING_STATES.PLAYING;
+
+    if (!shouldPlayMetronome) {
+      // Stop metronome when not in PLAYING state
+      if (metronomeIntervalRef.current) {
+        clearInterval(metronomeIntervalRef.current);
+        metronomeIntervalRef.current = null;
+        console.log('🔇 Metronome stopped:', sightReadingState);
+      }
+    } else if (sessionStarted && !isCountdownActive && deck.bpm && !metronomeIntervalRef.current) {
+      // Start metronome when in PLAYING state (if not already running)
+      const interval = (60 / deck.bpm) * 1000;
+      metronomeIntervalRef.current = setInterval(() => {
+        if (!audioContextRef.current) {
+          audioContextRef.current = new (window.AudioContext || window.webkitAudioContext)();
+        }
+        const ctx = audioContextRef.current;
+        const oscillator = ctx.createOscillator();
+        const gainNode = ctx.createGain();
+        oscillator.connect(gainNode);
+        gainNode.connect(ctx.destination);
+        oscillator.frequency.setValueAtTime(800, ctx.currentTime);
+        gainNode.gain.setValueAtTime(0.1, ctx.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.1);
+        oscillator.start(ctx.currentTime);
+        oscillator.stop(ctx.currentTime + 0.1);
+      }, interval);
+      console.log('🔊 Metronome started:', sightReadingState);
+    }
+  }, [sightReadingState, sessionStarted, isCountdownActive, deck.bpm]);
 
   // Update refs when state changes
   useEffect(() => {
@@ -353,26 +375,36 @@ const SightReadingSession = ({ deck, onSessionComplete, isCountdownActive = fals
               [waitingNoteIndex]: noteStatus
             }));
 
-            // Apply same pause timing reset for replay scenarios
-            if (timingPerformance.timingAccuracy === 'pause') {
-              // Reset timing after replay pause too
-              const nextNoteIndex = currentNoteIndexRef.current + 1;
-              if (nextNoteIndex < sequenceRef.current.length) {
-                const nextNote = sequenceRef.current[nextNoteIndex];
-                const nextExpectedTime = nextNote.startTime;
-                sequenceStartTimeRef.current = currentTime - nextExpectedTime;
-
-                console.log('⏸️➡️ Resetting timing after replay pause:', {
-                  currentTime,
-                  nextExpectedTime,
-                  newSequenceStartTime: sequenceStartTimeRef.current
-                });
-              }
-            }
-
             performanceMetricsRef.current.recordCorrectNote(waitingNote, currentTime, timingPerformance);
             waitingForCorrectNoteRef.current = null;
-            advanceToNextNote();
+
+            // Handle replay with state machine
+            if (timingPerformance.timingAccuracy === 'pause') {
+              const beatDuration = 60.0 / (deck.bpm || 120);
+              const toleranceThreshold = beatDuration * 0.2;
+              const lateDrift = timingPerformance.drift;
+
+              if (trainingWheelsMode && lateDrift > toleranceThreshold) {
+                // Calculate indices before advancing
+                const currentNoteForCalc = currentNoteIndexRef.current;
+                const nextNoteIndex = currentNoteIndexRef.current + 1;
+
+                // Advance to next note first
+                advanceToNextNote();
+
+                // Training wheels: recalculate timeline after replay
+                setSightReadingStateBoth(SIGHT_READING_STATES.RESUMING);
+                setTimeout(() => recalculateTimeline(nextNoteIndex, currentNoteForCalc), 50);
+              } else {
+                // Advance and return to normal playing
+                advanceToNextNote();
+                setSightReadingStateBoth(SIGHT_READING_STATES.PLAYING);
+              }
+            } else {
+              // Normal timing - advance and return to playing
+              advanceToNextNote();
+              setSightReadingStateBoth(SIGHT_READING_STATES.PLAYING);
+            }
           } else {
             console.log('❌ Replay timing still not acceptable:', timingPerformance.timingAccuracy);
           }
@@ -409,41 +441,123 @@ const SightReadingSession = ({ deck, onSessionComplete, isCountdownActive = fals
           sequenceStartTime: sequenceStartTimeRef.current
         });
 
-        if (timingPerformance.timingAccuracy === 'too_early') {
-          // Too early - treat as mistake, need to replay at correct time
-          performanceMetricsRef.current.recordEarlyNote(expectedNote, currentTime, timingPerformance.drift);
-          waitingForCorrectNoteRef.current = expectedNote;
+        if (timingPerformance.timingAccuracy === 'too_early' || timingPerformance.timingAccuracy === 'early') {
+          // Check if we should use training wheels for early notes
+          const beatDuration = 60.0 / (deck.bpm || 120);
+          const toleranceThreshold = beatDuration * 0.2; // 20% tolerance
+          const earlyDrift = Math.abs(timingPerformance.drift);
 
-          // Clear pressed notes to require replay
-          setPressedNotes(new Set());
-          pressedNotesRef.current = new Set();
-        } else if (timingPerformance.timingAccuracy === 'pause') {
-          // Mark note as paused (completed after significant delay)
-          setNoteStatuses(prev => ({
-            ...prev,
-            [currentIndex]: 'paused'
-          }));
+          if (trainingWheelsMode && earlyDrift > toleranceThreshold) {
+            // Training wheels: recalculate timeline and continue
+            console.log('🏃‍♀️ Training wheels: Early note - recalculating timeline');
 
-          // CORRECT APPROACH: Reset timing so user can pickup from here
-          // Calculate what the sequence start time should be to make the next note due "now"
-          const nextNoteIndex = currentIndex + 1;
-          if (nextNoteIndex < sequenceRef.current.length) {
-            const nextNote = sequenceRef.current[nextNoteIndex];
-            const nextExpectedTime = nextNote.startTime;
-            // Reset sequence start time so next note is due right now
-            sequenceStartTimeRef.current = currentTime - nextExpectedTime;
-
-            console.log('⏸️➡️ Resetting timing after pause:', {
-              currentTime,
-              nextExpectedTime,
-              newSequenceStartTime: sequenceStartTimeRef.current,
-              message: 'Next note will be due now, user can pickup from here'
+            setTimingAdjustment({
+              type: 'early',
+              message: 'Played too early - timing recentered',
+              adjustment: earlyDrift
             });
+            setTimeout(() => setTimingAdjustment(null), 2000);
+
+            // Mark as completed and advance
+            setNoteStatuses(prev => ({ ...prev, [currentIndex]: 'completed' }));
+            performanceMetricsRef.current.recordCorrectNote(expectedNote, currentTime, timingPerformance);
+            setCurrentStreak(prev => prev + 1);
+
+            // Calculate next note index before advancing
+            const nextNoteIndex = currentIndex + 1;
+
+            // Advance to next note first
+            advanceToNextNote();
+
+            // Then switch to RESUMING state and recalculate timeline
+            setSightReadingStateBoth(SIGHT_READING_STATES.RESUMING);
+            setTimeout(() => recalculateTimeline(nextNoteIndex, currentIndex), 50);
+          } else {
+            // Too early but within tolerance, or training wheels disabled
+            if (sightReadingStateRef.current === SIGHT_READING_STATES.PLAYING) {
+              setSightReadingStateBoth(SIGHT_READING_STATES.PAUSED_FOR_NOTE);
+              waitingForCorrectNoteRef.current = expectedNote;
+              setPressedNotes(new Set());
+              pressedNotesRef.current = new Set();
+            }
           }
+        } else if (timingPerformance.timingAccuracy === 'late') {
+          // Note played late but not pause-level late
+          const beatDuration = 60.0 / (deck.bpm || 120);
+          const toleranceThreshold = beatDuration * 0.2; // 20% tolerance
+          const lateDrift = timingPerformance.drift;
+
+          setNoteStatuses(prev => ({ ...prev, [currentIndex]: 'completed' }));
+          performanceMetricsRef.current.recordCorrectNote(expectedNote, currentTime, timingPerformance);
+          setCurrentStreak(prev => prev + 1);
+
+          if (trainingWheelsMode && lateDrift > toleranceThreshold) {
+            console.log('🐌 Training wheels: Late note - recalculating timeline');
+
+            setTimingAdjustment({
+              type: 'late',
+              message: 'Played late - timing recentered',
+              adjustment: lateDrift
+            });
+            setTimeout(() => setTimingAdjustment(null), 2000);
+
+            // Calculate next note index before advancing
+            const nextNoteIndex = currentIndex + 1;
+
+            // Advance to next note first
+            advanceToNextNote();
+
+            // Then switch to RESUMING state and recalculate timeline
+            setSightReadingStateBoth(SIGHT_READING_STATES.RESUMING);
+            setTimeout(() => recalculateTimeline(nextNoteIndex, currentIndex), 50);
+          } else {
+            // Late but within tolerance, or training wheels disabled
+            advanceToNextNote();
+            setSightReadingStateBoth(SIGHT_READING_STATES.PLAYING);
+          }
+        } else if (timingPerformance.timingAccuracy === 'pause') {
+          // Note played after significant delay
+          const beatDuration = 60.0 / (deck.bpm || 120);
+          const toleranceThreshold = beatDuration * 0.2; // 20% tolerance
+          const lateDrift = timingPerformance.drift;
+
+          setNoteStatuses(prev => ({ ...prev, [currentIndex]: 'paused' }));
 
           performanceMetricsRef.current.recordCorrectNote(expectedNote, currentTime, timingPerformance);
           setCurrentStreak(prev => prev + 1);
-          advanceToNextNote();
+
+          if (trainingWheelsMode) {
+            // Training wheels: always recalculate timeline for any 'pause' note
+            console.log('🎯 Training wheels: recalculating timeline for pause note', {
+              lateDrift,
+              toleranceThreshold,
+              exceedsThreshold: lateDrift > toleranceThreshold
+            });
+
+            // Show notification only if significantly beyond tolerance
+            if (lateDrift > toleranceThreshold) {
+              setTimingAdjustment({
+                type: 'late',
+                message: 'Played late - timing recentered',
+                adjustment: lateDrift - toleranceThreshold
+              });
+              setTimeout(() => setTimingAdjustment(null), 2000);
+            }
+
+            // Calculate next note index before advancing
+            const nextNoteIndex = currentIndex + 1;
+
+            // Advance to next note first
+            advanceToNextNote();
+
+            // Always recalculate timeline for any 'pause' note in training wheels mode
+            setSightReadingStateBoth(SIGHT_READING_STATES.RESUMING);
+            setTimeout(() => recalculateTimeline(nextNoteIndex, currentIndex), 50);
+          } else {
+            // No training wheels - advance and return to PLAYING state
+            advanceToNextNote();
+            setSightReadingStateBoth(SIGHT_READING_STATES.PLAYING);
+          }
         } else {
           // Correct timing (or acceptable early/late) - mark as completed (green)
           // Even if it was previously overdue, it turns green when played correctly
@@ -466,6 +580,42 @@ const SightReadingSession = ({ deck, onSessionComplete, isCountdownActive = fals
       setCurrentStreak(0);
     }
   }, []);
+
+  // Timeline recalculation for training wheels mode
+  const recalculateTimeline = useCallback((fromNoteIndex, currentNoteIndex) => {
+    const currentTime = performance.now() / 1000;
+
+    if (fromNoteIndex >= sequenceRef.current.length) {
+      console.log('📅 No more notes to recalculate');
+      setSightReadingStateBoth(SIGHT_READING_STATES.PLAYING);
+      return;
+    }
+
+    // Use ORIGINAL sequence timing (not adjusted timing) to prevent accumulation
+    const originalCurrentNote = originalSequenceRef.current[currentNoteIndex];
+    const originalExpectedTime = originalCurrentNote.startTime;
+
+    // Calculate when the note became "late" (crossed the late threshold)
+    const beatDuration = 60.0 / (deck.bpm || 120);
+    const lateThreshold = beatDuration * 0.2;
+    const originalTimeWhenNoteBecameLate = originalExpectedTime + lateThreshold;
+
+    // Set sequence start time based on original timing to prevent drift accumulation
+    sequenceStartTimeRef.current = currentTime - originalTimeWhenNoteBecameLate;
+
+    console.log('📅 Timeline rewound to late threshold:', {
+      currentNoteIndex,
+      fromNoteIndex,
+      originalExpectedTime,
+      lateThreshold,
+      originalTimeWhenNoteBecameLate,
+      currentTime,
+      newSequenceStartTime: sequenceStartTimeRef.current,
+      verification: `Timeline set to when note became late at ${originalTimeWhenNoteBecameLate}s`
+    });
+
+    setSightReadingStateBoth(SIGHT_READING_STATES.PLAYING);
+  }, [deck.bpm]);
 
   const handleMidiNoteOff = useCallback((midiNote) => {
     const currentTime = performance.now() / 1000;
@@ -495,6 +645,8 @@ const SightReadingSession = ({ deck, onSessionComplete, isCountdownActive = fals
     setCurrentNoteIndex(newIndex);
     setNotesReached(prev => Math.max(prev, newIndex));
 
+    console.log('🎯 Advancing to next note:', { newIndex });
+
     // Clear any existing status for the next note (in case it was previously marked)
     setNoteStatuses(prev => {
       const updated = { ...prev };
@@ -503,6 +655,11 @@ const SightReadingSession = ({ deck, onSessionComplete, isCountdownActive = fals
       }
       return updated;
     });
+
+    // State transitions handled elsewhere - just ensure we're in correct state if not paused
+    if (sightReadingStateRef.current === SIGHT_READING_STATES.PAUSED_FOR_NOTE && !waitingForCorrectNoteRef.current) {
+      setSightReadingStateBoth(SIGHT_READING_STATES.PLAYING);
+    }
 
     // Update progress
     if (performanceMetricsRef.current && sequenceRef.current.length > 0) {
@@ -1053,14 +1210,25 @@ const SightReadingSession = ({ deck, onSessionComplete, isCountdownActive = fals
         </div>
 
         <div className="text-right space-y-1">
-          <div className="flex items-center justify-end space-x-2">
-            <div className={`w-2 h-2 rounded-full ${
-              midiStatus === 'connected' ? 'bg-green-500' :
-              midiStatus === 'error' ? 'bg-red-500' : 'bg-yellow-500'
-            }`}></div>
-            <div className="text-sm text-buretto-accent">
-              MIDI {midiStatus === 'connected' ? 'Connected' :
-                    midiStatus === 'error' ? 'Error' : 'Connecting...'}
+          <div className="flex items-center justify-end space-x-3">
+            <label className="flex items-center text-xs text-buretto-accent">
+              <input
+                type="checkbox"
+                checked={trainingWheelsMode}
+                onChange={(e) => setTrainingWheelsMode(e.target.checked)}
+                className="mr-1"
+              />
+              Training Wheels
+            </label>
+            <div className="flex items-center space-x-2">
+              <div className={`w-2 h-2 rounded-full ${
+                midiStatus === 'connected' ? 'bg-green-500' :
+                midiStatus === 'error' ? 'bg-red-500' : 'bg-yellow-500'
+              }`}></div>
+              <div className="text-sm text-buretto-accent">
+                MIDI {midiStatus === 'connected' ? 'Connected' :
+                      midiStatus === 'error' ? 'Error' : 'Connecting...'}
+              </div>
             </div>
           </div>
           <div className="text-xs h-4 flex items-center justify-end">
@@ -1108,6 +1276,33 @@ const SightReadingSession = ({ deck, onSessionComplete, isCountdownActive = fals
         </div>
       </div>
 
+      {/* Timing Adjustment Notification */}
+      {timingAdjustment && (
+        <div className={`fixed top-4 right-4 p-3 rounded-lg shadow-lg z-50 ${
+          timingAdjustment.type === 'early'
+            ? 'bg-blue-50 border border-blue-200'
+            : 'bg-orange-50 border border-orange-200'
+        }`}>
+          <div className="flex items-center space-x-2">
+            <span className="text-lg">
+              {timingAdjustment.type === 'early' ? '🏃‍♀️' : '🐌'}
+            </span>
+            <div>
+              <p className={`text-sm font-medium ${
+                timingAdjustment.type === 'early' ? 'text-blue-700' : 'text-orange-700'
+              }`}>
+                {timingAdjustment.message}
+              </p>
+              <p className={`text-xs ${
+                timingAdjustment.type === 'early' ? 'text-blue-600' : 'text-orange-600'
+              }`}>
+                Adjusted by {timingAdjustment.adjustment.toFixed(2)}s
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Status indicators */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {waitingForCorrectNoteRef.current && (
@@ -1120,7 +1315,26 @@ const SightReadingSession = ({ deck, onSessionComplete, isCountdownActive = fals
 
         <div className="bg-blue-50 border border-blue-200 p-4 rounded-lg">
           <p className="text-sm text-blue-700 text-center">
-            🎵 Read ahead and maintain steady timing
+            {sightReadingState === SIGHT_READING_STATES.PAUSED_FOR_NOTE ? (
+              <>
+                ⏸️ Paused - play the red note to continue
+                <span className="block text-xs mt-1">
+                  {trainingWheelsMode ? 'Timing will recenter when played' : 'Must play at correct time'}
+                </span>
+              </>
+            ) : sightReadingState === SIGHT_READING_STATES.RESUMING ? (
+              <>
+                🔄 Adjusting timeline...
+                <span className="block text-xs mt-1">Getting back in sync</span>
+              </>
+            ) : (
+              <>
+                🎵 Read ahead and maintain steady timing
+                {trainingWheelsMode && (
+                  <span className="block text-xs mt-1">Training wheels: timing adjusts if played ±20% off</span>
+                )}
+              </>
+            )}
           </p>
         </div>
 
