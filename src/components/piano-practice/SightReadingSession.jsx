@@ -1324,16 +1324,16 @@ const SightReadingSession = ({ deck, onSessionComplete, isCountdownActive = fals
       )}
 
       {/* Status indicators */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 min-h-[120px]">
         {waitingForCorrectNoteRef.current && (
-          <div className="bg-yellow-50 border border-yellow-200 p-4 rounded-lg">
+          <div className="bg-yellow-50 border border-yellow-200 p-4 rounded-lg min-h-[88px] flex flex-col justify-center">
             <p className="text-sm text-yellow-700 text-center">
               ⏱️ Play the note again at the correct time
             </p>
           </div>
         )}
 
-        <div className="bg-blue-50 border border-blue-200 p-4 rounded-lg">
+        <div className="bg-blue-50 border border-blue-200 p-4 rounded-lg min-h-[88px] flex flex-col justify-center">
           <p className="text-sm text-blue-700 text-center">
             {sightReadingState === SIGHT_READING_STATES.PAUSED_FOR_NOTE ? (
               <>
@@ -1358,7 +1358,7 @@ const SightReadingSession = ({ deck, onSessionComplete, isCountdownActive = fals
           </p>
         </div>
 
-        <div className="bg-green-50 border border-green-200 p-4 rounded-lg">
+        <div className="bg-green-50 border border-green-200 p-4 rounded-lg min-h-[88px] flex flex-col justify-center">
           <p className="text-sm text-green-700 text-center">
             🎯 Focus on accuracy and consistent rhythm
           </p>
