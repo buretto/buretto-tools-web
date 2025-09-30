@@ -25,6 +25,9 @@ const SightReadingSession = ({ deck, onSessionComplete, isCountdownActive = fals
   const [sightReadingState, setSightReadingState] = useState(SIGHT_READING_STATES.PLAYING);
   const sightReadingStateRef = useRef(SIGHT_READING_STATES.PLAYING);
 
+  // Session completion guard to prevent duplicate saves
+  const sessionCompletedRef = useRef(false);
+
   // Helper function to update both state and ref
   const setSightReadingStateBoth = (newState) => {
     setSightReadingState(newState);
@@ -794,6 +797,12 @@ const SightReadingSession = ({ deck, onSessionComplete, isCountdownActive = fals
   }, []);
 
   const endSession = () => {
+    // Prevent duplicate session completion
+    if (sessionCompletedRef.current) {
+      return;
+    }
+    sessionCompletedRef.current = true;
+
     if (timerRef.current) {
       clearInterval(timerRef.current);
     }

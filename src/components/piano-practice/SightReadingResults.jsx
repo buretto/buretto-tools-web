@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { TrendingUp, Target, Clock, Music, BarChart3, Eye, HelpCircle } from 'lucide-react';
+import { TrendingUp, Target, Clock, Music, BarChart3, Eye, HelpCircle, Play, History } from 'lucide-react';
+import PastResultsModal from './PastResultsModal';
 
 // Tooltip component for metric descriptions
 const MetricTooltip = ({ description, children }) => {
@@ -33,8 +34,10 @@ const SightReadingResults = ({
   previousRecord,
   onGoAgain,
   onChangeDeck,
-  onViewDetailedAnalysis
+  onViewDetailedAnalysis,
+  onTryNextLevel
 }) => {
+  const [showPastResults, setShowPastResults] = useState(false);
   if (!results) {
     return <div>Loading results...</div>;
   }
@@ -55,6 +58,9 @@ const SightReadingResults = ({
   const goalBeats = deck.goal ? deck.goal.beats : 80;
   const goalAccuracy = deck.goal ? deck.goal.accuracy : 0.85;
   const passed = noteAccuracy >= goalAccuracy && notesReached >= goalBeats;
+
+  // Check if next level is available
+  const hasNextLevel = deck.difficultyIndex < 2; // Assuming 3 difficulty levels (0, 1, 2)
 
   const formatPercentage = (value) => `${Math.round(value * 100)}%`;
   const formatTime = (seconds) => `${Math.round(seconds * 1000)}ms`;
@@ -107,7 +113,16 @@ const SightReadingResults = ({
         {passed && (
           <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg">
             <div className="text-green-800 font-semibold">🎯 Level Passed!</div>
-            <div className="text-sm text-green-700">You've unlocked the next difficulty level</div>
+            <div className="text-sm text-green-700 mb-3">You've unlocked the next difficulty level</div>
+            {hasNextLevel && onTryNextLevel && (
+              <button
+                onClick={onTryNextLevel}
+                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center space-x-2 text-sm"
+              >
+                <Play size={16} />
+                <span>Try Next Level</span>
+              </button>
+            )}
           </div>
         )}
 
@@ -275,12 +290,27 @@ const SightReadingResults = ({
         </button>
 
         <button
+          onClick={() => setShowPastResults(true)}
+          className="px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors flex items-center space-x-2"
+        >
+          <History className="w-4 h-4" />
+          <span>View Past Results</span>
+        </button>
+
+        <button
           onClick={onChangeDeck}
           className="px-6 py-3 bg-buretto-accent text-white rounded-lg hover:bg-opacity-90 transition-colors"
         >
           Change Settings
         </button>
       </div>
+
+      {/* Past Results Modal */}
+      <PastResultsModal
+        deck={deck}
+        isOpen={showPastResults}
+        onClose={() => setShowPastResults(false)}
+      />
     </div>
   );
 };

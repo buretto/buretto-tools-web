@@ -1,9 +1,17 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import DeckSelector from './DeckSelector';
 import CountdownTimer from './CountdownTimer';
 import SightReadingSession from './SightReadingSession';
 import SightReadingResults from './SightReadingResults';
 import DetailedAnalysisView from './DetailedAnalysisView';
+import {
+  saveSessionResult,
+  saveUnlockedLevels,
+  getUnlockedLevels,
+  saveSessionRecords,
+  getSessionRecords,
+  shouldShowSessionWarning
+} from './utils/resultsStorage';
 
 const GAME_STATES = {
   DECK_SELECTION: 'deck_selection',
@@ -19,6 +27,27 @@ const SightReadingTool = () => {
   const [sessionResults, setSessionResults] = useState(null);
   const [sessionRecords, setSessionRecords] = useState({});
   const [unlockedLevels, setUnlockedLevels] = useState({});
+  const [showSessionWarning, setShowSessionWarning] = useState(false);
+
+  // Load persisted data on component mount
+  useEffect(() => {
+    const loadedRecords = getSessionRecords();
+    const loadedUnlocks = getUnlockedLevels();
+    const shouldShowWarning = shouldShowSessionWarning();
+
+    setSessionRecords(loadedRecords);
+    setUnlockedLevels(loadedUnlocks);
+    setShowSessionWarning(shouldShowWarning);
+  }, []);
+
+  // Save data when it changes
+  useEffect(() => {
+    saveSessionRecords(sessionRecords);
+  }, [sessionRecords]);
+
+  useEffect(() => {
+    saveUnlockedLevels(unlockedLevels);
+  }, [unlockedLevels]);
 
   const handleDeckSelected = (deck) => {
     setSelectedDeck(deck);
@@ -33,6 +62,9 @@ const SightReadingTool = () => {
   const handleSessionComplete = (results) => {
     setSessionResults(results);
 
+    // Save complete session result to history
+    saveSessionResult(selectedDeck, results);
+
     // Update session records based on notes reached
     const deckKey = `${selectedDeck.scale}-${selectedDeck.practiceType}-${selectedDeck.difficulty}-${selectedDeck.rhythmPattern}`;
     const currentRecord = sessionRecords[deckKey] || 0;
@@ -43,8 +75,11 @@ const SightReadingTool = () => {
       }));
     }
 
-    // Unlock next level based on performance (reaching 80+ notes with good accuracy)
-    const shouldUnlock = results.notesReached >= 80 && results.noteAccuracy >= 0.85;
+    // Unlock next level based on performance
+    const goalBeats = selectedDeck.goal ? selectedDeck.goal.beats : 80;
+    const goalAccuracy = selectedDeck.goal ? selectedDeck.goal.accuracy : 0.85;
+    const shouldUnlock = results.notesReached >= goalBeats && results.noteAccuracy >= goalAccuracy;
+
     if (shouldUnlock) {
       const nextDifficultyIndex = selectedDeck.difficultyIndex + 1;
       if (nextDifficultyIndex < 3) {
@@ -78,7 +113,36 @@ const SightReadingTool = () => {
   const resetSession = () => {
     setSessionRecords({});
     setUnlockedLevels({});
+    setShowSessionWarning(false);
+    saveSessionRecords({});
+    saveUnlockedLevels({});
     setGameState(GAME_STATES.DECK_SELECTION);
+  };
+
+  const handleTryNextLevel = () => {
+    if (!selectedDeck || selectedDeck.difficultyIndex >= 2) return;
+
+    const nextDifficultyIndex = selectedDeck.difficultyIndex + 1;
+    const nextDifficulty = [
+      { id: 'half-octave', name: 'Half Octave', range: 4 },
+      { id: 'full-octave', name: 'Full Octave', range: 8 },
+      { id: 'full-scale', name: 'Full Scale', range: 15 }
+    ][nextDifficultyIndex];
+
+    const nextDeck = {
+      ...selectedDeck,
+      difficulty: nextDifficulty.id,
+      difficultyName: nextDifficulty.name,
+      difficultyIndex: nextDifficultyIndex,
+      range: nextDifficulty.range
+    };
+
+    setSelectedDeck(nextDeck);
+    setGameState(GAME_STATES.COUNTDOWN);
+  };
+
+  const dismissSessionWarning = () => {
+    setShowSessionWarning(false);
   };
 
   const getDeckKey = () => {
@@ -96,6 +160,23 @@ const SightReadingTool = () => {
           <p className="text-buretto-accent">
             Practice reading musical sequences with real-time timing feedback
           </p>
+
+          {/* Session Warning */}
+          {showSessionWarning && (
+            <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+              <div className="flex items-center justify-between">
+                <div className="text-yellow-800 text-sm">
+                  ⚠️ You have unlocked levels from this session. Refreshing the page will reset your progress.
+                </div>
+                <button
+                  onClick={dismissSessionWarning}
+                  className="text-yellow-600 hover:text-yellow-800 font-medium text-sm"
+                >
+                  ×
+                </button>
+              </div>
+            </div>
+          )}
         </div>
 
         {gameState === GAME_STATES.DECK_SELECTION && (
@@ -144,6 +225,7 @@ const SightReadingTool = () => {
             onGoAgain={handleGoAgain}
             onChangeDeck={handleChangeDeck}
             onViewDetailedAnalysis={handleViewDetailedAnalysis}
+            onTryNextLevel={handleTryNextLevel}
           />
         )}
 
