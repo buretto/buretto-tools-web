@@ -55,6 +55,7 @@ class SequenceGenerator {
     this.range = deckConfig.range;
     this.bpm = deckConfig.bpm || 120; // Use BPM from deck config
     this.goal = deckConfig.goal || { beats: 72, accuracy: 0.9 }; // Default goal
+    this.fixedSequence = deckConfig.fixedSequence || null; // Support fixed sequences for songs
 
     this.scaleNotes = SCALE_PATTERNS[this.scale];
     this.octaveRange = OCTAVE_RANGES[this.difficulty];
@@ -66,6 +67,10 @@ class SequenceGenerator {
 
   // Generate a sequence that lasts approximately targetDuration seconds
   generateSequence(targetDuration = 60) {
+    // If fixed sequence provided (e.g., for song practice), return it directly
+    if (this.fixedSequence) {
+      return this.fixedSequence;
+    }
     const sequence = [];
     const beatsPerSecond = this.rhythmConfig.tempo / 60;
     const targetBeats = targetDuration * beatsPerSecond;

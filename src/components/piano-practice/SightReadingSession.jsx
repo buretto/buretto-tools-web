@@ -7,7 +7,7 @@ import PerformanceMetrics from './utils/performanceMetrics';
 import { midiNoteToName } from './utils/noteNames';
 
 const SightReadingSession = ({ deck, onSessionComplete, isCountdownActive = false }) => {
-  const [timeLeft, setTimeLeft] = useState(60); // Always start with 60 seconds
+  const [timeLeft, setTimeLeft] = useState(60); // Will be updated when sequence loads
   const [sessionStarted, setSessionStarted] = useState(false);
   const [currentNoteIndex, setCurrentNoteIndex] = useState(0);
   const [sequence, setSequence] = useState([]);
@@ -87,6 +87,15 @@ const SightReadingSession = ({ deck, onSessionComplete, isCountdownActive = fals
         setSequence(generatedSequence);
         sequenceRef.current = generatedSequence;
         originalSequenceRef.current = generatedSequence; // Store original timing
+
+        // Calculate and set the timer based on sequence duration
+        if (generatedSequence.length > 0) {
+          const lastNote = generatedSequence[generatedSequence.length - 1];
+          // Calculate endTime if not present (from startTime + duration)
+          const endTime = lastNote.endTime || (lastNote.startTime + lastNote.duration);
+          const calculatedTime = Math.ceil(endTime) + 5; // Add 5 second buffer
+          setTimeLeft(calculatedTime);
+        }
 
         // Start session
         timingAnalyzerRef.current.startSession();

@@ -42,6 +42,14 @@ function Home({ onNavigate }) {
       action: () => onNavigate('piano-sight-reading'),
       status: 'available',
       features: ['Musical sequences', 'Timing drift analysis', 'Performance metrics', 'Detailed feedback']
+    },
+    {
+      name: 'Song Practice',
+      description: 'Practice specific songs with progressive difficulty variants and BPM progression tracking.',
+      icon: Music,
+      action: () => onNavigate('song-practice'),
+      status: 'available',
+      features: ['Song library', 'Multiple variants', 'BPM progression', 'Practice sets']
     }
   ]
 

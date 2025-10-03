@@ -6,6 +6,7 @@ import RangeSeriesCalculator from './components/RangeSeriesCalculator.jsx'
 import RolldownTool from './components/rolldown/RolldownTool.jsx'
 import PianoPracticeTool from './components/piano-practice/PianoPracticeTool.jsx'
 import SightReadingTool from './components/piano-practice/SightReadingTool.jsx'
+import SongPracticeTool from './components/song-practice/SongPracticeTool.jsx'
 import Home from './components/Home'
 
 function App() {
@@ -25,6 +26,8 @@ function App() {
         return <PianoPracticeTool />
       case 'piano-sight-reading':
         return <SightReadingTool />
+      case 'song-practice':
+        return <SongPracticeTool />
       default:
         return <Home onNavigate={setCurrentPage} />
     }

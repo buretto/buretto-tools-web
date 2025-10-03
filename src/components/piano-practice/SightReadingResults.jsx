@@ -35,7 +35,13 @@ const SightReadingResults = ({
   onGoAgain,
   onChangeDeck,
   onViewDetailedAnalysis,
-  onTryNextLevel
+  onTryNextLevel,
+  // Song mode customization props
+  isSongMode = false,
+  changeDeckButtonText = 'Change Settings',
+  showDetailedAnalysis = true,
+  showPastResultsButton = true,
+  originalBPM = null
 }) => {
   const [showPastResults, setShowPastResults] = useState(false);
   if (!results) {
@@ -113,8 +119,10 @@ const SightReadingResults = ({
         {passed && (
           <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg">
             <div className="text-green-800 font-semibold">🎯 Level Passed!</div>
-            <div className="text-sm text-green-700 mb-3">You've unlocked the next difficulty level</div>
-            {hasNextLevel && onTryNextLevel && (
+            {!isSongMode && (
+              <div className="text-sm text-green-700 mb-3">You've unlocked the next difficulty level</div>
+            )}
+            {!isSongMode && hasNextLevel && onTryNextLevel && (
               <button
                 onClick={onTryNextLevel}
                 className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center space-x-2 text-sm"
@@ -262,6 +270,9 @@ const SightReadingResults = ({
           </div>
           <div>
             <span className="font-medium">Difficulty:</span> {deck.difficultyName}
+            {originalBPM && (
+              <span className="text-gray-500"> (ref. {originalBPM} BPM)</span>
+            )}
           </div>
           <div>
             <span className="font-medium">Rhythm:</span> {deck.rhythmPattern}
@@ -281,27 +292,31 @@ const SightReadingResults = ({
           Practice Again
         </button>
 
-        <button
-          onClick={onViewDetailedAnalysis}
-          className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-2"
-        >
-          <BarChart3 className="w-4 h-4" />
-          <span>Detailed Analysis</span>
-        </button>
+        {showDetailedAnalysis && (
+          <button
+            onClick={onViewDetailedAnalysis}
+            className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-2"
+          >
+            <BarChart3 className="w-4 h-4" />
+            <span>Detailed Analysis</span>
+          </button>
+        )}
 
-        <button
-          onClick={() => setShowPastResults(true)}
-          className="px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors flex items-center space-x-2"
-        >
-          <History className="w-4 h-4" />
-          <span>View Past Results</span>
-        </button>
+        {showPastResultsButton && (
+          <button
+            onClick={() => setShowPastResults(true)}
+            className="px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors flex items-center space-x-2"
+          >
+            <History className="w-4 h-4" />
+            <span>View Past Results</span>
+          </button>
+        )}
 
         <button
           onClick={onChangeDeck}
           className="px-6 py-3 bg-buretto-accent text-white rounded-lg hover:bg-opacity-90 transition-colors"
         >
-          Change Settings
+          {changeDeckButtonText}
         </button>
       </div>
 

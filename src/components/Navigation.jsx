@@ -77,6 +77,12 @@ function Navigation({ currentPage, onNavigate }) {
             >
               Sight Reading
             </button>
+            <button
+              onClick={() => onNavigate('song-practice')}
+              className={`${currentPage === 'song-practice' ? 'text-buretto-primary font-medium' : 'text-gray-600 hover:text-gray-900'}`}
+            >
+              Song Practice
+            </button>
             <a
               href="https://www.buretto.com"
               className="text-buretto-secondary font-medium hover:text-yellow-600"
