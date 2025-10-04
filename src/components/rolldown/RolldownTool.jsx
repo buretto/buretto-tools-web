@@ -15,6 +15,7 @@ import ImageMappingModal from './components/ImageMappingModal'
 import ImageLoadWarning from './components/ImageLoadWarning'
 import TeamPlannerModal from './components/TeamPlannerModal'
 import UnifiedProgressIndicator from './components/UnifiedProgressIndicator'
+import DisclaimerModal, { shouldShowDisclaimer } from './components/DisclaimerModal'
 import { useTFTData } from './hooks/useTFTData'
 import { useTFTImages } from './hooks/useTFTImages'
 import { useUnitPool } from './hooks/useUnitPool'
@@ -76,7 +77,8 @@ function RolldownTool() {
   const [rerollCooldown, setRerollCooldown] = useState(false)
   const [teamPlannerOpen, setTeamPlannerOpen] = useState(false)
   const [teamPlannerSlots, setTeamPlannerSlots] = useState(new Array(10).fill(null))
-  
+  const [disclaimerOpen, setDisclaimerOpen] = useState(false)
+
   // Transition state management
   const [isTransitioning, setIsTransitioning] = useState(false)
   const [transitionError, setTransitionError] = useState(null)
@@ -108,6 +110,13 @@ function RolldownTool() {
   // Initialize audio manager
   useEffect(() => {
     audioManager.initialize()
+  }, [])
+
+  // Check if disclaimer should be shown on mount
+  useEffect(() => {
+    if (shouldShowDisclaimer()) {
+      setDisclaimerOpen(true)
+    }
   }, [])
   
   // Set up drag manager audio after audio manager is ready
@@ -916,7 +925,7 @@ function RolldownTool() {
     onPlaceUnit: handlePlaceUnit,
     hotkeyConfig: hotkeys,
     hoveredUnit,
-    enabled: !analyticsOpen && !settingsOpen && !mappingModalOpen && !teamPlannerOpen && !isTransitioning
+    enabled: !analyticsOpen && !settingsOpen && !mappingModalOpen && !teamPlannerOpen && !isTransitioning && !disclaimerOpen
   })
   
   // Clear team planner when version changes (switching sets)
@@ -1268,6 +1277,11 @@ function RolldownTool() {
           teamSlots={teamPlannerSlots}
           setTeamSlots={setTeamPlannerSlots}
         />
+
+        {/* Disclaimer Modal */}
+        {disclaimerOpen && (
+          <DisclaimerModal onClose={() => setDisclaimerOpen(false)} />
+        )}
         </div>
         
         {/* Full Screen Progress Overlay for Major Operations */}
