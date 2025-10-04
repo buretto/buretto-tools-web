@@ -3,7 +3,7 @@ import { Music, Filter, Search, TrendingUp, Award, Clock, Settings, Download, Tr
 import { filterSongs, getAllTags, getPracticeSets, deleteSong } from './utils/songStorage';
 import { getSongDetailedProgress, calculatePracticeSetProgress } from './utils/songProgressTracker';
 
-const SongLibrary = ({ onSongSelected, onOpenImporter, onManageSets }) => {
+const SongLibrary = ({ onSongSelected, onOpenImporter, onManageSets, refreshTrigger }) => {
   const [songs, setSongs] = useState([]);
   const [selectedPracticeSet, setSelectedPracticeSet] = useState('all');
   const [searchText, setSearchText] = useState('');
@@ -22,12 +22,12 @@ const SongLibrary = ({ onSongSelected, onOpenImporter, onManageSets }) => {
     const sets = getPracticeSets();
     setPracticeSets(sets);
     setAvailableTags(getAllTags());
-  }, []);
+  }, [refreshTrigger]);
 
   // Update filtered songs when filters change
   useEffect(() => {
     updateFilteredSongs();
-  }, [selectedPracticeSet, searchText, propertyFilters]);
+  }, [selectedPracticeSet, searchText, propertyFilters, refreshTrigger]);
 
   const updateFilteredSongs = () => {
     const filters = {

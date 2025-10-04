@@ -16,6 +16,7 @@ const STATES = {
 
 const SongPracticeTool = () => {
   const [state, setState] = useState(STATES.LIBRARY);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   // Initialize default songs on mount
   useEffect(() => {
@@ -57,7 +58,12 @@ const SongPracticeTool = () => {
   };
 
   const handleImportComplete = (count) => {
-    // Library will refresh automatically due to re-render
+    setRefreshTrigger(prev => prev + 1);
+  };
+
+  const handleSetManagerClose = () => {
+    setShowSetManager(false);
+    setRefreshTrigger(prev => prev + 1);
   };
 
   return (
@@ -79,6 +85,7 @@ const SongPracticeTool = () => {
             onSongSelected={handleSongSelected}
             onOpenImporter={() => setShowImporter(true)}
             onManageSets={() => setShowSetManager(true)}
+            refreshTrigger={refreshTrigger}
           />
         )}
 
@@ -158,7 +165,7 @@ const SongPracticeTool = () => {
 
       {showSetManager && (
         <PracticeSetManager
-          onClose={() => setShowSetManager(false)}
+          onClose={handleSetManagerClose}
         />
       )}
     </div>
