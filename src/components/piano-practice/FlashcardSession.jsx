@@ -234,11 +234,12 @@ const FlashcardSession = ({ deck, onSessionComplete }) => {
     });
 
     // Add accidentals
+    // Note: VexFlow 5.0 uses addModifier(modifier, index) parameter order
     notes.forEach((note, index) => {
       if (note.note.includes('#')) {
-        staveNote.addAccidental(index, new Accidental('#'));
+        staveNote.addModifier(new Accidental('#'), index);
       } else if (note.note.includes('b')) {
-        staveNote.addAccidental(index, new Accidental('b'));
+        staveNote.addModifier(new Accidental('b'), index);
       }
     });
 

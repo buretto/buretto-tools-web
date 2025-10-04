@@ -232,7 +232,7 @@ export const isComplexEnoughForVariants = (properties) => {
   return complexityScore >= 0.5; // Threshold: 50% complexity or higher
 };
 
-// Parse imported song data (JSON format)
+// Parse imported song data (JSON format or parsed from file)
 export const parseImportedSong = (songData) => {
   try {
     // Expected format:
@@ -241,6 +241,8 @@ export const parseImportedSong = (songData) => {
     //   artist: "Artist Name" (optional),
     //   tags: ["tag1", "tag2"] (optional),
     //   sequence: [...] // Array of note objects
+    //   sourceFormat: "json" | "midi" | "musicxml" (optional)
+    //   originalBPM: 120 (optional)
     // }
 
     if (!songData.title || !songData.sequence || !Array.isArray(songData.sequence)) {
@@ -254,11 +256,17 @@ export const parseImportedSong = (songData) => {
       throw new Error('Could not analyze song properties');
     }
 
+    // If source format provided BPM, use it; otherwise use calculated BPM
+    if (songData.originalBPM && songData.originalBPM > 0) {
+      properties.originalBPM = songData.originalBPM;
+    }
+
     // Create song object with "original" variant
     const song = {
       title: songData.title,
       artist: songData.artist || null,
       tags: songData.tags || [],
+      sourceFormat: songData.sourceFormat || 'json',
       variants: [
         {
           variantId: 'original',

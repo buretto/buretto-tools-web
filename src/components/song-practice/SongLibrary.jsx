@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Music, Filter, Search, TrendingUp, Award, Clock, Settings, Download } from 'lucide-react';
-import { filterSongs, getAllTags, getPracticeSets } from './utils/songStorage';
+import { Music, Filter, Search, TrendingUp, Award, Clock, Settings, Download, Trash2 } from 'lucide-react';
+import { filterSongs, getAllTags, getPracticeSets, deleteSong } from './utils/songStorage';
 import { getSongDetailedProgress, calculatePracticeSetProgress } from './utils/songProgressTracker';
 
 const SongLibrary = ({ onSongSelected, onOpenImporter, onManageSets }) => {
@@ -57,6 +57,17 @@ const SongLibrary = ({ onSongSelected, onOpenImporter, onManageSets }) => {
 
   const handleSongClick = (song, variant, bpmPercent) => {
     onSongSelected(song, variant, bpmPercent);
+  };
+
+  const handleDeleteSong = (songId, songTitle) => {
+    const confirmed = window.confirm(
+      `Are you sure you want to delete "${songTitle}"?\n\nThis will also delete all progress data for this song.`
+    );
+
+    if (confirmed) {
+      deleteSong(songId);
+      updateFilteredSongs(); // Refresh the list
+    }
   };
 
   const handlePropertyFilterChange = (filterType, value) => {
@@ -289,6 +300,7 @@ const SongLibrary = ({ onSongSelected, onOpenImporter, onManageSets }) => {
               key={song.id}
               song={song}
               onSelectVariant={handleSongClick}
+              onDelete={handleDeleteSong}
             />
           ))}
         </div>
@@ -298,7 +310,7 @@ const SongLibrary = ({ onSongSelected, onOpenImporter, onManageSets }) => {
 };
 
 // Song Card Component
-const SongCard = ({ song, onSelectVariant }) => {
+const SongCard = ({ song, onSelectVariant, onDelete }) => {
   const [expandedVariant, setExpandedVariant] = useState(null);
   const songProgress = getSongDetailedProgress(song.id);
 
@@ -322,16 +334,40 @@ const SongCard = ({ song, onSelectVariant }) => {
           )}
         </div>
 
-        {/* Progress Indicator */}
-        {songProgress.isCompleted && (
-          <div className="flex items-center space-x-2 text-green-600">
-            <Award size={20} />
-            <div className="text-right">
-              <div className="text-sm font-semibold">{songProgress.bestGrade}</div>
-              <div className="text-xs">at {songProgress.bestBPM}% BPM</div>
+        <div className="flex items-center space-x-2 ml-3">
+          {/* Progress Indicator - show grade always, badge only for hardest variant at 100% BPM with passing grade */}
+          {songProgress.isCompleted && songProgress.bestGrade && (
+            <div className="flex items-center space-x-2">
+              {songProgress.bestVariant === song.variants[song.variants.length - 1].variantId &&
+               songProgress.bestBPM === 100 &&
+               !['F', 'D'].includes(songProgress.bestGrade) && (
+                <Award size={20} className={`${
+                  songProgress.bestGrade === 'A' ? 'text-green-600' :
+                  songProgress.bestGrade === 'B' ? 'text-blue-600' :
+                  'text-yellow-600'
+                }`} />
+              )}
+              <div className={`text-sm font-semibold ${
+                songProgress.bestGrade === 'A' ? 'text-green-600' :
+                songProgress.bestGrade === 'B' ? 'text-blue-600' :
+                songProgress.bestGrade === 'C' ? 'text-yellow-600' :
+                songProgress.bestGrade === 'D' ? 'text-orange-600' :
+                'text-red-600'
+              }`}>
+                {songProgress.bestGrade} <span className="text-xs text-gray-500">(at {songProgress.bestBPM}% BPM)</span>
+              </div>
             </div>
-          </div>
-        )}
+          )}
+
+          {/* Delete Button */}
+          <button
+            onClick={() => onDelete(song.id, song.title)}
+            className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+            title="Delete song"
+          >
+            <Trash2 size={18} />
+          </button>
+        </div>
       </div>
 
       {/* Variants */}
@@ -349,12 +385,27 @@ const SongCard = ({ song, onSelectVariant }) => {
               >
                 <div className="flex items-center space-x-3">
                   <span className="font-medium text-buretto-primary">{variant.name}</span>
-                  {variantProgress.isCompleted && (
-                    <span className="text-xs text-green-600 flex items-center">
-                      <Award size={12} className="mr-1" />
-                      Best: {variantProgress.bestBPM}%
-                    </span>
-                  )}
+                  {variantProgress.isCompleted && variantProgress.bestBPM > 0 && (() => {
+                    const bestGrade = variantProgress.bpmLevels[variantProgress.bestBPM]?.grade;
+                    if (!bestGrade) return null;
+
+                    const gradeColor =
+                      bestGrade === 'A' ? 'text-green-600' :
+                      bestGrade === 'B' ? 'text-blue-600' :
+                      bestGrade === 'C' ? 'text-yellow-600' :
+                      bestGrade === 'D' ? 'text-orange-600' :
+                      'text-red-600';
+
+                    return (
+                      <span className="text-xs">
+                        {variantProgress.bestBPM === 100 && !['F', 'D'].includes(bestGrade) && (
+                          <Award size={12} className={`mr-1 ${gradeColor} inline-block align-text-bottom`} />
+                        )}
+                        <span className={`font-semibold ${gradeColor}`}>{bestGrade}</span>
+                        <span className="text-gray-500"> (at {variantProgress.bestBPM}% BPM)</span>
+                      </span>
+                    );
+                  })()}
                 </div>
                 <div className="flex items-center space-x-2 text-xs text-gray-500">
                   <span>{variant.properties.scale}</span>
@@ -385,17 +436,19 @@ const SongCard = ({ song, onSelectVariant }) => {
                         <button
                           key={bpm}
                           onClick={() => onSelectVariant(song, variant, bpm)}
-                          className={`px-3 py-2 rounded-lg border-2 text-sm transition-colors ${
-                            bpmResult && bpmResult.passed
-                              ? 'border-green-500 bg-green-50 text-green-700'
-                              : 'border-gray-300 bg-white text-gray-700 hover:border-buretto-secondary'
-                          }`}
+                          className="px-3 py-2 rounded-lg border-2 border-gray-300 bg-white text-gray-700 hover:border-buretto-secondary transition-colors"
                         >
                           <div className="font-medium">{bpm}%</div>
                           <div className="text-xs opacity-75">{actualBPM} BPM</div>
-                          {bpmResult && (
-                            <div className="text-xs font-semibold mt-1">
-                              {bpmResult.grade}
+                          {bpmResult && bpmResult.grade && (
+                            <div className="text-xs font-semibold mt-1 text-gray-700">
+                              Highest: <span className={`${
+                                bpmResult.grade === 'A' ? 'text-green-600' :
+                                bpmResult.grade === 'B' ? 'text-blue-600' :
+                                bpmResult.grade === 'C' ? 'text-yellow-600' :
+                                bpmResult.grade === 'D' ? 'text-orange-600' :
+                                'text-red-600'
+                              }`}>{bpmResult.grade}</span>
                             </div>
                           )}
                         </button>

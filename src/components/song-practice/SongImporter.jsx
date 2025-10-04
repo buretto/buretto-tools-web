@@ -1,25 +1,80 @@
 import React, { useState } from 'react';
 import { Upload, X, AlertCircle, CheckCircle } from 'lucide-react';
 import { parseImportedSongs } from './utils/songParser';
-import { addSongs, getAllTags } from './utils/songStorage';
+import { addSongs, getAllTags, getAllArtists } from './utils/songStorage';
+import { parseFile, getSupportedFileFormats } from './utils/fileFormatParsers';
 
 const SongImporter = ({ onClose, onImportComplete }) => {
   const [importText, setImportText] = useState('');
   const [parsedSongs, setParsedSongs] = useState([]);
   const [commonTags, setCommonTags] = useState([]);
   const [availableTags, setAvailableTags] = useState([]);
+  const [availableArtists, setAvailableArtists] = useState([]);
   const [errors, setErrors] = useState([]);
   const [importStatus, setImportStatus] = useState('idle'); // idle, parsed, importing, complete
+  const [importMode, setImportMode] = useState('file'); // 'file' or 'json'
+  const [selectedFiles, setSelectedFiles] = useState([]);
+  const [artist, setArtist] = useState('');
+  const [artistInput, setArtistInput] = useState('');
+  const [tagInput, setTagInput] = useState('');
+  const [showArtistSuggestions, setShowArtistSuggestions] = useState(false);
+  const [showTagSuggestions, setShowTagSuggestions] = useState(false);
 
   React.useEffect(() => {
     setAvailableTags(getAllTags());
+    setAvailableArtists(getAllArtists());
   }, []);
+
+  const handleFileChange = async (e) => {
+    const files = Array.from(e.target.files);
+    setSelectedFiles(files);
+
+    if (files.length === 0) return;
+
+    setImportStatus('parsing');
+    setErrors([]);
+
+    try {
+      const parsedSongsPromises = files.map(file => parseFile(file));
+      const parsedSongsData = await Promise.all(parsedSongsPromises);
+
+      // Convert to song format and apply artist/tags
+      const songs = parsedSongsData.map(songData => ({
+        ...songData,
+        artist: artist || null,
+        tags: [...commonTags]
+      }));
+
+      const parsed = parseImportedSongs(songs);
+
+      if (parsed.length === 0) {
+        setErrors(['No valid songs found in the files']);
+        setImportStatus('idle');
+        return;
+      }
+
+      setParsedSongs(parsed);
+      setImportStatus('parsed');
+      setErrors([]);
+    } catch (error) {
+      setErrors([`Failed to parse files: ${error.message}`]);
+      setImportStatus('idle');
+    }
+  };
 
   const handleParse = () => {
     try {
       const data = JSON.parse(importText);
       const songs = Array.isArray(data) ? data : [data];
-      const parsed = parseImportedSongs(songs);
+
+      // Apply artist and tags to JSON imports
+      const songsWithMetadata = songs.map(song => ({
+        ...song,
+        artist: artist || song.artist || null,
+        tags: [...(song.tags || []), ...commonTags]
+      }));
+
+      const parsed = parseImportedSongs(songsWithMetadata);
 
       if (parsed.length === 0) {
         setErrors(['No valid songs found in the input']);
@@ -38,13 +93,8 @@ const SongImporter = ({ onClose, onImportComplete }) => {
     setImportStatus('importing');
 
     try {
-      // Add common tags to all songs
-      const songsWithTags = parsedSongs.map(song => ({
-        ...song,
-        tags: [...(song.tags || []), ...commonTags]
-      }));
-
-      const addedIds = addSongs(songsWithTags);
+      // Songs already have artist and tags applied from parsing
+      const addedIds = addSongs(parsedSongs);
 
       setImportStatus('complete');
 
@@ -59,24 +109,90 @@ const SongImporter = ({ onClose, onImportComplete }) => {
     }
   };
 
-  const toggleTag = (tag) => {
-    setCommonTags(prev =>
-      prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]
-    );
+  const handleArtistInputChange = (e) => {
+    const value = e.target.value;
+    setArtistInput(value);
+    setShowArtistSuggestions(value.length > 0);
   };
 
-  const addCustomTag = () => {
-    const tag = prompt('Enter custom tag name:');
-    if (tag && tag.trim()) {
-      const trimmedTag = tag.trim();
-      if (!availableTags.includes(trimmedTag)) {
-        setAvailableTags(prev => [...prev, trimmedTag].sort());
-      }
-      if (!commonTags.includes(trimmedTag)) {
-        setCommonTags(prev => [...prev, trimmedTag]);
+  const selectArtist = (selectedArtist) => {
+    setArtist(selectedArtist);
+    setArtistInput(selectedArtist);
+    setShowArtistSuggestions(false);
+  };
+
+  const handleArtistBlur = () => {
+    // Delay to allow click on suggestion
+    setTimeout(() => {
+      setShowArtistSuggestions(false);
+      // Set the artist to whatever is in the input
+      setArtist(artistInput.trim());
+    }, 200);
+  };
+
+  const handleTagInputChange = (e) => {
+    const value = e.target.value;
+    setTagInput(value);
+    setShowTagSuggestions(value.length > 0);
+  };
+
+  const addTagFromInput = (tag) => {
+    const trimmedTag = tag.trim();
+    if (!trimmedTag) return;
+
+    // Normalize to match existing tags (case-insensitive)
+    const normalizedTag = availableTags.find(
+      t => t.toLowerCase() === trimmedTag.toLowerCase()
+    ) || trimmedTag;
+
+    if (!commonTags.includes(normalizedTag)) {
+      setCommonTags(prev => [...prev, normalizedTag]);
+      if (!availableTags.includes(normalizedTag)) {
+        setAvailableTags(prev => [...prev, normalizedTag].sort());
       }
     }
+
+    setTagInput('');
+    setShowTagSuggestions(false);
   };
+
+  const handleTagInputKeyDown = (e) => {
+    if (e.key === 'Enter' || e.key === ',') {
+      e.preventDefault();
+      addTagFromInput(tagInput);
+    }
+  };
+
+  const handleTagBlur = () => {
+    // Delay to allow click on suggestion
+    setTimeout(() => {
+      setShowTagSuggestions(false);
+      if (tagInput.trim()) {
+        addTagFromInput(tagInput);
+      }
+    }, 200);
+  };
+
+  const removeTag = (tagToRemove) => {
+    setCommonTags(prev => prev.filter(t => t !== tagToRemove));
+  };
+
+  const getFilteredArtists = () => {
+    if (!artistInput) return [];
+    const lowerInput = artistInput.toLowerCase();
+    return availableArtists.filter(a =>
+      a.toLowerCase().includes(lowerInput)
+    ).slice(0, 5);
+  };
+
+  const getFilteredTags = () => {
+    if (!tagInput) return [];
+    const lowerInput = tagInput.toLowerCase();
+    return availableTags.filter(t =>
+      t.toLowerCase().includes(lowerInput) && !commonTags.includes(t)
+    ).slice(0, 8);
+  };
+
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
@@ -95,23 +211,164 @@ const SongImporter = ({ onClose, onImportComplete }) => {
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto p-6 space-y-6">
-          {/* Instructions */}
+          {/* Artist and Tags Input (shown in idle and parsing states) */}
+          {(importStatus === 'idle' || importStatus === 'parsing') && (
+            <div className="space-y-4">
+              {/* Artist Input with Autocomplete */}
+              <div className="relative">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Artist (optional - applies to all imported songs)
+                </label>
+                <input
+                  type="text"
+                  value={artistInput}
+                  onChange={handleArtistInputChange}
+                  onBlur={handleArtistBlur}
+                  onFocus={() => artistInput && setShowArtistSuggestions(true)}
+                  placeholder="Enter artist name..."
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-buretto-secondary"
+                />
+                {showArtistSuggestions && getFilteredArtists().length > 0 && (
+                  <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-40 overflow-y-auto">
+                    {getFilteredArtists().map(artistName => (
+                      <button
+                        key={artistName}
+                        onMouseDown={() => selectArtist(artistName)}
+                        className="w-full text-left px-3 py-2 hover:bg-gray-100 transition-colors"
+                      >
+                        {artistName}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Tags Input with Autocomplete */}
+              <div className="relative">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Tags (optional - applies to all imported songs)
+                </label>
+                <div className="flex flex-wrap gap-2 mb-2">
+                  {commonTags.map(tag => (
+                    <span
+                      key={tag}
+                      className="px-3 py-1 bg-buretto-secondary text-white rounded-lg text-sm flex items-center space-x-1"
+                    >
+                      <span>{tag}</span>
+                      <button
+                        onClick={() => removeTag(tag)}
+                        className="ml-1 hover:text-gray-200"
+                      >
+                        <X size={14} />
+                      </button>
+                    </span>
+                  ))}
+                </div>
+                <input
+                  type="text"
+                  value={tagInput}
+                  onChange={handleTagInputChange}
+                  onKeyDown={handleTagInputKeyDown}
+                  onBlur={handleTagBlur}
+                  onFocus={() => tagInput && setShowTagSuggestions(true)}
+                  placeholder="Add tags (press Enter or comma to add)..."
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-buretto-secondary"
+                />
+                {showTagSuggestions && getFilteredTags().length > 0 && (
+                  <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-40 overflow-y-auto">
+                    {getFilteredTags().map(tagName => (
+                      <button
+                        key={tagName}
+                        onMouseDown={() => addTagFromInput(tagName)}
+                        className="w-full text-left px-3 py-2 hover:bg-gray-100 transition-colors"
+                      >
+                        {tagName}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Mode Toggle */}
           {importStatus === 'idle' && (
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-              <h3 className="font-semibold text-blue-800 mb-2">Import Format</h3>
-              <p className="text-sm text-blue-700 mb-2">
-                Paste JSON data in the following format:
-              </p>
-              <pre className="bg-white p-3 rounded text-xs overflow-x-auto">
+            <div className="flex space-x-2 border-b border-gray-200">
+              <button
+                onClick={() => setImportMode('file')}
+                className={`px-4 py-2 font-medium transition-colors ${
+                  importMode === 'file'
+                    ? 'text-buretto-secondary border-b-2 border-buretto-secondary'
+                    : 'text-gray-600 hover:text-gray-800'
+                }`}
+              >
+                Import from File
+              </button>
+              <button
+                onClick={() => setImportMode('json')}
+                className={`px-4 py-2 font-medium transition-colors ${
+                  importMode === 'json'
+                    ? 'text-buretto-secondary border-b-2 border-buretto-secondary'
+                    : 'text-gray-600 hover:text-gray-800'
+                }`}
+              >
+                Import from JSON
+              </button>
+            </div>
+          )}
+
+          {/* File Upload Mode */}
+          {importStatus === 'idle' && importMode === 'file' && (
+            <div>
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+                <h3 className="font-semibold text-blue-800 mb-2">Supported Formats</h3>
+                <p className="text-sm text-blue-700">
+                  Upload MusicXML (.xml, .musicxml) or MIDI (.mid, .midi) files.
+                  You can select multiple files to import at once.
+                </p>
+              </div>
+              <label className="block">
+                <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-buretto-secondary transition-colors cursor-pointer">
+                  <Upload className="w-12 h-12 mx-auto mb-3 text-gray-400" />
+                  <p className="text-gray-700 mb-1">
+                    Click to select files or drag and drop
+                  </p>
+                  <p className="text-sm text-gray-500">
+                    MusicXML (.xml, .musicxml) or MIDI (.mid, .midi)
+                  </p>
+                </div>
+                <input
+                  type="file"
+                  accept={getSupportedFileFormats()}
+                  multiple
+                  onChange={handleFileChange}
+                  className="hidden"
+                />
+              </label>
+              {selectedFiles.length > 0 && (
+                <div className="mt-3 text-sm text-gray-600">
+                  Selected: {selectedFiles.map(f => f.name).join(', ')}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* JSON Input Mode */}
+          {importStatus === 'idle' && importMode === 'json' && (
+            <div>
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+                <h3 className="font-semibold text-blue-800 mb-2">JSON Import Format</h3>
+                <p className="text-sm text-blue-700 mb-2">
+                  Paste JSON data in the following format:
+                </p>
+                <pre className="bg-white p-3 rounded text-xs overflow-x-auto">
 {`{
   "title": "Song Name",
-  "artist": "Artist Name", // optional
-  "tags": ["genre", "difficulty"], // optional
   "sequence": [
     {
       "startTime": 0,
       "duration": 1,
-      "expectedNotes": [60, 64, 67], // MIDI notes
+      "expectedNotes": [60, 64, 67],
       "clef": "treble",
       "notes": [
         { "note": "C", "octave": 4 },
@@ -119,19 +376,13 @@ const SongImporter = ({ onClose, onImportComplete }) => {
         { "note": "G", "octave": 4 }
       ]
     }
-    // ... more notes
   ]
 }`}
-              </pre>
-              <p className="text-xs text-blue-600 mt-2">
-                You can also import an array of songs: <code>[song1, song2, ...]</code>
-              </p>
-            </div>
-          )}
-
-          {/* Input Area */}
-          {importStatus === 'idle' && (
-            <div>
+                </pre>
+                <p className="text-xs text-blue-600 mt-2">
+                  Array of songs: <code>[song1, song2, ...]</code>
+                </p>
+              </div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Song Data (JSON)
               </label>
@@ -149,6 +400,14 @@ const SongImporter = ({ onClose, onImportComplete }) => {
               >
                 Parse Songs
               </button>
+            </div>
+          )}
+
+          {/* Parsing Status */}
+          {importStatus === 'parsing' && (
+            <div className="text-center py-8">
+              <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-buretto-secondary border-t-transparent"></div>
+              <p className="mt-4 text-gray-600">Parsing files...</p>
             </div>
           )}
 
@@ -190,33 +449,22 @@ const SongImporter = ({ onClose, onImportComplete }) => {
                 </div>
               </div>
 
-              {/* Tag Selection */}
-              <div className="border border-gray-300 rounded-lg p-4">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Add Tags (optional - applied to all imported songs)
-                </label>
-                <div className="flex flex-wrap gap-2 mb-3">
-                  {availableTags.map(tag => (
-                    <button
-                      key={tag}
-                      onClick={() => toggleTag(tag)}
-                      className={`px-3 py-1 text-sm rounded-lg border transition-colors ${
-                        commonTags.includes(tag)
-                          ? 'bg-buretto-secondary text-white border-buretto-secondary'
-                          : 'bg-white text-gray-700 border-gray-300 hover:border-buretto-secondary'
-                      }`}
-                    >
-                      {tag}
-                    </button>
-                  ))}
+              {/* Applied Tags Display */}
+              {(artist || commonTags.length > 0) && (
+                <div className="border border-gray-300 rounded-lg p-4">
+                  <h4 className="font-semibold text-buretto-primary mb-2">Applied Metadata:</h4>
+                  {artist && (
+                    <div className="text-sm text-gray-700 mb-1">
+                      <span className="font-medium">Artist:</span> {artist}
+                    </div>
+                  )}
+                  {commonTags.length > 0 && (
+                    <div className="text-sm text-gray-700">
+                      <span className="font-medium">Tags:</span> {commonTags.join(', ')}
+                    </div>
+                  )}
                 </div>
-                <button
-                  onClick={addCustomTag}
-                  className="text-sm text-buretto-secondary hover:text-buretto-primary transition-colors"
-                >
-                  + Add Custom Tag
-                </button>
-              </div>
+              )}
 
               {/* Song Preview */}
               <div className="border border-gray-300 rounded-lg p-4">

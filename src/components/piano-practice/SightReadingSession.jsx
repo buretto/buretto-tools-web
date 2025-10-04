@@ -925,12 +925,13 @@ const SightReadingSession = ({ deck, onSessionComplete, isCountdownActive = fals
     });
 
     // Add accidentals only for actual notes (not rests)
+    // Note: VexFlow 5.0 uses addModifier(modifier, index) parameter order
     if (!isRest && notes.length > 0) {
       notes.forEach((note, index) => {
         if (note.note.includes('#')) {
-          staveNote.addAccidental(index, new Accidental('#'));
+          staveNote.addModifier(new Accidental('#'), index);
         } else if (note.note.includes('b')) {
-          staveNote.addAccidental(index, new Accidental('b'));
+          staveNote.addModifier(new Accidental('b'), index);
         }
       });
     }

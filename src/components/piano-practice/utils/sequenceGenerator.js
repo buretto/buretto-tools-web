@@ -67,9 +67,12 @@ class SequenceGenerator {
 
   // Generate a sequence that lasts approximately targetDuration seconds
   generateSequence(targetDuration = 60) {
-    // If fixed sequence provided (e.g., for song practice), return it directly
+    // If fixed sequence provided (e.g., for song practice), add sequenceIndex if missing
     if (this.fixedSequence) {
-      return this.fixedSequence;
+      return this.fixedSequence.map((note, index) => ({
+        ...note,
+        sequenceIndex: note.sequenceIndex !== undefined ? note.sequenceIndex : index
+      }));
     }
     const sequence = [];
     const beatsPerSecond = this.rhythmConfig.tempo / 60;
