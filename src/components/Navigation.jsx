@@ -34,42 +34,42 @@ function Navigation({ currentPage, onNavigate }) {
             <BurettoLogo />
           </button>
           
-          <div className="flex space-x-6">
-            <button 
+          <div className="flex space-x-6 items-center">
+            <button
               onClick={() => onNavigate('home')}
               className={`${currentPage === 'home' ? 'text-buretto-primary font-medium' : 'text-gray-600 hover:text-gray-900'}`}
             >
               Home
             </button>
-            <button 
+
+            {/* Series Probability Tools */}
+            <div className="h-6 w-px bg-gray-300"></div>
+            <button
               onClick={() => onNavigate('series-calculator')}
               className={`${currentPage === 'series-calculator' ? 'text-buretto-primary font-medium' : 'text-gray-600 hover:text-gray-900'}`}
             >
-              Series Calculator
+              Series Calc
             </button>
-            <button 
+            <button
               onClick={() => onNavigate('reverse-series-calculator')}
               className={`${currentPage === 'reverse-series-calculator' ? 'text-buretto-primary font-medium' : 'text-gray-600 hover:text-gray-900'}`}
             >
-              Reverse Calculator
+              Reverse
             </button>
-            <button 
+            <button
               onClick={() => onNavigate('range-series-calculator')}
               className={`${currentPage === 'range-series-calculator' ? 'text-buretto-primary font-medium' : 'text-gray-600 hover:text-gray-900'}`}
             >
-              Range Calculator
+              Range
             </button>
-            <button
-              onClick={() => onNavigate('rolldown-tool')}
-              className={`${currentPage === 'rolldown-tool' ? 'text-buretto-primary font-medium' : 'text-gray-600 hover:text-gray-900'}`}
-            >
-              TFT Rolldown
-            </button>
+
+            {/* Piano Tools */}
+            <div className="h-6 w-px bg-gray-300"></div>
             <button
               onClick={() => onNavigate('piano-practice')}
               className={`${currentPage === 'piano-practice' ? 'text-buretto-primary font-medium' : 'text-gray-600 hover:text-gray-900'}`}
             >
-              Piano Practice
+              Flashcards
             </button>
             <button
               onClick={() => onNavigate('piano-sight-reading')}
@@ -83,12 +83,15 @@ function Navigation({ currentPage, onNavigate }) {
             >
               Song Practice
             </button>
-            <a
-              href="https://www.buretto.com"
-              className="text-buretto-secondary font-medium hover:text-yellow-600"
+
+            {/* Gaming Tools */}
+            <div className="h-6 w-px bg-gray-300"></div>
+            <button
+              onClick={() => onNavigate('rolldown-tool')}
+              className={`${currentPage === 'rolldown-tool' ? 'text-buretto-primary font-medium' : 'text-gray-600 hover:text-gray-900'}`}
             >
-              ← Main Site
-            </a>
+              TFT Rolldown
+            </button>
           </div>
         </div>
       </div>
