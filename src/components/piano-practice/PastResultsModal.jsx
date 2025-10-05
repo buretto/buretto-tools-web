@@ -1,14 +1,20 @@
 import React, { useState, useMemo } from 'react';
 import { X, TrendingUp, Target, Clock, Music, Award, Calendar } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { getDeckResults, getBestMetrics, getPerformanceChartData } from './utils/resultsStorage';
+import { getDeckResults, getBestMetrics, getPerformanceChartData, getFlashcardBestMetrics, getFlashcardChartData } from './utils/resultsStorage';
 
-const PastResultsModal = ({ deck, isOpen, onClose }) => {
+const PastResultsModal = ({ deck, isOpen, onClose, mode = 'sight-reading' }) => {
   const [selectedMetric, setSelectedMetric] = useState('overallScore');
 
   const results = useMemo(() => getDeckResults(deck), [deck]);
-  const bestMetrics = useMemo(() => getBestMetrics(deck), [deck]);
-  const chartData = useMemo(() => getPerformanceChartData(deck, selectedMetric), [deck, selectedMetric]);
+  const bestMetrics = useMemo(() =>
+    mode === 'flashcard' ? getFlashcardBestMetrics(deck) : getBestMetrics(deck),
+    [deck, mode]
+  );
+  const chartData = useMemo(() =>
+    mode === 'flashcard' ? getFlashcardChartData(deck) : getPerformanceChartData(deck, selectedMetric),
+    [deck, selectedMetric, mode]
+  );
 
   if (!isOpen) return null;
 
@@ -115,6 +121,91 @@ const PastResultsModal = ({ deck, isOpen, onClose }) => {
     );
   };
 
+  const FlashcardChart = ({ data }) => {
+    if (data.length === 0) return <div className="text-gray-500 text-center py-8">No data available</div>;
+
+    const CustomTooltip = ({ active, payload, label }) => {
+      if (active && payload && payload.length) {
+        return (
+          <div className="bg-white p-3 border border-gray-200 rounded shadow">
+            <p className="text-sm font-medium mb-1">{`Session ${label}`}</p>
+            <p className="text-sm text-green-600">Correct: {payload.find(p => p.dataKey === 'notesCorrect')?.value || 0}</p>
+            <p className="text-sm text-red-600">Mistakes: {payload.find(p => p.dataKey === 'mistakes')?.value || 0}</p>
+            <p className="text-sm text-blue-600 font-medium">Score: {payload.find(p => p.dataKey === 'finalScore')?.value || 0}</p>
+          </div>
+        );
+      }
+      return null;
+    };
+
+    return (
+      <div className="space-y-4">
+        <div className="flex justify-between text-sm text-gray-600">
+          <span>Session Progress</span>
+          <span>{data.length} sessions</span>
+        </div>
+
+        <div className="h-64 w-full">
+          <ResponsiveContainer width="100%" height="100%">
+            <LineChart data={data} margin={{ top: 20, right: 30, left: 20, bottom: 20 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+              <XAxis
+                dataKey="session"
+                tick={{ fontSize: 12 }}
+                axisLine={{ stroke: '#d1d5db' }}
+              />
+              <YAxis
+                tick={{ fontSize: 12 }}
+                axisLine={{ stroke: '#d1d5db' }}
+              />
+              <Tooltip content={<CustomTooltip />} />
+              <Line
+                type="monotone"
+                dataKey="notesCorrect"
+                stroke="#22c55e"
+                strokeWidth={2}
+                name="Correct"
+                dot={{ fill: '#22c55e', strokeWidth: 2, r: 4 }}
+              />
+              <Line
+                type="monotone"
+                dataKey="mistakes"
+                stroke="#dc2626"
+                strokeWidth={2}
+                name="Mistakes"
+                dot={{ fill: '#dc2626', strokeWidth: 2, r: 4 }}
+              />
+              <Line
+                type="monotone"
+                dataKey="finalScore"
+                stroke="#2563eb"
+                strokeWidth={2}
+                name="Score"
+                dot={{ fill: '#2563eb', strokeWidth: 2, r: 4 }}
+              />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+
+        {/* Legend */}
+        <div className="flex justify-center space-x-6 text-xs">
+          <div className="flex items-center space-x-2">
+            <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+            <span>Notes Correct</span>
+          </div>
+          <div className="flex items-center space-x-2">
+            <div className="w-3 h-3 bg-red-500 rounded-full"></div>
+            <span>Mistakes</span>
+          </div>
+          <div className="flex items-center space-x-2">
+            <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
+            <span>Final Score</span>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
@@ -123,7 +214,10 @@ const PastResultsModal = ({ deck, isOpen, onClose }) => {
           <div>
             <h2 className="text-2xl font-bold text-buretto-primary">Past Results</h2>
             <p className="text-buretto-accent mt-1">
-              {deck.scale} {deck.practiceTypeName} - {deck.difficultyName} - {deck.rhythmPatternName} @ {deck.bpmName}
+              {mode === 'flashcard'
+                ? `${deck.scale} ${deck.practiceTypeName} - ${deck.difficultyName}`
+                : `${deck.scale} ${deck.practiceTypeName} - ${deck.difficultyName} - ${deck.rhythmPatternName} @ ${deck.bpmName}`
+              }
             </p>
           </div>
           <button
@@ -152,43 +246,69 @@ const PastResultsModal = ({ deck, isOpen, onClose }) => {
                     <Award className="w-5 h-5 mr-2" />
                     Personal Bests
                   </h3>
-                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-                    <div className="text-center">
-                      <div className="text-2xl font-bold text-buretto-primary">{bestMetrics.bestNotesReached}</div>
-                      <div className="text-sm text-buretto-accent">Notes Reached</div>
-                      {bestMetrics.dates?.notesReached && (
-                        <div className="text-xs text-gray-500">{formatDate(bestMetrics.dates.notesReached)}</div>
-                      )}
+                  {mode === 'flashcard' ? (
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div className="text-center">
+                        <div className="text-2xl font-bold text-blue-600">{bestMetrics.bestFinalScore}</div>
+                        <div className="text-sm text-buretto-accent">Best Score</div>
+                        {bestMetrics.dates?.finalScore && (
+                          <div className="text-xs text-gray-500">{formatDate(bestMetrics.dates.finalScore)}</div>
+                        )}
+                      </div>
+                      <div className="text-center">
+                        <div className="text-2xl font-bold text-green-600">{bestMetrics.mostNotesCorrect}</div>
+                        <div className="text-sm text-buretto-accent">Most Correct</div>
+                        {bestMetrics.dates?.notesCorrect && (
+                          <div className="text-xs text-gray-500">{formatDate(bestMetrics.dates.notesCorrect)}</div>
+                        )}
+                      </div>
+                      <div className="text-center">
+                        <div className="text-2xl font-bold text-red-600">{bestMetrics.fewestMistakes}</div>
+                        <div className="text-sm text-buretto-accent">Fewest Mistakes</div>
+                        {bestMetrics.dates?.mistakes && (
+                          <div className="text-xs text-gray-500">{formatDate(bestMetrics.dates.mistakes)}</div>
+                        )}
+                      </div>
                     </div>
-                    <div className="text-center">
-                      <div className="text-2xl font-bold text-blue-600">{formatPercentage(bestMetrics.bestNoteAccuracy)}</div>
-                      <div className="text-sm text-buretto-accent">Note Accuracy</div>
-                      {bestMetrics.dates?.noteAccuracy && (
-                        <div className="text-xs text-gray-500">{formatDate(bestMetrics.dates.noteAccuracy)}</div>
-                      )}
+                  ) : (
+                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+                      <div className="text-center">
+                        <div className="text-2xl font-bold text-buretto-primary">{bestMetrics.bestNotesReached}</div>
+                        <div className="text-sm text-buretto-accent">Notes Reached</div>
+                        {bestMetrics.dates?.notesReached && (
+                          <div className="text-xs text-gray-500">{formatDate(bestMetrics.dates.notesReached)}</div>
+                        )}
+                      </div>
+                      <div className="text-center">
+                        <div className="text-2xl font-bold text-blue-600">{formatPercentage(bestMetrics.bestNoteAccuracy)}</div>
+                        <div className="text-sm text-buretto-accent">Note Accuracy</div>
+                        {bestMetrics.dates?.noteAccuracy && (
+                          <div className="text-xs text-gray-500">{formatDate(bestMetrics.dates.noteAccuracy)}</div>
+                        )}
+                      </div>
+                      <div className="text-center">
+                        <div className="text-2xl font-bold text-green-600">{formatPercentage(bestMetrics.bestTimingAccuracy)}</div>
+                        <div className="text-sm text-buretto-accent">Timing Accuracy</div>
+                        {bestMetrics.dates?.timingAccuracy && (
+                          <div className="text-xs text-gray-500">{formatDate(bestMetrics.dates.timingAccuracy)}</div>
+                        )}
+                      </div>
+                      <div className="text-center">
+                        <div className="text-2xl font-bold text-purple-600">{formatPercentage(bestMetrics.bestTimingPrecision)}</div>
+                        <div className="text-sm text-buretto-accent">Timing Precision</div>
+                        {bestMetrics.dates?.timingPrecision && (
+                          <div className="text-xs text-gray-500">{formatDate(bestMetrics.dates.timingPrecision)}</div>
+                        )}
+                      </div>
+                      <div className="text-center">
+                        <div className="text-2xl font-bold text-orange-600">{formatPercentage(bestMetrics.bestOverallScore)}</div>
+                        <div className="text-sm text-buretto-accent">Overall Grade</div>
+                        {bestMetrics.dates?.overallScore && (
+                          <div className="text-xs text-gray-500">{formatDate(bestMetrics.dates.overallScore)}</div>
+                        )}
+                      </div>
                     </div>
-                    <div className="text-center">
-                      <div className="text-2xl font-bold text-green-600">{formatPercentage(bestMetrics.bestTimingAccuracy)}</div>
-                      <div className="text-sm text-buretto-accent">Timing Accuracy</div>
-                      {bestMetrics.dates?.timingAccuracy && (
-                        <div className="text-xs text-gray-500">{formatDate(bestMetrics.dates.timingAccuracy)}</div>
-                      )}
-                    </div>
-                    <div className="text-center">
-                      <div className="text-2xl font-bold text-purple-600">{formatPercentage(bestMetrics.bestTimingPrecision)}</div>
-                      <div className="text-sm text-buretto-accent">Timing Precision</div>
-                      {bestMetrics.dates?.timingPrecision && (
-                        <div className="text-xs text-gray-500">{formatDate(bestMetrics.dates.timingPrecision)}</div>
-                      )}
-                    </div>
-                    <div className="text-center">
-                      <div className="text-2xl font-bold text-orange-600">{formatPercentage(bestMetrics.bestOverallScore)}</div>
-                      <div className="text-sm text-buretto-accent">Overall Grade</div>
-                      {bestMetrics.dates?.overallScore && (
-                        <div className="text-xs text-gray-500">{formatDate(bestMetrics.dates.overallScore)}</div>
-                      )}
-                    </div>
-                  </div>
+                  )}
                 </div>
               )}
 
@@ -199,19 +319,25 @@ const PastResultsModal = ({ deck, isOpen, onClose }) => {
                     <TrendingUp className="w-5 h-5 mr-2" />
                     Performance Trends
                   </h3>
-                  <select
-                    value={selectedMetric}
-                    onChange={(e) => setSelectedMetric(e.target.value)}
-                    className="px-3 py-2 border border-gray-300 rounded-lg bg-white text-sm"
-                  >
-                    {metricOptions.map(option => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
+                  {mode === 'sight-reading' && (
+                    <select
+                      value={selectedMetric}
+                      onChange={(e) => setSelectedMetric(e.target.value)}
+                      className="px-3 py-2 border border-gray-300 rounded-lg bg-white text-sm"
+                    >
+                      {metricOptions.map(option => (
+                        <option key={option.value} value={option.value}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </select>
+                  )}
                 </div>
-                <PerformanceChart data={chartData} metric={selectedMetric} />
+                {mode === 'flashcard' ? (
+                  <FlashcardChart data={chartData} />
+                ) : (
+                  <PerformanceChart data={chartData} metric={selectedMetric} />
+                )}
               </div>
 
               {/* Recent Sessions Table */}
@@ -225,34 +351,64 @@ const PastResultsModal = ({ deck, isOpen, onClose }) => {
                     <thead>
                       <tr className="border-b border-gray-200">
                         <th className="text-left py-2 px-3">Date</th>
-                        <th className="text-left py-2 px-3">Notes</th>
-                        <th className="text-left py-2 px-3">Note Acc.</th>
-                        <th className="text-left py-2 px-3">Timing Acc.</th>
-                        <th className="text-left py-2 px-3">Timing Prec.</th>
-                        <th className="text-left py-2 px-3">BPM</th>
-                        <th className="text-left py-2 px-3">Grade</th>
-                        <th className="text-left py-2 px-3">Passed</th>
+                        {mode === 'flashcard' ? (
+                          <>
+                            <th className="text-left py-2 px-3">Correct</th>
+                            <th className="text-left py-2 px-3">Mistakes</th>
+                            <th className="text-left py-2 px-3">Score</th>
+                            <th className="text-left py-2 px-3">Passed</th>
+                          </>
+                        ) : (
+                          <>
+                            <th className="text-left py-2 px-3">Notes</th>
+                            <th className="text-left py-2 px-3">Note Acc.</th>
+                            <th className="text-left py-2 px-3">Timing Acc.</th>
+                            <th className="text-left py-2 px-3">Timing Prec.</th>
+                            <th className="text-left py-2 px-3">BPM</th>
+                            <th className="text-left py-2 px-3">Grade</th>
+                            <th className="text-left py-2 px-3">Passed</th>
+                          </>
+                        )}
                       </tr>
                     </thead>
                     <tbody>
                       {results.slice(-10).reverse().map((session, index) => (
                         <tr key={session.id || `${session.timestamp}_${index}`} className="border-b border-gray-100 hover:bg-gray-50">
                           <td className="py-2 px-3">{formatDate(session.date)}</td>
-                          <td className="py-2 px-3 font-medium">{session.results.notesReached}</td>
-                          <td className="py-2 px-3">{formatPercentage(session.results.noteAccuracy)}</td>
-                          <td className="py-2 px-3">{formatPercentage(session.results.timingMetrics.timingAccuracy)}</td>
-                          <td className="py-2 px-3">{formatPercentage(session.results.timingMetrics.timingPrecision)}</td>
-                          <td className="py-2 px-3">{Math.round(session.results.performedBPM || 0)}</td>
-                          <td className="py-2 px-3 font-medium">{formatPercentage(session.results.overallScore)}</td>
-                          <td className="py-2 px-3">
-                            <span className={`px-2 py-1 rounded text-xs font-medium ${
-                              session.results.passed
-                                ? 'bg-green-100 text-green-800'
-                                : 'bg-red-100 text-red-800'
-                            }`}>
-                              {session.results.passed ? 'Yes' : 'No'}
-                            </span>
-                          </td>
+                          {mode === 'flashcard' ? (
+                            <>
+                              <td className="py-2 px-3 font-medium text-green-600">{session.results.notesCorrect || 0}</td>
+                              <td className="py-2 px-3 font-medium text-red-600">{session.results.mistakes || 0}</td>
+                              <td className="py-2 px-3 font-medium text-blue-600">{session.results.finalScore || 0}</td>
+                              <td className="py-2 px-3">
+                                <span className={`px-2 py-1 rounded text-xs font-medium ${
+                                  session.results.passed
+                                    ? 'bg-green-100 text-green-800'
+                                    : 'bg-red-100 text-red-800'
+                                }`}>
+                                  {session.results.passed ? 'Yes' : 'No'}
+                                </span>
+                              </td>
+                            </>
+                          ) : (
+                            <>
+                              <td className="py-2 px-3 font-medium">{session.results.notesReached}</td>
+                              <td className="py-2 px-3">{formatPercentage(session.results.noteAccuracy)}</td>
+                              <td className="py-2 px-3">{formatPercentage(session.results.timingMetrics.timingAccuracy)}</td>
+                              <td className="py-2 px-3">{formatPercentage(session.results.timingMetrics.timingPrecision)}</td>
+                              <td className="py-2 px-3">{Math.round(session.results.performedBPM || 0)}</td>
+                              <td className="py-2 px-3 font-medium">{formatPercentage(session.results.overallScore)}</td>
+                              <td className="py-2 px-3">
+                                <span className={`px-2 py-1 rounded text-xs font-medium ${
+                                  session.results.passed
+                                    ? 'bg-green-100 text-green-800'
+                                    : 'bg-red-100 text-red-800'
+                                }`}>
+                                  {session.results.passed ? 'Yes' : 'No'}
+                                </span>
+                              </td>
+                            </>
+                          )}
                         </tr>
                       ))}
                     </tbody>

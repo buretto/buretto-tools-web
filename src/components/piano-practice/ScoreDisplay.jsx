@@ -1,28 +1,31 @@
-import React from 'react';
-import { Trophy, Target, RotateCcw, ArrowLeft, Unlock } from 'lucide-react';
+import React, { useState } from 'react';
+import { Trophy, Target, RotateCcw, ArrowLeft, Unlock, History } from 'lucide-react';
+import PastResultsModal from './PastResultsModal';
 
 const ScoreDisplay = ({
-  score,
+  results,
   deck,
   previousRecord,
-  passed,
   onGoAgain,
   onChangeDeck
 }) => {
-  const isNewRecord = score > previousRecord;
-  const progressPercentage = Math.min((score / 60) * 100, 100);
+  const [showPastResults, setShowPastResults] = useState(false);
+
+  const { finalScore, notesCorrect, mistakes, passed } = results;
+  const isNewRecord = finalScore > previousRecord;
+  const progressPercentage = Math.min((finalScore / 45) * 100, 100);
 
   const getScoreColor = () => {
     if (passed) return 'text-green-600';
-    if (score >= 45) return 'text-yellow-600';
+    if (finalScore >= 30) return 'text-yellow-600';
     return 'text-red-600';
   };
 
   const getScoreMessage = () => {
-    if (passed) return 'Excellent! Level Passed!';
-    if (score >= 45) return 'Good effort! Almost there!';
-    if (score >= 30) return 'Keep practicing!';
-    return 'Try focusing on accuracy first';
+    if (passed) return 'Passed!';
+    if (finalScore >= 30) return 'Almost there!';
+    if (finalScore >= 15) return 'Keep practicing!';
+    return 'Focus on accuracy';
   };
 
   return (
@@ -43,10 +46,13 @@ const ScoreDisplay = ({
           {/* Main Score */}
           <div className="space-y-2">
             <div className={`text-6xl font-bold ${getScoreColor()}`}>
-              {score}
+              {finalScore}
             </div>
             <div className="text-lg text-buretto-accent">
-              cards completed in 60 seconds
+              final score in 60 seconds
+            </div>
+            <div className="text-sm text-buretto-accent mb-2">
+              {notesCorrect} correct - {mistakes} mistakes = {finalScore}
             </div>
             <div className={`text-xl font-semibold ${getScoreColor()}`}>
               {getScoreMessage()}
@@ -57,7 +63,7 @@ const ScoreDisplay = ({
           <div className="space-y-2">
             <div className="flex justify-between text-sm text-buretto-accent">
               <span>Progress to Pass</span>
-              <span>{score}/60</span>
+              <span>{finalScore}/45</span>
             </div>
             <div className="w-full bg-gray-200 rounded-full h-4">
               <div
@@ -78,7 +84,7 @@ const ScoreDisplay = ({
                 <span className="font-semibold text-buretto-primary">Today's Score</span>
               </div>
               <div className="text-2xl font-bold text-buretto-primary text-center">
-                {score}
+                {finalScore}
               </div>
             </div>
 
@@ -89,9 +95,9 @@ const ScoreDisplay = ({
                 <span className="font-semibold text-buretto-primary">Session Record</span>
               </div>
               <div className="text-2xl font-bold text-buretto-primary text-center">
-                {Math.max(score, previousRecord)}
+                {Math.max(finalScore, previousRecord)}
               </div>
-              {isNewRecord && score > 0 && (
+              {isNewRecord && finalScore > 0 && (
                 <div className="text-sm text-green-600 text-center mt-1">
                   New Record! 🎉
                 </div>
@@ -130,6 +136,14 @@ const ScoreDisplay = ({
         </button>
 
         <button
+          onClick={() => setShowPastResults(true)}
+          className="flex items-center justify-center space-x-2 px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+        >
+          <History size={20} />
+          <span>View Past Results</span>
+        </button>
+
+        <button
           onClick={onChangeDeck}
           className="flex items-center justify-center space-x-2 px-8 py-3 bg-buretto-accent text-white rounded-lg hover:bg-opacity-90 transition-colors font-semibold"
         >
@@ -144,32 +158,32 @@ const ScoreDisplay = ({
           Tips for Improvement:
         </h3>
         <ul className="text-sm text-blue-700 space-y-2">
-          {score < 30 && (
+          {finalScore < 15 && (
             <>
-              <li>• Focus on accuracy over speed - correct notes matter most</li>
-              <li>• Practice the scale pattern slowly outside of the game</li>
-              <li>• Make sure your MIDI keyboard is properly calibrated</li>
+              <li>• Take your time - there's no rush, play at your own pace</li>
+              <li>• Focus on reading one note at a time</li>
+              <li>• Practice identifying notes on the staff outside of this tool</li>
             </>
           )}
-          {score >= 30 && score < 45 && (
+          {finalScore >= 15 && finalScore < 30 && (
             <>
-              <li>• Great progress! Work on recognizing note patterns quickly</li>
-              <li>• Try practicing with a metronome to improve timing</li>
-              <li>• Focus on smooth finger transitions between notes</li>
+              <li>• Good start! Keep working on note recognition</li>
+              <li>• Try to remember the note positions to speed up reading</li>
+              <li>• Reduce mistakes by double-checking before playing</li>
             </>
           )}
-          {score >= 45 && !passed && (
+          {finalScore >= 30 && !passed && (
             <>
-              <li>• You're almost there! Work on quick note recognition</li>
-              <li>• Try to anticipate the next note while playing the current one</li>
-              <li>• Maintain steady rhythm even when reading gets challenging</li>
+              <li>• You're almost there! Work on reading faster</li>
+              <li>• Try to look ahead to the next note while playing</li>
+              <li>• Focus on reducing mistakes to boost your score</li>
             </>
           )}
           {passed && (
             <>
               <li>• Excellent work! Try the next difficulty level</li>
               <li>• Challenge yourself with different scales</li>
-              <li>• Consider trying more complex practice types</li>
+              <li>• Consider trying the Sight Reading tool for rhythm practice</li>
             </>
           )}
         </ul>
@@ -182,6 +196,14 @@ const ScoreDisplay = ({
           This encourages consistent practice and warming up with easier levels each time.
         </p>
       </div>
+
+      {/* Past Results Modal */}
+      <PastResultsModal
+        deck={deck}
+        isOpen={showPastResults}
+        onClose={() => setShowPastResults(false)}
+        mode="flashcard"
+      />
     </div>
   );
 };

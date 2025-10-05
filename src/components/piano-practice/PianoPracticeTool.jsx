@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import DeckSelector from './DeckSelector';
 import CountdownTimer from './CountdownTimer';
-import SightReadingSession from './SightReadingSession';
+import FlashcardSession from './FlashcardSession';
 import ScoreDisplay from './ScoreDisplay';
+import { saveSessionResult } from './utils/resultsStorage';
 
 const GAME_STATES = {
   DECK_SELECTION: 'deck_selection',
@@ -14,7 +15,7 @@ const GAME_STATES = {
 const PianoPracticeTool = () => {
   const [gameState, setGameState] = useState(GAME_STATES.DECK_SELECTION);
   const [selectedDeck, setSelectedDeck] = useState(null);
-  const [sessionScore, setSessionScore] = useState(0);
+  const [sessionResults, setSessionResults] = useState(null);
   const [sessionRecords, setSessionRecords] = useState({});
   const [unlockedLevels, setUnlockedLevels] = useState({});
 
@@ -24,25 +25,28 @@ const PianoPracticeTool = () => {
   };
 
   const handleCountdownComplete = () => {
-    setSessionScore(0);
+    setSessionResults(null);
     setGameState(GAME_STATES.PLAYING);
   };
 
-  const handleSessionComplete = (score) => {
-    setSessionScore(score);
+  const handleSessionComplete = (results) => {
+    setSessionResults(results);
+
+    // Save to localStorage for historical tracking
+    saveSessionResult(selectedDeck, results);
 
     // Update session records
     const deckKey = `${selectedDeck.scale}-${selectedDeck.practiceType}-${selectedDeck.difficulty}`;
     const currentRecord = sessionRecords[deckKey] || 0;
-    if (score > currentRecord) {
+    if (results.finalScore > currentRecord) {
       setSessionRecords(prev => ({
         ...prev,
-        [deckKey]: score
+        [deckKey]: results.finalScore
       }));
     }
 
-    // Check if level should be unlocked (60+ cards = passed)
-    if (score >= 60) {
+    // Check if level should be unlocked (45+ score = passed)
+    if (results.passed) {
       const nextDifficultyIndex = selectedDeck.difficultyIndex + 1;
       if (nextDifficultyIndex < 3) { // 3 difficulty levels total
         const unlockKey = `${selectedDeck.scale}-${selectedDeck.practiceType}`;
@@ -98,19 +102,17 @@ const PianoPracticeTool = () => {
         )}
 
         {gameState === GAME_STATES.PLAYING && (
-          <SightReadingSession
+          <FlashcardSession
             deck={selectedDeck}
             onSessionComplete={handleSessionComplete}
-            isCountdownActive={gameState === GAME_STATES.COUNTDOWN}
           />
         )}
 
         {gameState === GAME_STATES.RESULTS && (
           <ScoreDisplay
-            score={sessionScore}
+            results={sessionResults}
             deck={selectedDeck}
             previousRecord={sessionRecords[`${selectedDeck.scale}-${selectedDeck.practiceType}-${selectedDeck.difficulty}`] || 0}
-            passed={sessionScore >= 60}
             onGoAgain={handleGoAgain}
             onChangeDeck={handleChangeDeck}
           />

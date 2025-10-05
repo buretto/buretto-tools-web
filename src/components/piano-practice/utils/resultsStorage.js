@@ -8,6 +8,11 @@ const STORAGE_KEYS = {
 
 // Generate a unique key for a deck configuration
 export const generateDeckKey = (deck) => {
+  // Flashcard mode: no rhythmPattern or bpm
+  if (!deck.rhythmPattern && !deck.bpm) {
+    return `${deck.scale}-${deck.practiceType}-${deck.difficulty}`;
+  }
+  // Sight-reading mode: includes rhythmPattern and bpm
   return `${deck.scale}-${deck.practiceType}-${deck.difficulty}-${deck.rhythmPattern}-${deck.bpm}`;
 };
 
@@ -23,6 +28,9 @@ export const saveSessionResult = (deck, results) => {
     const deckKey = generateDeckKey(deck);
     const timestamp = Date.now();
 
+    // Detect mode based on results structure
+    const isFlashcardMode = 'notesCorrect' in results && 'mistakes' in results;
+
     const sessionData = {
       id: `${timestamp}_${Math.random().toString(36).substr(2, 9)}`, // Unique ID
       timestamp,
@@ -37,7 +45,14 @@ export const saveSessionResult = (deck, results) => {
         bpm: deck.bpm,
         goal: deck.goal
       },
-      results: {
+      results: isFlashcardMode ? {
+        // Flashcard mode fields
+        notesCorrect: results.notesCorrect,
+        mistakes: results.mistakes,
+        finalScore: results.finalScore,
+        passed: results.passed
+      } : {
+        // Sight-reading mode fields
         notesReached: results.notesReached,
         noteAccuracy: results.noteAccuracy,
         timingMetrics: results.timingMetrics,
@@ -110,15 +125,35 @@ export const getBestMetrics = (deck) => {
     return {
       bestNotesReached: Math.max(best.bestNotesReached || 0, r.notesReached),
       bestNoteAccuracy: Math.max(best.bestNoteAccuracy || 0, r.noteAccuracy),
-      bestTimingAccuracy: Math.max(best.bestTimingAccuracy || 0, r.timingMetrics.timingAccuracy),
-      bestTimingPrecision: Math.max(best.bestTimingPrecision || 0, r.timingMetrics.timingPrecision),
-      bestOverallScore: Math.max(best.bestOverallScore || 0, r.overallScore),
+      bestTimingAccuracy: Math.max(best.bestTimingAccuracy || 0, r.timingMetrics?.timingAccuracy || 0),
+      bestTimingPrecision: Math.max(best.bestTimingPrecision || 0, r.timingMetrics?.timingPrecision || 0),
+      bestOverallScore: Math.max(best.bestOverallScore || 0, r.overallScore || 0),
       dates: {
         notesReached: r.notesReached === (best.bestNotesReached || 0) ? session.date : best.dates?.notesReached,
         noteAccuracy: r.noteAccuracy === (best.bestNoteAccuracy || 0) ? session.date : best.dates?.noteAccuracy,
-        timingAccuracy: r.timingMetrics.timingAccuracy === (best.bestTimingAccuracy || 0) ? session.date : best.dates?.timingAccuracy,
-        timingPrecision: r.timingMetrics.timingPrecision === (best.bestTimingPrecision || 0) ? session.date : best.dates?.timingPrecision,
+        timingAccuracy: r.timingMetrics?.timingAccuracy === (best.bestTimingAccuracy || 0) ? session.date : best.dates?.timingAccuracy,
+        timingPrecision: r.timingMetrics?.timingPrecision === (best.bestTimingPrecision || 0) ? session.date : best.dates?.timingPrecision,
         overallScore: r.overallScore === (best.bestOverallScore || 0) ? session.date : best.dates?.overallScore
+      }
+    };
+  }, {});
+};
+
+// Get the best performance for flashcard mode
+export const getFlashcardBestMetrics = (deck) => {
+  const results = getDeckResults(deck);
+  if (results.length === 0) return null;
+
+  return results.reduce((best, session) => {
+    const r = session.results;
+    return {
+      bestFinalScore: Math.max(best.bestFinalScore || 0, r.finalScore || 0),
+      mostNotesCorrect: Math.max(best.mostNotesCorrect || 0, r.notesCorrect || 0),
+      fewestMistakes: best.fewestMistakes === undefined ? r.mistakes : Math.min(best.fewestMistakes, r.mistakes || 0),
+      dates: {
+        finalScore: r.finalScore === (best.bestFinalScore || 0) ? session.date : best.dates?.finalScore,
+        notesCorrect: r.notesCorrect === (best.mostNotesCorrect || 0) ? session.date : best.dates?.notesCorrect,
+        mistakes: r.mistakes === best.fewestMistakes ? session.date : best.dates?.mistakes
       }
     };
   }, {});
@@ -216,6 +251,23 @@ export const getPerformanceChartData = (deck, metric = 'overallScore') => {
         timestamp: session.timestamp
       };
     });
+};
+
+// Get chart data for flashcard mode (returns all 3 metrics together)
+export const getFlashcardChartData = (deck) => {
+  const results = getDeckResults(deck);
+  if (results.length === 0) return [];
+
+  return results
+    .sort((a, b) => a.timestamp - b.timestamp)
+    .map((session, index) => ({
+      session: index + 1,
+      date: new Date(session.date).toLocaleDateString(),
+      notesCorrect: session.results.notesCorrect || 0,
+      mistakes: session.results.mistakes || 0,
+      finalScore: session.results.finalScore || 0,
+      timestamp: session.timestamp
+    }));
 };
 
 // Clear all stored data (for reset functionality)

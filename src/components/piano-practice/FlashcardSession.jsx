@@ -5,9 +5,11 @@ import DeckGenerator from './utils/deckGenerator';
 import { midiNoteToName } from './utils/noteNames';
 
 const FlashcardSession = ({ deck, onSessionComplete }) => {
-  const [score, setScore] = useState(0);
+  const [notesCorrect, setNotesCorrect] = useState(0);
+  const [mistakes, setMistakes] = useState(0);
   const [timeLeft, setTimeLeft] = useState(60);
-  const [currentCard, setCurrentCard] = useState(null);
+  const [currentBar, setCurrentBar] = useState([]); // Array of 4 cards
+  const [currentNoteInBar, setCurrentNoteInBar] = useState(0); // Which note in the bar (0-3)
   const [flashcardDeck, setFlashcardDeck] = useState([]);
   const [cardIndex, setCardIndex] = useState(0);
   const [lastCardIndex, setLastCardIndex] = useState(-1);
@@ -17,8 +19,12 @@ const FlashcardSession = ({ deck, onSessionComplete }) => {
   const svgRef = useRef(null);
   const midiHandlerRef = useRef(null);
   const timerRef = useRef(null);
-  const currentCardRef = useRef(null);
+  const currentBarRef = useRef([]);
+  const currentNoteInBarRef = useRef(0);
   const pressedNotesRef = useRef(new Set());
+
+  // Session completion guard to prevent duplicate saves
+  const sessionCompletedRef = useRef(false);
 
   // Initialize MIDI and deck
   useEffect(() => {
@@ -39,8 +45,13 @@ const FlashcardSession = ({ deck, onSessionComplete }) => {
       const generatedDeck = generator.generateDeck(200);
 
       setFlashcardDeck(generatedDeck);
-      setCurrentCard(generatedDeck[0]);
-      currentCardRef.current = generatedDeck[0];
+
+      // Initialize with first bar (4 cards)
+      const firstBar = generatedDeck.slice(0, 4);
+      setCurrentBar(firstBar);
+      currentBarRef.current = firstBar;
+      setCurrentNoteInBar(0);
+      currentNoteInBarRef.current = 0;
     } catch (error) {
       console.error('Error generating deck:', error);
     }
@@ -62,7 +73,20 @@ const FlashcardSession = ({ deck, onSessionComplete }) => {
     timerRef.current = setInterval(() => {
       setTimeLeft(prev => {
         if (prev <= 1) {
-          onSessionComplete(score);
+          // Prevent duplicate session completion
+          if (sessionCompletedRef.current) {
+            return 0;
+          }
+          sessionCompletedRef.current = true;
+
+          const finalScore = notesCorrect - mistakes;
+          const results = {
+            notesCorrect,
+            mistakes,
+            finalScore,
+            passed: finalScore > 45
+          };
+          onSessionComplete(results);
           return 0;
         }
         return prev - 1;
@@ -74,14 +98,17 @@ const FlashcardSession = ({ deck, onSessionComplete }) => {
         clearInterval(timerRef.current);
       }
     };
-  }, [score, onSessionComplete]);
+  }, [notesCorrect, mistakes, onSessionComplete]);
 
   const handleMidiNoteOn = (midiNote) => {
-    const currentCard = currentCardRef.current;
+    const currentBar = currentBarRef.current;
+    const noteIndex = currentNoteInBarRef.current;
 
-    if (!currentCard) {
+    if (!currentBar || currentBar.length === 0 || noteIndex >= currentBar.length) {
       return;
     }
+
+    const currentCard = currentBar[noteIndex];
 
     const newPressedNotes = new Set([...pressedNotesRef.current, midiNote]);
     pressedNotesRef.current = newPressedNotes;
@@ -94,6 +121,12 @@ const FlashcardSession = ({ deck, onSessionComplete }) => {
 
     if (allNotesMatch) {
       handleCorrectAnswer();
+    } else if (newPressedNotes.size >= expectedNotes.size) {
+      // User has pressed enough notes but they're wrong - count as mistake
+      setMistakes(prev => prev + 1);
+      // Reset pressed notes to let them try again
+      setPressedNotes(new Set());
+      pressedNotesRef.current = new Set();
     }
   };
 
@@ -106,11 +139,15 @@ const FlashcardSession = ({ deck, onSessionComplete }) => {
 
   // Update refs when state changes
   useEffect(() => {
-    currentCardRef.current = currentCard;
-    if (currentCard && svgRef.current) {
-      renderCard(currentCard);
+    currentBarRef.current = currentBar;
+    if (currentBar.length > 0 && svgRef.current) {
+      renderBar(currentBar, currentNoteInBar);
     }
-  }, [currentCard]);
+  }, [currentBar, currentNoteInBar]);
+
+  useEffect(() => {
+    currentNoteInBarRef.current = currentNoteInBar;
+  }, [currentNoteInBar]);
 
   useEffect(() => {
     pressedNotesRef.current = pressedNotes;
@@ -128,41 +165,53 @@ const FlashcardSession = ({ deck, onSessionComplete }) => {
   };
 
   const handleCorrectAnswer = () => {
-    setScore(prev => prev + 1);
+    setNotesCorrect(prev => prev + 1);
     setPressedNotes(new Set());
     pressedNotesRef.current = new Set();
 
-    // Get the current card from ref (immediately updated, not async like state)
-    const currentCardData = currentCardRef.current;
+    const noteIndex = currentNoteInBarRef.current;
 
-    // Generate a few candidates and pick one that's different from current
-    let nextCard;
-    let attempts = 0;
-    const maxAttempts = 10;
-
-    do {
+    // Move to next note in the bar
+    if (noteIndex < 3) {
+      // Still notes left in current bar
+      setCurrentNoteInBar(noteIndex + 1);
+      currentNoteInBarRef.current = noteIndex + 1;
+    } else {
+      // Finished this bar, generate a new one
       const generator = new DeckGenerator(deck);
-      const tempDeck = generator.generateDeck(1);
-      nextCard = tempDeck[0];
-      attempts++;
-    } while (cardsAreEqual(nextCard, currentCardData) && attempts < maxAttempts);
+      const newBar = generator.generateDeck(4);
 
-    // Update state with the new card
-    const nextIndex = cardIndex + 1;
-    setCardIndex(nextIndex);
-    setLastCardIndex(cardIndex);
-    setCurrentCard(nextCard);
-    currentCardRef.current = nextCard;
+      setCurrentBar(newBar);
+      currentBarRef.current = newBar;
+      setCurrentNoteInBar(0);
+      currentNoteInBarRef.current = 0;
+
+      const nextIndex = cardIndex + 4;
+      setCardIndex(nextIndex);
+    }
   };
 
   const handleStop = () => {
+    // Prevent duplicate session completion
+    if (sessionCompletedRef.current) {
+      return;
+    }
+    sessionCompletedRef.current = true;
+
     if (timerRef.current) {
       clearInterval(timerRef.current);
     }
-    onSessionComplete(score);
+    const finalScore = notesCorrect - mistakes;
+    const results = {
+      notesCorrect,
+      mistakes,
+      finalScore,
+      passed: finalScore > 45
+    };
+    onSessionComplete(results);
   };
 
-  const renderCard = (card) => {
+  const renderBar = (bar, currentNoteIndex) => {
     // Clear previous rendering
     svgRef.current.innerHTML = '';
 
@@ -170,48 +219,70 @@ const FlashcardSession = ({ deck, onSessionComplete }) => {
     renderer.resize(600, 300);
     const context = renderer.getContext();
 
-    // Always show both clefs
+    // Always show both clefs for 1 bar (4 beats)
     let trebleStave, bassStave;
-    const voices = [];
 
-    // Always render treble clef
+    // Always render treble and bass clefs
     trebleStave = new Stave(50, 20, 500);
-    trebleStave.addClef('treble').setContext(context).draw();
+    trebleStave.addClef('treble').addTimeSignature('4/4').setContext(context).draw();
 
-    if (card.treble || (card.clef === 'treble' && card.notes)) {
-      const notes = card.treble || card.notes;
-      const staveNotes = createStaveNotes(notes, 'treble');
-      const trebleVoice = new Voice({ num_beats: 4, beat_value: 4 });
-      trebleVoice.addTickables(staveNotes);
-      voices.push({ voice: trebleVoice, stave: trebleStave });
-    }
-
-    // Always render bass clef
     bassStave = new Stave(50, 120, 500);
-    bassStave.addClef('bass').setContext(context).draw();
+    bassStave.addClef('bass').addTimeSignature('4/4').setContext(context).draw();
 
-    if (card.bass || (card.clef === 'bass' && card.notes)) {
-      const notes = card.bass || card.notes;
-      const staveNotes = createStaveNotes(notes, 'bass');
-      const bassVoice = new Voice({ num_beats: 4, beat_value: 4 });
-      bassVoice.addTickables(staveNotes);
-      voices.push({ voice: bassVoice, stave: bassStave });
-    }
+    // Create note arrays for treble and bass
+    const trebleNotes = [];
+    const bassNotes = [];
 
-    // Format and draw voices
-    if (voices.length > 0) {
-      const formatter = new Formatter();
-      formatter.joinVoices(voices.map(v => v.voice));
+    // Process each of the 4 cards in the bar
+    bar.forEach((card, index) => {
+      const isCurrentNote = index === currentNoteIndex;
 
-      voices.forEach(({ voice, stave }) => {
-        formatter.format([voice], 400);
-        voice.draw(context, stave);
-      });
-    }
+      if (card.treble || (card.clef === 'treble' && card.notes)) {
+        const notes = card.treble || card.notes;
+        const staveNote = createStaveNote(notes, 'treble', isCurrentNote);
+        trebleNotes.push(staveNote);
+      } else if (card.clef === 'bass' || card.bass) {
+        // This note is for bass clef only, add rest to treble
+        trebleNotes.push(new StaveNote({ clef: 'treble', keys: ['b/4'], duration: 'qr' }));
+      } else {
+        // No specific clef, add rest
+        trebleNotes.push(new StaveNote({ clef: 'treble', keys: ['b/4'], duration: 'qr' }));
+      }
+
+      if (card.bass || (card.clef === 'bass' && card.notes)) {
+        const notes = card.bass || card.notes;
+        const staveNote = createStaveNote(notes, 'bass', isCurrentNote);
+        bassNotes.push(staveNote);
+      } else if (card.clef === 'treble' || card.treble) {
+        // This note is for treble clef only, add rest to bass
+        bassNotes.push(new StaveNote({ clef: 'bass', keys: ['d/3'], duration: 'qr' }));
+      } else {
+        // No specific clef, add rest
+        bassNotes.push(new StaveNote({ clef: 'bass', keys: ['d/3'], duration: 'qr' }));
+      }
+    });
+
+    // Create voices
+    const trebleVoice = new Voice({ num_beats: 4, beat_value: 4 });
+    trebleVoice.addTickables(trebleNotes);
+
+    const bassVoice = new Voice({ num_beats: 4, beat_value: 4 });
+    bassVoice.addTickables(bassNotes);
+
+    // Format and draw
+    const formatter = new Formatter();
+    formatter.joinVoices([trebleVoice, bassVoice]);
+    formatter.format([trebleVoice], 400);
+    formatter.format([bassVoice], 400);
+
+    trebleVoice.draw(context, trebleStave);
+    bassVoice.draw(context, bassStave);
   };
 
-  const createStaveNotes = (notes, clef) => {
-    if (!notes || notes.length === 0) return [];
+  const createStaveNote = (notes, clef, isCurrentNote = false) => {
+    if (!notes || notes.length === 0) {
+      return new StaveNote({ clef: clef, keys: [clef === 'treble' ? 'b/4' : 'd/3'], duration: 'qr' });
+    }
 
     // Convert notes to VexFlow format
     const vexflowNotes = notes.map(note => {
@@ -230,11 +301,10 @@ const FlashcardSession = ({ deck, onSessionComplete }) => {
     const staveNote = new StaveNote({
       clef: clef,
       keys: vexflowNotes,
-      duration: 'w'
+      duration: 'q' // Quarter note
     });
 
     // Add accidentals
-    // Note: VexFlow 5.0 uses addModifier(modifier, index) parameter order
     notes.forEach((note, index) => {
       if (note.note.includes('#')) {
         staveNote.addModifier(new Accidental('#'), index);
@@ -243,7 +313,15 @@ const FlashcardSession = ({ deck, onSessionComplete }) => {
       }
     });
 
-    return [staveNote];
+    // Highlight current note
+    if (isCurrentNote) {
+      staveNote.setStyle({
+        fillStyle: '#f59e0b', // Orange for current note
+        strokeStyle: '#f59e0b'
+      });
+    }
+
+    return staveNote;
   };
 
   if (midiStatus === 'error') {
@@ -272,8 +350,16 @@ const FlashcardSession = ({ deck, onSessionComplete }) => {
       <div className="flex justify-between items-center bg-buretto-light p-4 rounded-lg">
         <div className="flex items-center space-x-6">
           <div className="text-center">
-            <div className="text-2xl font-bold text-buretto-primary">{score}</div>
-            <div className="text-sm text-buretto-accent">Cards</div>
+            <div className="text-2xl font-bold text-green-600">{notesCorrect}</div>
+            <div className="text-sm text-buretto-accent">Correct</div>
+          </div>
+          <div className="text-center">
+            <div className="text-2xl font-bold text-red-600">{mistakes}</div>
+            <div className="text-sm text-buretto-accent">Mistakes</div>
+          </div>
+          <div className="text-center">
+            <div className="text-2xl font-bold text-buretto-primary">{notesCorrect - mistakes}</div>
+            <div className="text-sm text-buretto-accent">Score</div>
           </div>
           <div className="text-center">
             <div className="flex items-center justify-center space-x-3 mb-1">
@@ -310,7 +396,7 @@ const FlashcardSession = ({ deck, onSessionComplete }) => {
             )}
           </div>
           <div className="text-sm text-buretto-accent">
-            Goal: 60+ to pass
+            Goal: 45+ to pass
           </div>
         </div>
       </div>
@@ -320,7 +406,7 @@ const FlashcardSession = ({ deck, onSessionComplete }) => {
       <div className="bg-white border-2 border-gray-200 rounded-lg p-6">
         <div className="text-center mb-4">
           <h3 className="text-lg font-semibold text-buretto-primary">
-            Play the note(s) shown below
+            Play the notes shown - one bar at a time
           </h3>
           <p className="text-sm text-buretto-accent">
             {deck.practiceTypeName} - {deck.difficultyName}
@@ -336,8 +422,8 @@ const FlashcardSession = ({ deck, onSessionComplete }) => {
       {/* Instructions */}
       <div className="bg-blue-50 border border-blue-200 p-4 rounded-lg">
         <p className="text-sm text-blue-700 text-center mb-3">
-          Play all the notes shown simultaneously on your MIDI keyboard.
-          Correct answers will automatically advance to the next card.
+          Play the notes at your own pace. Each correct answer advances to the next bar.
+          Wrong notes count as mistakes and deduct from your final score.
         </p>
         <div className="flex justify-center space-x-3">
           <button
