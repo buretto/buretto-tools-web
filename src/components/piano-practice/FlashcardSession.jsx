@@ -284,8 +284,25 @@ const FlashcardSession = ({ deck, onSessionComplete }) => {
       return new StaveNote({ clef: clef, keys: [clef === 'treble' ? 'b/4' : 'd/3'], duration: 'qr' });
     }
 
+    // Helper to convert note to MIDI number for sorting
+    const noteToMidiForSort = (note) => {
+      const noteValues = {
+        'C': 0, 'C#': 1, 'Db': 1,
+        'D': 2, 'D#': 3, 'Eb': 3,
+        'E': 4,
+        'F': 5, 'F#': 6, 'Gb': 6,
+        'G': 7, 'G#': 8, 'Ab': 8,
+        'A': 9, 'A#': 10, 'Bb': 10,
+        'B': 11
+      };
+      return (note.octave + 1) * 12 + noteValues[note.note];
+    };
+
+    // Sort notes by pitch (VexFlow requires this for chords)
+    const sortedNotes = [...notes].sort((a, b) => noteToMidiForSort(a) - noteToMidiForSort(b));
+
     // Convert notes to VexFlow format
-    const vexflowNotes = notes.map(note => {
+    const vexflowNotes = sortedNotes.map(note => {
       let vexNote = `${note.note}`;
 
       // Handle accidentals
@@ -304,8 +321,8 @@ const FlashcardSession = ({ deck, onSessionComplete }) => {
       duration: 'q' // Quarter note
     });
 
-    // Add accidentals
-    notes.forEach((note, index) => {
+    // Add accidentals (maintain sorted order)
+    sortedNotes.forEach((note, index) => {
       if (note.note.includes('#')) {
         staveNote.addModifier(new Accidental('#'), index);
       } else if (note.note.includes('b')) {

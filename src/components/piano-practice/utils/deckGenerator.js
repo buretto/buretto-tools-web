@@ -26,8 +26,11 @@ class DeckGenerator {
     this.scale = deckConfig.scale;
     this.practiceType = deckConfig.practiceType;
     this.difficulty = deckConfig.difficulty;
-    this.hands = deckConfig.hands;
     this.range = deckConfig.range;
+    this.hand = deckConfig.hand || 'both';
+    this.inversion = deckConfig.inversion || 'root';
+    this.simultaneousPlay = deckConfig.simultaneousPlay || [];
+    this.supportsInversions = deckConfig.supportsInversions || false;
   }
 
   generateDeck(size = 100) {
@@ -36,7 +39,13 @@ class DeckGenerator {
     const octaveRange = OCTAVE_RANGES[this.difficulty];
 
     for (let i = 0; i < size; i++) {
-      const card = this.generateCard(scaleNotes, octaveRange);
+      let card = this.generateCard(scaleNotes, octaveRange);
+
+      // Apply simultaneous play notes if configured (sight reading mode)
+      if (this.simultaneousPlay && this.simultaneousPlay.length > 0) {
+        card = this.addSimultaneousPlayNotes(card, scaleNotes, octaveRange);
+      }
+
       deck.push(card);
     }
 
@@ -47,14 +56,23 @@ class DeckGenerator {
     switch (this.practiceType) {
       case 'single-notes':
         return this.generateSingleNote(scaleNotes, octaveRange);
+      case 'intervals-basic':
+        return this.generateBasicInterval(scaleNotes, octaveRange);
+      case 'intervals-advanced':
+        return this.generateAdvancedInterval(scaleNotes, octaveRange);
+      case 'triads':
+        return this.generateTriad(scaleNotes, octaveRange);
+      case 'sevenths':
+        return this.generateSeventhChord(scaleNotes, octaveRange);
+      // Legacy support for old practice types
       case 'intervals-one-hand':
-        return this.generateInterval(scaleNotes, octaveRange, false);
+        return this.generateBasicInterval(scaleNotes, octaveRange);
       case 'chords-one-hand':
         return this.generateChord(scaleNotes, octaveRange, false);
       case 'single-notes-both-hands':
         return this.generateSingleNote(scaleNotes, octaveRange, true);
       case 'intervals-both-hands':
-        return this.generateInterval(scaleNotes, octaveRange, true);
+        return this.generateBasicInterval(scaleNotes, octaveRange);
       case 'multi-notes-both-hands':
         return this.generateMultiNotes(scaleNotes, octaveRange);
       default:
@@ -62,10 +80,10 @@ class DeckGenerator {
     }
   }
 
-  generateSingleNote(scaleNotes, octaveRange, bothHands = false) {
+  generateSingleNote(scaleNotes, octaveRange) {
     const note = this.getRandomNote(scaleNotes);
 
-    if (bothHands) {
+    if (this.hand === 'both') {
       const trebleOctave = this.getRandomOctave(octaveRange.treble);
       const bassOctave = this.getRandomOctave(octaveRange.bass);
 
@@ -79,7 +97,7 @@ class DeckGenerator {
         ]
       };
     } else {
-      const clef = Math.random() > 0.5 ? 'treble' : 'bass';
+      const clef = this.hand === 'left' ? 'bass' : this.hand === 'right' ? 'treble' : (Math.random() > 0.5 ? 'treble' : 'bass');
       const octave = this.getRandomOctave(octaveRange[clef]);
 
       return {
@@ -190,6 +208,244 @@ class DeckGenerator {
         ...bassNotes.map(({ note, octave }) => this.noteToMidi(note, octave))
       ]
     };
+  }
+
+  generateBasicInterval(scaleNotes, octaveRange) {
+    // Basic intervals: 2nd, 3rd, 4th, 5th, Octave
+    const basicIntervalSizes = [1, 2, 3, 4, 7]; // In scale degrees (0-indexed becomes 2nd, 3rd, 4th, 5th, octave)
+    const intervalSize = basicIntervalSizes[Math.floor(Math.random() * basicIntervalSizes.length)];
+
+    const rootNoteIndex = Math.floor(Math.random() * scaleNotes.length);
+    const note1 = scaleNotes[rootNoteIndex];
+    const note2 = scaleNotes[(rootNoteIndex + intervalSize) % scaleNotes.length];
+
+    const clef = this.hand === 'left' ? 'bass' : this.hand === 'right' ? 'treble' : (Math.random() > 0.5 ? 'treble' : 'bass');
+    const octave = this.getRandomOctave(octaveRange[clef]);
+    const octave2 = intervalSize === 7 ? octave + 1 : octave; // Octave interval goes up an octave
+
+    return {
+      type: 'interval-basic',
+      clef,
+      notes: [
+        { note: note1, octave },
+        { note: note2, octave: octave2 }
+      ],
+      expectedNotes: [
+        this.noteToMidi(note1, octave),
+        this.noteToMidi(note2, octave2)
+      ]
+    };
+  }
+
+  generateAdvancedInterval(scaleNotes, octaveRange) {
+    // Advanced intervals: 6th, 7th, 9th, 10th
+    const advancedIntervalSizes = [5, 6, 8, 9]; // Scale degrees for 6th, 7th, 9th, 10th
+    const intervalSize = advancedIntervalSizes[Math.floor(Math.random() * advancedIntervalSizes.length)];
+
+    const rootNoteIndex = Math.floor(Math.random() * scaleNotes.length);
+    const note1 = scaleNotes[rootNoteIndex];
+    const note2Index = (rootNoteIndex + intervalSize) % scaleNotes.length;
+    const note2 = scaleNotes[note2Index];
+
+    const clef = this.hand === 'left' ? 'bass' : this.hand === 'right' ? 'treble' : (Math.random() > 0.5 ? 'treble' : 'bass');
+    const octave = this.getRandomOctave(octaveRange[clef]);
+    const octave2 = intervalSize >= 7 ? octave + 1 : octave; // 9th and 10th go up an octave
+
+    return {
+      type: 'interval-advanced',
+      clef,
+      notes: [
+        { note: note1, octave },
+        { note: note2, octave: octave2 }
+      ],
+      expectedNotes: [
+        this.noteToMidi(note1, octave),
+        this.noteToMidi(note2, octave2)
+      ]
+    };
+  }
+
+  generateTriad(scaleNotes, octaveRange) {
+    // Generate a triad from scale degrees (I, ii, iii, IV, V, vi, vii°)
+    const rootIndex = Math.floor(Math.random() * scaleNotes.length);
+    const root = scaleNotes[rootIndex];
+    const third = scaleNotes[(rootIndex + 2) % scaleNotes.length];
+    const fifth = scaleNotes[(rootIndex + 4) % scaleNotes.length];
+
+    let chordNotes = [
+      { note: root, degree: 0 },
+      { note: third, degree: 2 },
+      { note: fifth, degree: 4 }
+    ];
+
+    // Apply inversion
+    chordNotes = this.applyInversion(chordNotes, 'triad');
+
+    const clef = this.hand === 'left' ? 'bass' : this.hand === 'right' ? 'treble' : (Math.random() > 0.5 ? 'treble' : 'bass');
+    const baseOctave = this.getRandomOctave(octaveRange[clef]);
+
+    const notesWithOctaves = chordNotes.map((n, idx) => ({
+      note: n.note,
+      octave: baseOctave + (n.octaveAdjust || 0)
+    }));
+
+    return {
+      type: 'triad',
+      clef,
+      notes: notesWithOctaves,
+      expectedNotes: notesWithOctaves.map(({ note, octave }) => this.noteToMidi(note, octave))
+    };
+  }
+
+  generateSeventhChord(scaleNotes, octaveRange) {
+    // Generate a 7th chord from scale degrees
+    const rootIndex = Math.floor(Math.random() * scaleNotes.length);
+    const root = scaleNotes[rootIndex];
+    const third = scaleNotes[(rootIndex + 2) % scaleNotes.length];
+    const fifth = scaleNotes[(rootIndex + 4) % scaleNotes.length];
+    const seventh = scaleNotes[(rootIndex + 6) % scaleNotes.length];
+
+    let chordNotes = [
+      { note: root, degree: 0 },
+      { note: third, degree: 2 },
+      { note: fifth, degree: 4 },
+      { note: seventh, degree: 6 }
+    ];
+
+    // Apply inversion
+    chordNotes = this.applyInversion(chordNotes, 'seventh');
+
+    const clef = this.hand === 'left' ? 'bass' : this.hand === 'right' ? 'treble' : (Math.random() > 0.5 ? 'treble' : 'bass');
+    const baseOctave = this.getRandomOctave(octaveRange[clef]);
+
+    const notesWithOctaves = chordNotes.map((n, idx) => ({
+      note: n.note,
+      octave: baseOctave + (n.octaveAdjust || 0)
+    }));
+
+    return {
+      type: 'seventh',
+      clef,
+      notes: notesWithOctaves,
+      expectedNotes: notesWithOctaves.map(({ note, octave }) => this.noteToMidi(note, octave))
+    };
+  }
+
+  applyInversion(chordNotes, chordType) {
+    // chordNotes is an array of {note, degree}
+    // Returns same array with octaveAdjust property added
+
+    if (this.inversion === 'root' || this.inversion === 'all' && Math.random() < 0.25) {
+      // Root position - no changes
+      return chordNotes.map(n => ({ ...n, octaveAdjust: 0 }));
+    }
+
+    let inversionType = this.inversion;
+    if (this.inversion === 'all') {
+      // Randomly choose an inversion
+      const options = chordType === 'seventh' ? ['first', 'second', 'third'] : ['first', 'second'];
+      inversionType = options[Math.floor(Math.random() * options.length)];
+    }
+
+    const result = [...chordNotes];
+
+    if (inversionType === 'first') {
+      // Move root up an octave
+      result[0].octaveAdjust = 1;
+      return result.slice(1).concat(result[0]);
+    } else if (inversionType === 'second') {
+      // Move root and third up an octave
+      result[0].octaveAdjust = 1;
+      result[1].octaveAdjust = 1;
+      return result.slice(2).concat(result[0], result[1]);
+    } else if (inversionType === 'third' && chordType === 'seventh') {
+      // Move root, third, and fifth up an octave (7th chords only)
+      result[0].octaveAdjust = 1;
+      result[1].octaveAdjust = 1;
+      result[2].octaveAdjust = 1;
+      return result.slice(3).concat(result[0], result[1], result[2]);
+    }
+
+    return result.map(n => ({ ...n, octaveAdjust: 0 }));
+  }
+
+  addSimultaneousPlayNotes(card, scaleNotes, octaveRange) {
+    // For sight reading mode: randomly add notes to the opposite hand
+    // Only apply if simultaneousPlay is configured and we're not already playing both hands
+    if (!this.simultaneousPlay || this.simultaneousPlay.length === 0) {
+      return card;
+    }
+
+    // Don't apply if card already has both hands playing
+    if (card.treble && card.bass) {
+      return card;
+    }
+
+    // Randomly decide whether to add simultaneous notes (50% chance)
+    if (Math.random() < 0.5) {
+      return card;
+    }
+
+    // Determine which hand to add notes to (opposite of current)
+    const addToTreble = card.clef === 'bass' || card.bass;
+    const addToBass = card.clef === 'treble' || card.treble;
+
+    // Pick the highest level from simultaneousPlay settings
+    const maxLevel = Math.max(...this.simultaneousPlay.map(sp => {
+      if (sp === 'single-notes') return 1;
+      if (sp === 'intervals') return 2;
+      if (sp === 'chords') return 3;
+      return 0;
+    }));
+
+    // Randomly choose what to add (weighted towards simpler options)
+    const rand = Math.random();
+    let addType;
+    if (maxLevel >= 3 && rand < 0.2) {
+      addType = 'chord';
+    } else if (maxLevel >= 2 && rand < 0.5) {
+      addType = 'interval';
+    } else {
+      addType = 'single';
+    }
+
+    // Generate the additional notes
+    let additionalNotes = [];
+    if (addType === 'single') {
+      const note = this.getRandomNote(scaleNotes);
+      const octave = this.getRandomOctave(addToTreble ? octaveRange.treble : octaveRange.bass);
+      additionalNotes = [{ note, octave }];
+    } else if (addType === 'interval') {
+      const note1 = this.getRandomNote(scaleNotes);
+      const note2 = this.getRandomNote(scaleNotes);
+      const octave = this.getRandomOctave(addToTreble ? octaveRange.treble : octaveRange.bass);
+      additionalNotes = [
+        { note: note1, octave },
+        { note: note2, octave }
+      ];
+    } else if (addType === 'chord') {
+      const chordNotes = this.getRandomChordNotes(scaleNotes).slice(0, 3);
+      const octave = this.getRandomOctave(addToTreble ? octaveRange.treble : octaveRange.bass);
+      additionalNotes = chordNotes.map(note => ({ note, octave }));
+    }
+
+    // Add the notes to the appropriate clef
+    const updatedCard = { ...card };
+    if (addToTreble) {
+      updatedCard.treble = additionalNotes;
+      updatedCard.expectedNotes = [
+        ...card.expectedNotes,
+        ...additionalNotes.map(({ note, octave }) => this.noteToMidi(note, octave))
+      ];
+    } else if (addToBass) {
+      updatedCard.bass = additionalNotes;
+      updatedCard.expectedNotes = [
+        ...card.expectedNotes,
+        ...additionalNotes.map(({ note, octave }) => this.noteToMidi(note, octave))
+      ];
+    }
+
+    return updatedCard;
   }
 
   getRandomNote(scaleNotes) {

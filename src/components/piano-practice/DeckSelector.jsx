@@ -9,12 +9,31 @@ const SCALES = [
 ];
 
 const PRACTICE_TYPES = [
-  { id: 'single-notes', name: 'Single Notes', hands: 'one' },
-  { id: 'intervals-one-hand', name: 'Intervals (One Hand)', hands: 'one' },
-  { id: 'chords-one-hand', name: 'Chords (One Hand)', hands: 'one' },
-  { id: 'single-notes-both-hands', name: 'Single Notes (Both Hands)', hands: 'both' },
-  { id: 'intervals-both-hands', name: 'Intervals (Both Hands)', hands: 'both' },
-  { id: 'multi-notes-both-hands', name: 'Multi-Notes (Both Hands)', hands: 'both' }
+  { id: 'single-notes', name: 'Single Notes', description: 'One note at a time', supportsInversions: false },
+  { id: 'intervals-basic', name: 'Intervals (Basic)', description: '2nds, 3rds, 4ths, 5ths, Octaves', supportsInversions: false },
+  { id: 'triads', name: 'Triads', description: 'Three-note chords from scale', supportsInversions: true },
+  { id: 'sevenths', name: '7th Chords', description: 'Four-note seventh chords', supportsInversions: true },
+  { id: 'intervals-advanced', name: 'Intervals (Advanced)', description: '6ths, 7ths, 9ths, 10ths', supportsInversions: false }
+];
+
+const INVERSION_OPTIONS = [
+  { id: 'root', name: 'Root Position', description: 'Root note in bass' },
+  { id: 'first', name: '1st Inversion', description: '3rd in bass' },
+  { id: 'second', name: '2nd Inversion', description: '5th in bass' },
+  { id: 'third', name: '3rd Inversion', description: '7th in bass (7th chords only)' },
+  { id: 'all', name: 'All Inversions', description: 'Random inversions' }
+];
+
+const HAND_OPTIONS = [
+  { id: 'left', name: 'Left Hand Only', description: 'Bass clef only' },
+  { id: 'right', name: 'Right Hand Only', description: 'Treble clef only' },
+  { id: 'both', name: 'Both Hands', description: 'Both clefs' }
+];
+
+const SIMULTANEOUS_PLAY_OPTIONS = [
+  { id: 'single-notes', name: 'Single Notes', description: 'Add single notes in other hand', level: 1 },
+  { id: 'intervals', name: 'Intervals', description: 'Add intervals in other hand', level: 2 },
+  { id: 'chords', name: 'Chords', description: 'Add chords in other hand', level: 3 }
 ];
 
 const DIFFICULTY_LEVELS = [
@@ -37,9 +56,46 @@ const BPM_OPTIONS = [
   { id: 'fast', bpm: 120, name: '120 BPM', description: 'Fast, performance tempo', goal: { beats: 108, accuracy: 0.9 } }
 ];
 
+// Helper function to generate consistent deck keys for progress tracking
+const generateDeckKey = (deck) => {
+  const parts = [
+    deck.scale,
+    deck.practiceType,
+    deck.difficulty,
+  ];
+
+  // Add inversion if applicable
+  if (deck.supportsInversions || deck.inversion) {
+    parts.push(deck.inversion || 'root');
+  }
+
+  // Add hand setting
+  parts.push(deck.hand || 'both');
+
+  // Add simultaneous play if it's an array with items
+  if (Array.isArray(deck.simultaneousPlay) && deck.simultaneousPlay.length > 0) {
+    parts.push(deck.simultaneousPlay.sort().join('-'));
+  } else if (deck.simultaneousPlay) {
+    parts.push('none');
+  }
+
+  // Add rhythm pattern and BPM for sight reading
+  if (deck.rhythmPattern) {
+    parts.push(deck.rhythmPattern);
+  }
+  if (deck.bpm) {
+    parts.push(deck.bpm.toString());
+  }
+
+  return parts.join('-');
+};
+
 const DeckSelector = ({ onDeckSelected, unlockedLevels, onResetSession, mode = 'flashcards' }) => {
   const [selectedScale, setSelectedScale] = useState(null);
   const [selectedPracticeType, setSelectedPracticeType] = useState(null);
+  const [selectedInversion, setSelectedInversion] = useState(null);
+  const [selectedHand, setSelectedHand] = useState(null);
+  const [selectedSimultaneousPlay, setSelectedSimultaneousPlay] = useState([]);
   const [selectedRhythmPattern, setSelectedRhythmPattern] = useState(null);
   const [selectedBPM, setSelectedBPM] = useState(null);
   const [showPastResults, setShowPastResults] = useState(false);
@@ -48,14 +104,57 @@ const DeckSelector = ({ onDeckSelected, unlockedLevels, onResetSession, mode = '
   const handleScaleSelect = (scale) => {
     setSelectedScale(scale);
     setSelectedPracticeType(null);
+    setSelectedInversion(null);
+    setSelectedHand(null);
+    setSelectedSimultaneousPlay([]);
     setSelectedRhythmPattern(null);
     setSelectedBPM(null);
   };
 
   const handlePracticeTypeSelect = (practiceType) => {
     setSelectedPracticeType(practiceType);
+    // Reset inversion if new practice type doesn't support it
+    if (!practiceType.supportsInversions) {
+      setSelectedInversion(null);
+    }
+    setSelectedHand(null);
+    setSelectedSimultaneousPlay([]);
     setSelectedRhythmPattern(null);
     setSelectedBPM(null);
+  };
+
+  const handleInversionSelect = (inversion) => {
+    setSelectedInversion(inversion);
+  };
+
+  const handleHandSelect = (hand) => {
+    setSelectedHand(hand);
+  };
+
+  const handleSimultaneousPlayToggle = (optionId) => {
+    const option = SIMULTANEOUS_PLAY_OPTIONS.find(opt => opt.id === optionId);
+    if (!option) return;
+
+    setSelectedSimultaneousPlay(prev => {
+      const isCurrentlySelected = prev.includes(optionId);
+
+      if (isCurrentlySelected) {
+        // Remove this option and all higher-level options
+        return prev.filter(id => {
+          const opt = SIMULTANEOUS_PLAY_OPTIONS.find(o => o.id === id);
+          return opt.level < option.level;
+        });
+      } else {
+        // Add this option and all lower-level options
+        const newSelection = new Set(prev);
+        SIMULTANEOUS_PLAY_OPTIONS.forEach(opt => {
+          if (opt.level <= option.level) {
+            newSelection.add(opt.id);
+          }
+        });
+        return Array.from(newSelection);
+      }
+    });
   };
 
   const handleRhythmPatternSelect = (rhythmPattern) => {
@@ -75,8 +174,14 @@ const DeckSelector = ({ onDeckSelected, unlockedLevels, onResetSession, mode = '
       difficulty: difficulty.id,
       difficultyName: difficulty.name,
       difficultyIndex: difficultyIndex,
-      hands: selectedPracticeType.hands,
-      range: difficulty.range
+      range: difficulty.range,
+      // New settings
+      inversion: selectedInversion?.id || 'root',
+      inversionName: selectedInversion?.name || 'Root Position',
+      hand: selectedHand?.id || 'both',
+      handName: selectedHand?.name || 'Both Hands',
+      simultaneousPlay: selectedSimultaneousPlay.length > 0 ? selectedSimultaneousPlay : [],
+      supportsInversions: selectedPracticeType.supportsInversions
     };
 
     // Add rhythm pattern and BPM for sight reading mode
@@ -196,7 +301,7 @@ const DeckSelector = ({ onDeckSelected, unlockedLevels, onResetSession, mode = '
       {selectedScale && (
         <div className="space-y-4">
           <h3 className="text-lg font-semibold text-buretto-primary">
-            2. Choose Practice Type
+            2. Choose Note Type
           </h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {PRACTICE_TYPES.map((type) => {
@@ -223,7 +328,7 @@ const DeckSelector = ({ onDeckSelected, unlockedLevels, onResetSession, mode = '
                     )}
                   </div>
                   <div className="text-sm opacity-75">
-                    {type.hands === 'one' ? 'Single hand/clef' : 'Both hands/clefs'}
+                    {type.description}
                   </div>
                   {showMastery && (
                     <div className="mt-2 text-xs opacity-60">
@@ -237,11 +342,125 @@ const DeckSelector = ({ onDeckSelected, unlockedLevels, onResetSession, mode = '
         </div>
       )}
 
-      {/* Step 3: Difficulty Level Selection (Flashcards only) */}
-      {mode !== 'sight-reading' && selectedScale && selectedPracticeType && (
+      {/* Step 3: Inversion Selection (Chords only) */}
+      {selectedScale && selectedPracticeType && (
         <div className="space-y-4">
           <h3 className="text-lg font-semibold text-buretto-primary">
-            3. Choose Difficulty Level
+            3. Choose Inversion {!selectedPracticeType.supportsInversions && '(Not applicable)'}
+          </h3>
+          {!selectedPracticeType.supportsInversions ? (
+            <div className="p-4 bg-gray-100 rounded-lg border-2 border-gray-300 text-gray-500">
+              <p className="text-sm">
+                Inversions only apply to chords (Triads and 7th Chords). Single notes and intervals don't have inversions.
+              </p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+              {INVERSION_OPTIONS.map((inversion) => {
+                // Hide 3rd inversion for triads
+                if (inversion.id === 'third' && selectedPracticeType.id === 'triads') {
+                  return null;
+                }
+
+                return (
+                  <button
+                    key={inversion.id}
+                    onClick={() => handleInversionSelect(inversion)}
+                    className={`p-4 rounded-lg border-2 text-left transition-colors ${
+                      selectedInversion?.id === inversion.id
+                        ? 'border-buretto-secondary bg-buretto-secondary text-white'
+                        : 'border-gray-300 hover:border-buretto-secondary'
+                    }`}
+                  >
+                    <div className="font-medium mb-1">{inversion.name}</div>
+                    <div className="text-xs opacity-75">{inversion.description}</div>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Step 4: Hand Selection */}
+      {selectedScale && selectedPracticeType && (
+        <div className="space-y-4">
+          <h3 className="text-lg font-semibold text-buretto-primary">
+            4. Choose Hand
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            {HAND_OPTIONS.map((hand) => (
+              <button
+                key={hand.id}
+                onClick={() => handleHandSelect(hand)}
+                className={`p-4 rounded-lg border-2 text-left transition-colors ${
+                  selectedHand?.id === hand.id
+                    ? 'border-buretto-secondary bg-buretto-secondary text-white'
+                    : 'border-gray-300 hover:border-buretto-secondary'
+                }`}
+              >
+                <div className="font-medium mb-1">{hand.name}</div>
+                <div className="text-sm opacity-75">{hand.description}</div>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Step 5: Simultaneous Playing (Sight Reading Only) */}
+      {mode === 'sight-reading' && selectedScale && selectedPracticeType && selectedHand && (
+        <div className="space-y-4">
+          <h3 className="text-lg font-semibold text-buretto-primary">
+            5. Simultaneous Playing (Other Hand)
+          </h3>
+          <p className="text-sm text-gray-600 mb-3">
+            Add notes in the other hand to increase difficulty. Higher levels include all lower levels.
+          </p>
+          <div className="space-y-2">
+            {SIMULTANEOUS_PLAY_OPTIONS.map((option) => {
+              const isSelected = selectedSimultaneousPlay.includes(option.id);
+              const isDisabled = option.level > 1 && !selectedSimultaneousPlay.some(id => {
+                const opt = SIMULTANEOUS_PLAY_OPTIONS.find(o => o.id === id);
+                return opt && opt.level === option.level - 1;
+              });
+
+              return (
+                <label
+                  key={option.id}
+                  className={`flex items-start space-x-3 p-3 rounded-lg border-2 cursor-pointer transition-colors ${
+                    isSelected
+                      ? 'border-buretto-secondary bg-buretto-secondary bg-opacity-10'
+                      : isDisabled
+                      ? 'border-gray-200 bg-gray-50 opacity-50 cursor-not-allowed'
+                      : 'border-gray-300 hover:border-buretto-secondary'
+                  }`}
+                >
+                  <input
+                    type="checkbox"
+                    checked={isSelected}
+                    onChange={() => !isDisabled && handleSimultaneousPlayToggle(option.id)}
+                    disabled={isDisabled}
+                    className="mt-1"
+                  />
+                  <div className="flex-1">
+                    <div className="font-medium text-buretto-primary">{option.name}</div>
+                    <div className="text-sm text-gray-600">{option.description}</div>
+                  </div>
+                </label>
+              );
+            })}
+          </div>
+          <p className="text-xs text-gray-500 italic">
+            Note: Selecting "None" (no checkboxes) means only the primary hand plays.
+          </p>
+        </div>
+      )}
+
+      {/* Step 5: Difficulty Level Selection (Flashcards Only) */}
+      {mode !== 'sight-reading' && selectedScale && selectedPracticeType && selectedHand && (
+        <div className="space-y-4">
+          <h3 className="text-lg font-semibold text-buretto-primary">
+            5. Choose Difficulty & Start
           </h3>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
             {DIFFICULTY_LEVELS.map((difficulty, index) => {
@@ -282,11 +501,11 @@ const DeckSelector = ({ onDeckSelected, unlockedLevels, onResetSession, mode = '
         </div>
       )}
 
-      {/* Step 3: Rhythm Pattern Selection (Sight Reading Only) */}
-      {mode === 'sight-reading' && selectedScale && selectedPracticeType && (
+      {/* Step 6: Rhythm Pattern Selection (Sight Reading Only) */}
+      {mode === 'sight-reading' && selectedScale && selectedPracticeType && selectedHand && (
         <div className="space-y-4">
           <h3 className="text-lg font-semibold text-buretto-primary">
-            3. Choose Rhythm Pattern
+            6. Choose Rhythm Pattern
           </h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {RHYTHM_PATTERNS.map((pattern) => {
@@ -347,11 +566,11 @@ const DeckSelector = ({ onDeckSelected, unlockedLevels, onResetSession, mode = '
         </div>
       )}
 
-      {/* Step 4: BPM Selection for Sight Reading */}
-      {mode === 'sight-reading' && selectedScale && selectedPracticeType && selectedRhythmPattern && (
+      {/* Step 7: BPM Selection for Sight Reading */}
+      {mode === 'sight-reading' && selectedScale && selectedPracticeType && selectedHand && selectedRhythmPattern && (
         <div className="space-y-4">
           <h3 className="text-lg font-semibold text-buretto-primary">
-            4. Choose Tempo (BPM)
+            7. Choose Tempo (BPM)
           </h3>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
             {BPM_OPTIONS.map((bpmOption) => {
@@ -412,11 +631,11 @@ const DeckSelector = ({ onDeckSelected, unlockedLevels, onResetSession, mode = '
         </div>
       )}
 
-      {/* Step 5: Difficulty Selection for Sight Reading */}
-      {mode === 'sight-reading' && selectedScale && selectedPracticeType && selectedRhythmPattern && selectedBPM && (
+      {/* Step 8: Difficulty Selection for Sight Reading */}
+      {mode === 'sight-reading' && selectedScale && selectedPracticeType && selectedHand && selectedRhythmPattern && selectedBPM && (
         <div className="space-y-4">
           <h3 className="text-lg font-semibold text-buretto-primary">
-            5. Choose Difficulty & Start
+            8. Choose Difficulty & Start
           </h3>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
             {DIFFICULTY_LEVELS.map((difficulty, index) => {
@@ -487,25 +706,47 @@ const DeckSelector = ({ onDeckSelected, unlockedLevels, onResetSession, mode = '
           <h4 className="font-semibold text-buretto-primary mb-2">
             Current Selection:
           </h4>
-          <p className="text-buretto-accent">
-            <span className="font-medium">{selectedScale}</span> scale -
-            <span className="font-medium"> {selectedPracticeType.name}</span>
-            {mode === 'sight-reading' && selectedRhythmPattern && (
-              <span> - <span className="font-medium">{selectedRhythmPattern.name}</span></span>
+          <div className="space-y-1">
+            <p className="text-buretto-accent">
+              <span className="font-medium">{selectedScale}</span> scale -
+              <span className="font-medium"> {selectedPracticeType.name}</span>
+              {selectedPracticeType.supportsInversions && selectedInversion && (
+                <span> - <span className="font-medium">{selectedInversion.name}</span></span>
+              )}
+              {selectedHand && (
+                <span> - <span className="font-medium">{selectedHand.name}</span></span>
+              )}
+            </p>
+            {mode === 'sight-reading' && (
+              <p className="text-buretto-accent text-sm">
+                {selectedSimultaneousPlay.length > 0 && (
+                  <span>Simultaneous: <span className="font-medium">{selectedSimultaneousPlay.map(sp => {
+                    const opt = SIMULTANEOUS_PLAY_OPTIONS.find(o => o.id === sp);
+                    return opt?.name;
+                  }).join(', ')}</span> | </span>
+                )}
+                {selectedRhythmPattern && (
+                  <span><span className="font-medium">{selectedRhythmPattern.name}</span> | </span>
+                )}
+                {selectedBPM && (
+                  <span><span className="font-medium">{selectedBPM.name}</span></span>
+                )}
+              </p>
             )}
-            {mode === 'sight-reading' && selectedBPM && (
-              <span> - <span className="font-medium">{selectedBPM.name}</span></span>
-            )}
-          </p>
-          <p className="text-sm text-gray-600 mt-1">
+          </div>
+          <p className="text-sm text-gray-600 mt-2">
             {mode === 'sight-reading' ? (
               selectedBPM ?
                 'Choose a difficulty level above to start your sight reading session' :
                 selectedRhythmPattern ?
                   'Choose a tempo (BPM) to continue' :
-                  'Choose a rhythm pattern to continue'
+                  selectedHand ?
+                    'Choose a rhythm pattern to continue' :
+                    'Choose your hand preference to continue'
             ) : (
-              'Choose a difficulty level above to start practicing'
+              selectedHand ?
+                'Choose a difficulty level above to start practicing' :
+                'Choose your hand preference to continue'
             )}
           </p>
         </div>
