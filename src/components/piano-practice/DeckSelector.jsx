@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Lock, Unlock, RotateCcw, TrendingUp, History, Award } from 'lucide-react';
 import { calculateMasteryPercentage, getHighScore, getResultsHistory } from './utils/resultsStorage';
 import PastResultsModal from './PastResultsModal';
@@ -9,11 +9,11 @@ const SCALES = [
 ];
 
 const PRACTICE_TYPES = [
-  { id: 'single-notes', name: 'Single Notes', description: 'One note at a time', supportsInversions: false },
-  { id: 'intervals-basic', name: 'Intervals (Basic)', description: '2nds, 3rds, 4ths, 5ths, Octaves', supportsInversions: false },
-  { id: 'triads', name: 'Triads', description: 'Three-note chords from scale', supportsInversions: true },
-  { id: 'sevenths', name: '7th Chords', description: 'Four-note seventh chords', supportsInversions: true },
-  { id: 'intervals-advanced', name: 'Intervals (Advanced)', description: '6ths, 7ths, 9ths, 10ths', supportsInversions: false }
+  { id: 'single-notes', name: 'Single Notes', description: 'One note at a time', supportsInversions: false, needsIntervalSelection: false },
+  { id: 'intervals-basic', name: 'Intervals (Basic)', description: 'Build up from 2nds to Octaves', supportsInversions: false, needsIntervalSelection: true, intervalType: 'basic' },
+  { id: 'triads', name: 'Triads', description: 'Three-note chords from scale', supportsInversions: true, needsIntervalSelection: false },
+  { id: 'sevenths', name: '7th Chords', description: 'Four-note seventh chords', supportsInversions: true, needsIntervalSelection: false },
+  { id: 'intervals-advanced', name: 'Intervals (Advanced)', description: 'Build up from 6ths to 10ths', supportsInversions: false, needsIntervalSelection: true, intervalType: 'advanced' }
 ];
 
 const INVERSION_OPTIONS = [
@@ -34,6 +34,21 @@ const SIMULTANEOUS_PLAY_OPTIONS = [
   { id: 'single-notes', name: 'Single Notes', description: 'Add single notes in other hand', level: 1 },
   { id: 'intervals', name: 'Intervals', description: 'Add intervals in other hand', level: 2 },
   { id: 'chords', name: 'Chords', description: 'Add chords in other hand', level: 3 }
+];
+
+const INTERVAL_BASIC_OPTIONS = [
+  { id: '2nd', name: '2nds', description: 'Second intervals', degree: 1, level: 1 },
+  { id: '3rd', name: '3rds', description: 'Third intervals', degree: 2, level: 2 },
+  { id: '4th', name: '4ths', description: 'Fourth intervals', degree: 3, level: 3 },
+  { id: '5th', name: '5ths', description: 'Fifth intervals', degree: 4, level: 4 },
+  { id: 'octave', name: 'Octaves', description: 'Octave intervals', degree: 7, level: 5 }
+];
+
+const INTERVAL_ADVANCED_OPTIONS = [
+  { id: '6th', name: '6ths', description: 'Sixth intervals', degree: 5, level: 1 },
+  { id: '7th', name: '7ths', description: 'Seventh intervals', degree: 6, level: 2 },
+  { id: '9th', name: '9ths', description: 'Ninth intervals', degree: 8, level: 3 },
+  { id: '10th', name: '10ths', description: 'Tenth intervals', degree: 9, level: 4 }
 ];
 
 const DIFFICULTY_LEVELS = [
@@ -69,6 +84,11 @@ const generateDeckKey = (deck) => {
     parts.push(deck.inversion || 'root');
   }
 
+  // Add interval selection if applicable
+  if (Array.isArray(deck.selectedIntervals) && deck.selectedIntervals.length > 0) {
+    parts.push(deck.selectedIntervals.sort().join('-'));
+  }
+
   // Add hand setting
   parts.push(deck.hand || 'both');
 
@@ -94,6 +114,7 @@ const DeckSelector = ({ onDeckSelected, unlockedLevels, onResetSession, mode = '
   const [selectedScale, setSelectedScale] = useState(null);
   const [selectedPracticeType, setSelectedPracticeType] = useState(null);
   const [selectedInversion, setSelectedInversion] = useState(null);
+  const [selectedIntervals, setSelectedIntervals] = useState([]);
   const [selectedHand, setSelectedHand] = useState(null);
   const [selectedSimultaneousPlay, setSelectedSimultaneousPlay] = useState([]);
   const [selectedRhythmPattern, setSelectedRhythmPattern] = useState(null);
@@ -101,26 +122,111 @@ const DeckSelector = ({ onDeckSelected, unlockedLevels, onResetSession, mode = '
   const [showPastResults, setShowPastResults] = useState(false);
   const [pastResultsDeck, setPastResultsDeck] = useState(null);
 
+  // Per-practice-type memory for inversions and intervals
+  const [practiceTypeMemory, setPracticeTypeMemory] = useState({});
+
+  // Restore last settings from localStorage on mount
+  useEffect(() => {
+    const storageKey = `piano-practice-last-settings-${mode}`;
+    const savedSettings = localStorage.getItem(storageKey);
+    if (savedSettings) {
+      try {
+        const settings = JSON.parse(savedSettings);
+        if (settings.selectedScale) setSelectedScale(settings.selectedScale);
+        if (settings.selectedPracticeType) {
+          const practiceType = PRACTICE_TYPES.find(pt => pt.id === settings.selectedPracticeType);
+          if (practiceType) setSelectedPracticeType(practiceType);
+        }
+        if (settings.selectedInversion) {
+          const inversion = INVERSION_OPTIONS.find(inv => inv.id === settings.selectedInversion);
+          if (inversion) setSelectedInversion(inversion);
+        }
+        if (settings.selectedIntervals) setSelectedIntervals(settings.selectedIntervals);
+        if (settings.selectedHand) {
+          const hand = HAND_OPTIONS.find(h => h.id === settings.selectedHand);
+          if (hand) setSelectedHand(hand);
+        }
+        if (settings.selectedSimultaneousPlay) setSelectedSimultaneousPlay(settings.selectedSimultaneousPlay);
+        if (settings.selectedRhythmPattern) {
+          const rhythm = RHYTHM_PATTERNS.find(r => r.id === settings.selectedRhythmPattern);
+          if (rhythm) setSelectedRhythmPattern(rhythm);
+        }
+        if (settings.selectedBPM) {
+          const bpm = BPM_OPTIONS.find(b => b.id === settings.selectedBPM);
+          if (bpm) setSelectedBPM(bpm);
+        }
+        // Restore per-practice-type memory
+        if (settings.practiceTypeMemory) setPracticeTypeMemory(settings.practiceTypeMemory);
+      } catch (e) {
+        console.error('Failed to restore settings:', e);
+      }
+    }
+  }, [mode]);
+
+  // Save settings to localStorage whenever they change
+  useEffect(() => {
+    const storageKey = `piano-practice-last-settings-${mode}`;
+    const settings = {
+      selectedScale,
+      selectedPracticeType: selectedPracticeType?.id || null,
+      selectedInversion: selectedInversion?.id || null,
+      selectedIntervals,
+      selectedHand: selectedHand?.id || null,
+      selectedSimultaneousPlay,
+      selectedRhythmPattern: selectedRhythmPattern?.id || null,
+      selectedBPM: selectedBPM?.id || null,
+      practiceTypeMemory
+    };
+    localStorage.setItem(storageKey, JSON.stringify(settings));
+  }, [mode, selectedScale, selectedPracticeType, selectedInversion, selectedIntervals, selectedHand, selectedSimultaneousPlay, selectedRhythmPattern, selectedBPM, practiceTypeMemory]);
+
   const handleScaleSelect = (scale) => {
     setSelectedScale(scale);
-    setSelectedPracticeType(null);
-    setSelectedInversion(null);
-    setSelectedHand(null);
-    setSelectedSimultaneousPlay([]);
-    setSelectedRhythmPattern(null);
-    setSelectedBPM(null);
+    // Don't reset other settings - let user keep their preferences
   };
 
   const handlePracticeTypeSelect = (practiceType) => {
-    setSelectedPracticeType(practiceType);
-    // Reset inversion if new practice type doesn't support it
-    if (!practiceType.supportsInversions) {
-      setSelectedInversion(null);
+    // Save current practice type's settings to memory before switching
+    if (selectedPracticeType) {
+      setPracticeTypeMemory(prev => ({
+        ...prev,
+        [selectedPracticeType.id]: {
+          inversion: selectedInversion?.id || null,
+          intervals: selectedIntervals
+        }
+      }));
     }
-    setSelectedHand(null);
-    setSelectedSimultaneousPlay([]);
-    setSelectedRhythmPattern(null);
-    setSelectedBPM(null);
+
+    setSelectedPracticeType(practiceType);
+
+    // Restore settings from memory for this practice type, if available
+    const memory = practiceTypeMemory[practiceType.id];
+    if (memory) {
+      // Restore inversion if this practice type supports inversions
+      if (practiceType.supportsInversions && memory.inversion) {
+        const inversion = INVERSION_OPTIONS.find(inv => inv.id === memory.inversion);
+        if (inversion) setSelectedInversion(inversion);
+      } else {
+        setSelectedInversion(null);
+      }
+
+      // Restore intervals if this practice type needs interval selection
+      if (practiceType.needsIntervalSelection && memory.intervals) {
+        setSelectedIntervals(memory.intervals);
+      } else {
+        setSelectedIntervals([]);
+      }
+    } else {
+      // No memory - reset to defaults
+      if (!practiceType.supportsInversions) {
+        setSelectedInversion(null);
+      }
+      if (!practiceType.needsIntervalSelection) {
+        setSelectedIntervals([]);
+      }
+    }
+
+    // Don't reset hand, simultaneous play, rhythm, or BPM - let user keep preferences
   };
 
   const handleInversionSelect = (inversion) => {
@@ -129,6 +235,35 @@ const DeckSelector = ({ onDeckSelected, unlockedLevels, onResetSession, mode = '
 
   const handleHandSelect = (hand) => {
     setSelectedHand(hand);
+  };
+
+  const handleIntervalToggle = (optionId) => {
+    const intervalOptions = selectedPracticeType?.intervalType === 'basic'
+      ? INTERVAL_BASIC_OPTIONS
+      : INTERVAL_ADVANCED_OPTIONS;
+    const option = intervalOptions.find(opt => opt.id === optionId);
+    if (!option) return;
+
+    setSelectedIntervals(prev => {
+      const isCurrentlySelected = prev.includes(optionId);
+
+      if (isCurrentlySelected) {
+        // Remove this option and all higher-level options
+        return prev.filter(id => {
+          const opt = intervalOptions.find(o => o.id === id);
+          return opt.level < option.level;
+        });
+      } else {
+        // Add this option and all lower-level options
+        const newSelection = new Set(prev);
+        intervalOptions.forEach(opt => {
+          if (opt.level <= option.level) {
+            newSelection.add(opt.id);
+          }
+        });
+        return Array.from(newSelection);
+      }
+    });
   };
 
   const handleSimultaneousPlayToggle = (optionId) => {
@@ -167,6 +302,18 @@ const DeckSelector = ({ onDeckSelected, unlockedLevels, onResetSession, mode = '
   };
 
   const handleDifficultySelect = (difficulty, difficultyIndex) => {
+    // Ensure first interval is always included for interval practice types
+    let intervalsToUse = selectedIntervals;
+    if (selectedPracticeType.needsIntervalSelection) {
+      const intervalOptions = selectedPracticeType.intervalType === 'basic'
+        ? INTERVAL_BASIC_OPTIONS
+        : INTERVAL_ADVANCED_OPTIONS;
+      const firstInterval = intervalOptions[0].id;
+      if (!intervalsToUse.includes(firstInterval)) {
+        intervalsToUse = [firstInterval, ...intervalsToUse];
+      }
+    }
+
     const deckConfig = {
       scale: selectedScale,
       practiceType: selectedPracticeType.id,
@@ -178,10 +325,13 @@ const DeckSelector = ({ onDeckSelected, unlockedLevels, onResetSession, mode = '
       // New settings
       inversion: selectedInversion?.id || 'root',
       inversionName: selectedInversion?.name || 'Root Position',
+      selectedIntervals: intervalsToUse.length > 0 ? intervalsToUse : [],
       hand: selectedHand?.id || 'both',
       handName: selectedHand?.name || 'Both Hands',
       simultaneousPlay: selectedSimultaneousPlay.length > 0 ? selectedSimultaneousPlay : [],
-      supportsInversions: selectedPracticeType.supportsInversions
+      supportsInversions: selectedPracticeType.supportsInversions,
+      needsIntervalSelection: selectedPracticeType.needsIntervalSelection || false,
+      intervalType: selectedPracticeType.intervalType || null
     };
 
     // Add rhythm pattern and BPM for sight reading mode
@@ -342,19 +492,16 @@ const DeckSelector = ({ onDeckSelected, unlockedLevels, onResetSession, mode = '
         </div>
       )}
 
-      {/* Step 3: Inversion Selection (Chords only) */}
+      {/* Step 3: Inversion Selection (Chords) OR Interval Selection (Intervals) */}
       {selectedScale && selectedPracticeType && (
         <div className="space-y-4">
           <h3 className="text-lg font-semibold text-buretto-primary">
-            3. Choose Inversion {!selectedPracticeType.supportsInversions && '(Not applicable)'}
+            3. {selectedPracticeType.supportsInversions ? 'Choose Inversion' :
+                selectedPracticeType.needsIntervalSelection ? 'Choose Intervals' :
+                'Choose Inversion (Not applicable)'}
           </h3>
-          {!selectedPracticeType.supportsInversions ? (
-            <div className="p-4 bg-gray-100 rounded-lg border-2 border-gray-300 text-gray-500">
-              <p className="text-sm">
-                Inversions only apply to chords (Triads and 7th Chords). Single notes and intervals don't have inversions.
-              </p>
-            </div>
-          ) : (
+          {selectedPracticeType.supportsInversions ? (
+            // Show inversions for chords
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
               {INVERSION_OPTIONS.map((inversion) => {
                 // Hide 3rd inversion for triads
@@ -377,6 +524,67 @@ const DeckSelector = ({ onDeckSelected, unlockedLevels, onResetSession, mode = '
                   </button>
                 );
               })}
+            </div>
+          ) : selectedPracticeType.needsIntervalSelection ? (
+            // Show interval checkboxes for interval practice types
+            <>
+              <p className="text-sm text-gray-600 mb-3">
+                Add intervals progressively to your practice. Higher levels include all lower levels.
+              </p>
+              <div className="space-y-2">
+                {(selectedPracticeType.intervalType === 'basic' ? INTERVAL_BASIC_OPTIONS : INTERVAL_ADVANCED_OPTIONS).map((option) => {
+                  const isSelected = selectedIntervals.includes(option.id);
+                  const intervalOptions = selectedPracticeType.intervalType === 'basic'
+                    ? INTERVAL_BASIC_OPTIONS
+                    : INTERVAL_ADVANCED_OPTIONS;
+                  const isFirstOption = option.level === 1;
+
+                  // Check if previous level is enabled (either in selectedIntervals OR is the first option)
+                  const isPreviousLevelEnabled = option.level === 1 || selectedIntervals.some(id => {
+                    const opt = intervalOptions.find(o => o.id === id);
+                    return opt && opt.level === option.level - 1;
+                  }) || option.level === 2; // Level 2 can always be enabled since level 1 is always on
+
+                  const isDisabled = !isFirstOption && !isPreviousLevelEnabled;
+
+                  // First option is always selected (even if not in array)
+                  const isEffectivelySelected = isSelected || isFirstOption;
+
+                  return (
+                    <label
+                      key={option.id}
+                      className={`flex items-start space-x-3 p-3 rounded-lg border-2 ${
+                        isFirstOption ? 'cursor-default' : 'cursor-pointer'
+                      } transition-colors ${
+                        isEffectivelySelected
+                          ? 'border-buretto-secondary bg-buretto-secondary bg-opacity-10'
+                          : isDisabled
+                          ? 'border-gray-200 bg-gray-50 opacity-50 cursor-not-allowed'
+                          : 'border-gray-300 hover:border-buretto-secondary'
+                      }`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={isEffectivelySelected}
+                        onChange={() => !isDisabled && !isFirstOption && handleIntervalToggle(option.id)}
+                        disabled={isDisabled || isFirstOption}
+                        className="mt-1"
+                      />
+                      <div className="flex-1">
+                        <div className="font-medium text-buretto-primary">{option.name}</div>
+                        <div className="text-sm text-gray-600">{option.description}</div>
+                      </div>
+                    </label>
+                  );
+                })}
+              </div>
+            </>
+          ) : (
+            // Not applicable for single notes
+            <div className="p-4 bg-gray-100 rounded-lg border-2 border-gray-300 text-gray-500">
+              <p className="text-sm">
+                Inversions and interval selection only apply to chords and interval practice. Single notes don't have these options.
+              </p>
             </div>
           )}
         </div>
@@ -712,6 +920,17 @@ const DeckSelector = ({ onDeckSelected, unlockedLevels, onResetSession, mode = '
               <span className="font-medium"> {selectedPracticeType.name}</span>
               {selectedPracticeType.supportsInversions && selectedInversion && (
                 <span> - <span className="font-medium">{selectedInversion.name}</span></span>
+              )}
+              {selectedPracticeType.needsIntervalSelection && selectedIntervals.length > 0 && (
+                <span> - <span className="font-medium">
+                  {selectedIntervals.map(id => {
+                    const intervalOptions = selectedPracticeType.intervalType === 'basic'
+                      ? INTERVAL_BASIC_OPTIONS
+                      : INTERVAL_ADVANCED_OPTIONS;
+                    const opt = intervalOptions.find(o => o.id === id);
+                    return opt?.name;
+                  }).join(', ')}
+                </span></span>
               )}
               {selectedHand && (
                 <span> - <span className="font-medium">{selectedHand.name}</span></span>

@@ -21,6 +21,19 @@ const OCTAVE_RANGES = {
   'full-scale': { treble: [4, 5, 6], bass: [2, 3, 4] }
 };
 
+// Interval definitions matching DeckSelector options
+const INTERVAL_DEGREES = {
+  '2nd': 1,
+  '3rd': 2,
+  '4th': 3,
+  '5th': 4,
+  'octave': 7,
+  '6th': 5,
+  '7th': 6,
+  '9th': 8,
+  '10th': 9
+};
+
 class DeckGenerator {
   constructor(deckConfig) {
     this.scale = deckConfig.scale;
@@ -31,6 +44,8 @@ class DeckGenerator {
     this.inversion = deckConfig.inversion || 'root';
     this.simultaneousPlay = deckConfig.simultaneousPlay || [];
     this.supportsInversions = deckConfig.supportsInversions || false;
+    this.selectedIntervals = deckConfig.selectedIntervals || [];
+    this.intervalType = deckConfig.intervalType || null;
   }
 
   generateDeck(size = 100) {
@@ -83,30 +98,16 @@ class DeckGenerator {
   generateSingleNote(scaleNotes, octaveRange) {
     const note = this.getRandomNote(scaleNotes);
 
-    if (this.hand === 'both') {
-      const trebleOctave = this.getRandomOctave(octaveRange.treble);
-      const bassOctave = this.getRandomOctave(octaveRange.bass);
+    // For "both hands" mode, randomly pick ONE clef (not both)
+    const clef = this.hand === 'left' ? 'bass' : this.hand === 'right' ? 'treble' : (Math.random() > 0.5 ? 'treble' : 'bass');
+    const octave = this.getRandomOctave(octaveRange[clef]);
 
-      return {
-        type: 'single-notes-both',
-        treble: [{ note, octave: trebleOctave }],
-        bass: [{ note, octave: bassOctave }],
-        expectedNotes: [
-          this.noteToMidi(note, trebleOctave),
-          this.noteToMidi(note, bassOctave)
-        ]
-      };
-    } else {
-      const clef = this.hand === 'left' ? 'bass' : this.hand === 'right' ? 'treble' : (Math.random() > 0.5 ? 'treble' : 'bass');
-      const octave = this.getRandomOctave(octaveRange[clef]);
-
-      return {
-        type: 'single-note',
-        clef,
-        notes: [{ note, octave }],
-        expectedNotes: [this.noteToMidi(note, octave)]
-      };
-    }
+    return {
+      type: 'single-note',
+      clef,
+      notes: [{ note, octave }],
+      expectedNotes: [this.noteToMidi(note, octave)]
+    };
   }
 
   generateInterval(scaleNotes, octaveRange, bothHands = false) {
@@ -212,16 +213,31 @@ class DeckGenerator {
 
   generateBasicInterval(scaleNotes, octaveRange) {
     // Basic intervals: 2nd, 3rd, 4th, 5th, Octave
-    const basicIntervalSizes = [1, 2, 3, 4, 7]; // In scale degrees (0-indexed becomes 2nd, 3rd, 4th, 5th, octave)
-    const intervalSize = basicIntervalSizes[Math.floor(Math.random() * basicIntervalSizes.length)];
+    // Use selectedIntervals if provided, otherwise use all basic intervals
+    let intervalSizes;
+    if (this.selectedIntervals && this.selectedIntervals.length > 0) {
+      // Convert selected interval IDs to their degree values
+      intervalSizes = this.selectedIntervals.map(id => INTERVAL_DEGREES[id]);
+    } else {
+      // Default to all basic intervals
+      intervalSizes = [1, 2, 3, 4, 7]; // 2nd, 3rd, 4th, 5th, octave
+    }
+
+    const intervalSize = intervalSizes[Math.floor(Math.random() * intervalSizes.length)];
 
     const rootNoteIndex = Math.floor(Math.random() * scaleNotes.length);
+    const note2Index = (rootNoteIndex + intervalSize) % scaleNotes.length;
     const note1 = scaleNotes[rootNoteIndex];
-    const note2 = scaleNotes[(rootNoteIndex + intervalSize) % scaleNotes.length];
+    const note2 = scaleNotes[note2Index];
 
+    // For "both hands" mode, randomly pick ONE clef (not both)
     const clef = this.hand === 'left' ? 'bass' : this.hand === 'right' ? 'treble' : (Math.random() > 0.5 ? 'treble' : 'bass');
     const octave = this.getRandomOctave(octaveRange[clef]);
-    const octave2 = intervalSize === 7 ? octave + 1 : octave; // Octave interval goes up an octave
+
+    // Handle octave adjustment for the second note
+    // If interval is an octave, second note goes up one octave
+    // If the interval wrapped around the scale (note2Index < rootNoteIndex), second note also goes up one octave
+    const octave2 = (intervalSize === 7 || note2Index < rootNoteIndex) ? octave + 1 : octave;
 
     return {
       type: 'interval-basic',
@@ -239,17 +255,31 @@ class DeckGenerator {
 
   generateAdvancedInterval(scaleNotes, octaveRange) {
     // Advanced intervals: 6th, 7th, 9th, 10th
-    const advancedIntervalSizes = [5, 6, 8, 9]; // Scale degrees for 6th, 7th, 9th, 10th
-    const intervalSize = advancedIntervalSizes[Math.floor(Math.random() * advancedIntervalSizes.length)];
+    // Use selectedIntervals if provided, otherwise use all advanced intervals
+    let intervalSizes;
+    if (this.selectedIntervals && this.selectedIntervals.length > 0) {
+      // Convert selected interval IDs to their degree values
+      intervalSizes = this.selectedIntervals.map(id => INTERVAL_DEGREES[id]);
+    } else {
+      // Default to all advanced intervals
+      intervalSizes = [5, 6, 8, 9]; // 6th, 7th, 9th, 10th
+    }
+
+    const intervalSize = intervalSizes[Math.floor(Math.random() * intervalSizes.length)];
 
     const rootNoteIndex = Math.floor(Math.random() * scaleNotes.length);
-    const note1 = scaleNotes[rootNoteIndex];
     const note2Index = (rootNoteIndex + intervalSize) % scaleNotes.length;
+    const note1 = scaleNotes[rootNoteIndex];
     const note2 = scaleNotes[note2Index];
 
+    // For "both hands" mode, randomly pick ONE clef (not both)
     const clef = this.hand === 'left' ? 'bass' : this.hand === 'right' ? 'treble' : (Math.random() > 0.5 ? 'treble' : 'bass');
     const octave = this.getRandomOctave(octaveRange[clef]);
-    const octave2 = intervalSize >= 7 ? octave + 1 : octave; // 9th and 10th go up an octave
+
+    // Handle octave adjustment for the second note
+    // 9th and 10th intervals always go up an octave
+    // Also, if the interval wrapped around the scale, second note goes up an octave
+    const octave2 = (intervalSize >= 7 || note2Index < rootNoteIndex) ? octave + 1 : octave;
 
     return {
       type: 'interval-advanced',
