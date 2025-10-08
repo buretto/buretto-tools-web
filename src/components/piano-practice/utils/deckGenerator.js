@@ -41,7 +41,7 @@ class DeckGenerator {
     this.difficulty = deckConfig.difficulty;
     this.range = deckConfig.range;
     this.hand = deckConfig.hand || 'both';
-    this.inversion = deckConfig.inversion || 'root';
+    this.selectedInversions = deckConfig.selectedInversions || [];
     this.simultaneousPlay = deckConfig.simultaneousPlay || [];
     this.supportsInversions = deckConfig.supportsInversions || false;
     this.selectedIntervals = deckConfig.selectedIntervals || [];
@@ -365,21 +365,23 @@ class DeckGenerator {
     // chordNotes is an array of {note, degree}
     // Returns same array with octaveAdjust property added
 
-    if (this.inversion === 'root' || this.inversion === 'all' && Math.random() < 0.25) {
-      // Root position - no changes
-      return chordNotes.map(n => ({ ...n, octaveAdjust: 0 }));
-    }
-
-    let inversionType = this.inversion;
-    if (this.inversion === 'all') {
-      // Randomly choose an inversion
-      const options = chordType === 'seventh' ? ['first', 'second', 'third'] : ['first', 'second'];
-      inversionType = options[Math.floor(Math.random() * options.length)];
+    // Pick a random inversion from the selected inversions array
+    let inversionType = 'root';
+    if (this.selectedInversions && this.selectedInversions.length > 0) {
+      // Filter out 'third' for triads
+      let availableInversions = this.selectedInversions;
+      if (chordType === 'triad') {
+        availableInversions = this.selectedInversions.filter(inv => inv !== 'third');
+      }
+      inversionType = availableInversions[Math.floor(Math.random() * availableInversions.length)];
     }
 
     const result = [...chordNotes];
 
-    if (inversionType === 'first') {
+    if (inversionType === 'root') {
+      // Root position - no changes
+      return chordNotes.map(n => ({ ...n, octaveAdjust: 0 }));
+    } else if (inversionType === 'first') {
       // Move root up an octave
       result[0].octaveAdjust = 1;
       return result.slice(1).concat(result[0]);
